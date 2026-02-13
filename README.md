@@ -1,26 +1,33 @@
 # NewsGeneratorProject
 
-## 1.1. Description
+## Description
 
 It is a personalizable news generator. <br>
 It must be able to read the news, understand it, and summarize the news it has read, taking into account
 user parameters such as keywords, desired/undesired topics, language and timeframe of the search.
 
-## 1.2. Getting Started
+## Tech Stack
 
-### 1.2.1. Prerequisites
+* **Frontend:** [React.js](https://reactjs.org/) with framework [React Suite](https://rsuitejs.com/)
+* **Backend:** [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
+* **AI Orchestration:** [Ollama](https://ollama.com/)
+
+## Getting Started
+
+### Prerequisites
 
 List all dependencies and their version needed by the project as :
 
 [//]: # (* DataBase Engine &#40;MySql, PostgreSQL, MSSQL,...&#41;)
 * IDE used: IntelliJ
 * Package manager: pnpm
+* Application: Ollama (found here: https://ollama.com/download)
 * OS supported: All (web based)
 
 [//]: # (* Virtualization &#40;Docker, .Net, .JDK, .JRE&#41;)
 
-### 1.2.2. Configuration
-
+### Configuration
+#### Environment
 To install dependencies:
 
 ```bash
@@ -33,18 +40,24 @@ To start a development server:
 pnpm run dev
 ```
 
-To run for production:
+#### Ollama
 
-```bash
-pnpm run build
+- Create an `.env` file in `server/services/` folder and insert you api key file:
+```
+OLLAMA_API_KEY=your_api_key
 ```
 
 [//]: # (How to set up the database?)
 
 [//]: # (How do you set the sensitive data?)
 
-## 1.3. Deployment
-To be added...
+## Deployment
+
+To run for production:
+
+```bash
+pnpm run build
+```
 
 [//]: # ([### 1.3.1. On dev environment)
 
@@ -59,19 +72,23 @@ To be added...
 [//]: # ()
 [//]: # (How to deploy the application outside the dev environment.])
 
-## 1.4. Directory structure
+## Directory structure
 
 
 ```shell
+├───client
+│   └───src
+│       ├───assets
+│       ├───components
+│       │   └───ui
+│       ├───styles
+│       └───views
 ├───docs
-├───public
-└───src
-    ├───assets
-    ├───components
-    │   └───ui
-    ├───routes
-    ├── styles
-    └───views
+└───server
+    ├───api
+    ├───db
+    └───services
+        └───storage
 ```
 
 [//]: # (## 1.5. Collaborate)
@@ -94,6 +111,6 @@ To be added...
 [//]: # ()
 [//]: # (* [Choose the license adapted to your project]&#40;https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository&#41;.)
 
-## 1.5. Contact
+## Contact
 
 Can contact me on discord: fab2y
