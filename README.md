@@ -12,6 +12,9 @@ user parameters such as keywords, desired/undesired topics, language and timefra
 * **Backend:** [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
 * **AI Orchestration:** [Ollama](https://ollama.com/)
 * **Scraper:** [Crawlee](https://crawlee.dev/js)
+* **Parsers:**
+  * HTML: [linkedom](https://www.npmjs.com/package/linkedom) and [Readability](https://github.com/mozilla/readability) to extract content
+  * XML: [fast-xml-parser](https://www.npmjs.com/package/fast-xml-parser)
 
 ## Getting Started
 

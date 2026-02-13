@@ -61,9 +61,9 @@ async function scrapHtml(urls){
         // maxRequestsPerCrawl: 10,
 
         async requestHandler({ request, body }) {
-            const { document } = parseHTML(body);   // Parse html content
+            const { document } = parseHTML(body);   // parse full html content
             const reader = new Readability(document);
-            const newsContent = reader.parse();
+            const newsContent = reader.parse(); // parse useful content
 
             // format data
             fetchedContentNews.push({
