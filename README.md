@@ -36,9 +36,8 @@ pnpm install
 
 To start a development server:
 
-```bash
-pnpm run dev
-```
+- `pnpm run dev`
+- `pnpm run server`
 
 #### Ollama
 
