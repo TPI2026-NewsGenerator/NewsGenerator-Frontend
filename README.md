@@ -11,6 +11,7 @@ user parameters such as keywords, desired/undesired topics, language and timefra
 * **Frontend:** [React.js](https://reactjs.org/) with framework [React Suite](https://rsuitejs.com/)
 * **Backend:** [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
 * **AI Orchestration:** [Ollama](https://ollama.com/)
+* **Scraper:** [Crawlee](https://crawlee.dev/js)
 
 ## Getting Started
 
@@ -87,7 +88,7 @@ pnpm run build
     ├───api
     ├───db
     └───services
-        └───storage
+        └───storage   // Crawlee storage space
 ```
 
 [//]: # (## 1.5. Collaborate)
