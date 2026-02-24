@@ -19,7 +19,7 @@ async function scrapXml(urls, keywords) {
 
     // used basic crawler since it is for xml content
     const crawler = new BasicCrawler({
-        minConcurrency: 10,
+        minConcurrency: 20,
         maxConcurrency: 50,
         maxRequestRetries: 1,
         requestHandlerTimeoutSecs: 30,
@@ -54,15 +54,15 @@ async function scrapHtml(urls){
     let fetchedContentNews = [];
 
     const crawler = new CheerioCrawler({
-        minConcurrency: 10,
+        minConcurrency: 20,
         maxConcurrency: 50,
         maxRequestRetries: 1,
         requestHandlerTimeoutSecs: 30,
         // maxRequestsPerCrawl: 10,
 
         async requestHandler({ request, body }) {
-            const { document } = parseHTML(body);   // parse full html content
-            const reader = new Readability(document);
+            const { document } = parseHTML(body);   // structure html DOM
+            const reader = new Readability(document); // parse HTML from linkedom document
             const newsContent = reader.parse(); // parse useful content
 
             // format data
@@ -99,13 +99,14 @@ const filterNews = (newsList, keywords) => {
             // check if category corresponds
             if (!news || !news.category) continue;
             for (let keyword of keywords) {
+                // Check filter in category array
                 if (Array.isArray(news.category)) {
-                    // Check filter in category
                     for (let category of news.category ?? []) {
                         if (category.toLowerCase().includes(keyword.toLowerCase())) {
                             filteredNews.push(news);
                         }
                     }
+                // Check filter in category word (if only 1 category)
                 } else if (news.category.toLowerCase().includes(keyword.toLowerCase())) {
                     filteredNews.push(news);
                 }
