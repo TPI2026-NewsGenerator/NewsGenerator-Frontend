@@ -7,7 +7,7 @@ export const xmlParse = async (xml) => {
 
     return data.rss?.channel?.item?.map(news => ({
         title: news.title ?? '',
-        thumbnail: news['media:thumbnail'] ?? null,
+        thumbnail: (news['media:thumbnail'] || news['media:content']) ?? null,
         link: news.link ?? null,
         pubDate: news.pubDate ?? null,
         description: news.description ?? '',
