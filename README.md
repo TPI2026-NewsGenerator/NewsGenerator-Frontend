@@ -31,6 +31,11 @@ To install dependencies:
 pnpm install
 ```
 
+- Create an `.env` file such as the `.env.example` example file in `root` folder and insert API url:
+```
+VITE_API_URL=http://localhost:3001/api
+```
+
 To start a development server:
 
 ```bash
