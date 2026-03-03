@@ -50,7 +50,7 @@ function App() {
                                     onChange={(value) => searchTerm.current = value}
                                 />
 
-                                <Button appearance="primary" onClick={handleFetch} loading={isLoading}>
+                                <Button appearance="primary" name='fetchNews' onClick={handleFetch} loading={isLoading}>
                                     Fetch News
                                 </Button>
                             </VStack>
