@@ -8,7 +8,7 @@ user parameters such as keywords, desired/undesired topics, language and timefra
 
 ## Tech Stack
 
-* [React.js](https://reactjs.org/) with framework [React Suite](https://rsuitejs.com/)
+* [React.js](https://reactjs.org/) [v19.2.0] with framework [React Suite](https://rsuitejs.com/) [v6.1.2]
 
 ## Getting Started
 
@@ -17,8 +17,9 @@ user parameters such as keywords, desired/undesired topics, language and timefra
 List all dependencies and their version needed by the project as :
 
 [//]: # (* DataBase Engine &#40;MySql, PostgreSQL, MSSQL,...&#41;)
-* IDE used: [IntelliJ](https://www.jetbrains.com/idea/)
-* Package manager: [pnpm](https://pnpm.io/fr/)
+* [Node.js](https://nodejs.org/) [v22.18.0]
+* IDE used: [IntelliJ](https://www.jetbrains.com/idea/) [v2025.3.3]
+* Package manager: [pnpm](https://pnpm.io/fr/) [v10.28.2]
 * OS supported: All (web based)
 
 [//]: # (* Virtualization &#40;Docker, .Net, .JDK, .JRE&#41;)
