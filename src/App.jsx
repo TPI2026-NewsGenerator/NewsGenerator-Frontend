@@ -1,10 +1,19 @@
 import {useRef, useState} from 'react'
 import {Button, Input, TagPicker, CustomProvider, List, VStack, Heading, Container, Content, Center } from 'rsuite';
+import { VscHome, VscArchive, VscAccount, VscSettingsGear } from "react-icons/vsc";
 import 'rsuite/dist/rsuite.min.css';
 import 'rsuite/TagPicker/styles/index.css';
 import './App.css'
 import {fetchNews} from "./api/api.js";
+import Dock from "./components/ui/Navbar";
 
+// update with your own items
+const navItems = [
+    { icon: <VscHome size={18} />, label: 'Home', onClick: () => alert('Home!') },
+    { icon: <VscArchive size={18} />, label: 'Archive', onClick: () => alert('Archive!') },
+    { icon: <VscAccount size={18} />, label: 'Profile', onClick: () => alert('Profile!') },
+    { icon: <VscSettingsGear size={18} />, label: 'Settings', onClick: () => alert('Settings!') },
+];
 
 const category = ["World", "Sports", "Press"].map(
     item => ({label: item, value: item})
@@ -72,6 +81,12 @@ function App() {
                                 </VStack>
                             )}
                             {hasSearched && !isLoading && newsList.length === 0 && (<h6>No results found...</h6>)}
+                            <Dock
+                                items={navItems}
+                                panelHeight={68}
+                                baseItemSize={50}
+                                magnification={70}
+                            />
                         </VStack>
                     </Center>
                 </Content>
