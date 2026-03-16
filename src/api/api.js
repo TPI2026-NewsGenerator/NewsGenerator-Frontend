@@ -7,7 +7,7 @@ export const fetchNews = async (query) => {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({query}),
+        body: JSON.stringify(query),
     });
 
     return await response.json();
