@@ -4,7 +4,7 @@ import { VscHome, VscArchive, VscAccount, VscSettingsGear } from "react-icons/vs
 import 'rsuite/dist/rsuite.min.css';
 import 'rsuite/TagPicker/styles/index.css';
 import './App.css'
-import {fetchNews} from "./api/api.js";
+import {Fetch} from "./api/api.js";
 import Dock from "./components/ui/Navbar";
 
 // update with your own items
@@ -32,7 +32,7 @@ function App() {
         hasSearched.current = true;
 
         // Get all links from category
-        const allNews = await fetchNews({
+        const allNews = await Fetch.News({
             category: selectedCategory,
             keywords: [searchTerm.current]
         });
