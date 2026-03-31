@@ -1,20 +1,24 @@
 import {useRef, useState} from 'react'
-import {Button, Input, TagPicker, CustomProvider, List, VStack, Heading, Container, Content, Center } from 'rsuite';
+import {
+    Button,
+    Input,
+    TagPicker,
+    CustomProvider,
+    List,
+    VStack,
+    Heading,
+    Container,
+    Content,
+    Center,
+    Text
+} from 'rsuite';
 import { VscHome, VscArchive, VscAccount, VscSettingsGear } from "react-icons/vsc";
 import 'rsuite/dist/rsuite.min.css';
 import 'rsuite/TagPicker/styles/index.css';
 import './App.css'
 import {Fetch} from "./api/api.js";
-import Dock from "./components/ui/Navbar";
 
-// update with your own items
-const navItems = [
-    { icon: <VscHome size={18} />, label: 'Home', onClick: () => alert('Home!') },
-    { icon: <VscArchive size={18} />, label: 'Archive', onClick: () => alert('Archive!') },
-    { icon: <VscAccount size={18} />, label: 'Profile', onClick: () => alert('Profile!') },
-    { icon: <VscSettingsGear size={18} />, label: 'Settings', onClick: () => alert('Settings!') },
-];
-
+// rsuite TagPicker data
 const category = ["World", "Sports", "Press"].map(
     item => ({label: item, value: item})
 );
@@ -23,6 +27,7 @@ function App() {
     const searchTerm = useRef('');
     const hasSearched = useRef(false);
     const [newsList, setNewsList] = useState([]);
+    const [nbArticles, setNbArticles] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState([]);
 
@@ -40,7 +45,8 @@ function App() {
         console.log('App: allNews: ');
         console.log(allNews);
 
-        setNewsList(allNews);
+        setNewsList(allNews.news);
+        setNbArticles(allNews.totalResults);
 
         setIsLoading(false);
     }
@@ -62,8 +68,11 @@ function App() {
                                 <Button appearance="primary" name='fetchNews' onClick={handleFetch} loading={isLoading}>
                                     Fetch News
                                 </Button>
+                                {newsList.length > 0 && (
+                                   <Text align="center">Found {nbArticles} articles</Text>
+                                )}
                             </VStack>
-                            {newsList.length > 0 && (
+                            {newsList && newsList.length > 0 && (
                                 <VStack spacing={20} align="stretch">
                                     <List bordered style={{marginTop: 20}}>
                                         {newsList.map((news, index) => (news && (
@@ -81,12 +90,6 @@ function App() {
                                 </VStack>
                             )}
                             {hasSearched && !isLoading && newsList.length === 0 && (<h6>No results found...</h6>)}
-                            <Dock
-                                items={navItems}
-                                panelHeight={68}
-                                baseItemSize={50}
-                                magnification={70}
-                            />
                         </VStack>
                     </Center>
                 </Content>
