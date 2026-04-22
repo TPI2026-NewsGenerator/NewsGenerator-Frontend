@@ -1,0 +1,9 @@
+.article:hover {
+    background: #fff9f3;
+    cursor: pointer;
+}
+
+.article.checked {
+    outline: 3px solid #e28e36;
+    outline-offset: 8px;
+}

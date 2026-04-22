@@ -1,0 +1,487 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renders and responds to mouse events 1`] = `
+<DocumentFragment>
+  <section
+    class="app-header rs-container"
+  >
+    <main
+      class="rs-content"
+    >
+      <div
+        class="rs-center"
+        style="height: 100%;"
+      >
+        <div
+          class="rs-stack rs-stack-column rs-box-_r_3_"
+          data-rs="box"
+          style="width: 100%;"
+        >
+          <div
+            class="rs-stack rs-stack-column rs-box-_r_4_"
+            data-rs="box"
+            style="width: 100%; max-width: 400px;"
+          >
+            <h1
+              class="rs-heading"
+            >
+              News Generator
+            </h1>
+            <div
+              class="rs-picker"
+              data-appearance="default"
+              data-focus="false"
+              data-picker="tag"
+              data-size="md"
+              data-testid="picker"
+            >
+              <div
+                aria-controls="rs-_r_6_-listbox"
+                aria-describedby="rs-_r_6_-describe"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+                class="rs-picker-toggle rs-btn"
+                data-active="false"
+                data-appearance="default"
+                data-cleanable="true"
+                data-has-value="false"
+                data-size="md"
+                id="rs-_r_6_"
+                role="combobox"
+                tabindex="0"
+              >
+                <div
+                  class="rs-picker-toggle-stack rs-stack"
+                >
+                  <div
+                    class="rs-stack-item rs-box-_r_a_"
+                    data-rs="box"
+                    overflow="hidden"
+                  >
+                    <input
+                      aria-hidden="true"
+                      class="rs-picker-toggle-textbox"
+                      data-testid="picker-toggle-input"
+                      readonly=""
+                      style="pointer-events: none;"
+                      tabindex="-1"
+                      value=""
+                    />
+                    <span
+                      class="rs-picker-toggle-placeholder"
+                      data-testid="picker-describe"
+                      id="rs-_r_6_-describe"
+                    >
+                      Select news category
+                    </span>
+                  </div>
+                  <div
+                    class="rs-picker-toggle-indicator rs-stack-item rs-box-_r_b_"
+                    data-rs="box"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      aria-label="arrow down line"
+                      class="rs-picker-caret-icon rs-icon rs-icon"
+                      data-category="direction"
+                      data-testid="caret"
+                      fill="currentColor"
+                      focusable="false"
+                      height="1em"
+                      viewBox="0 0 16 16"
+                      width="1em"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M3.166 5.128a.5.5 0 0 1 .706.037L8 9.752l4.128-4.587a.5.5 0 1 1 .743.669l-4.5 5a.5.5 0 0 1-.744 0l-4.5-5a.5.5 0 0 1 .037-.706z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="rs-picker-textbox"
+              >
+                <div
+                  class="rs-picker-tag-list"
+                  id="rs-_r_6_-describe"
+                  role="listbox"
+                >
+                  <div
+                    class="rs-picker-search"
+                  >
+                    <div
+                      class="rs-picker-search-input rs-box-_r_c_"
+                      data-rs="box"
+                    >
+                      <input
+                        style="box-sizing: content-box; width: 10px; max-width: 40px;"
+                        tabindex="-1"
+                        type="text"
+                        value=""
+                      />
+                      <div
+                        style="position: absolute; top: 0px; left: 0px; visibility: hidden; height: 0px; overflow: scroll; white-space: pre; letter-spacing: initial; text-transform: initial;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input
+              class="rs-input"
+              data-size="md"
+              id="rs-_r_d_"
+              placeholder="Enter search term"
+              type="text"
+            />
+            <button
+              class="rs-btn"
+              data-appearance="primary"
+              data-loading="false"
+              data-size="md"
+              type="button"
+            >
+              Fetch News
+              <span
+                class="rs-ripple-pond"
+              >
+                <span
+                  class="rs-ripple"
+                />
+              </span>
+            </button>
+          </div>
+          <h6>
+            No results found...
+          </h6>
+        </div>
+      </div>
+    </main>
+  </section>
+</DocumentFragment>
+`;
+
+exports[`renders and responds to mouse events 2`] = `
+<DocumentFragment>
+  <section
+    class="app-header rs-container"
+  >
+    <main
+      class="rs-content"
+    >
+      <div
+        class="rs-center"
+        style="height: 100%;"
+      >
+        <div
+          class="rs-stack rs-stack-column rs-box-_r_3_"
+          data-rs="box"
+          style="width: 100%;"
+        >
+          <div
+            class="rs-stack rs-stack-column rs-box-_r_4_"
+            data-rs="box"
+            style="width: 100%; max-width: 400px;"
+          >
+            <h1
+              class="rs-heading"
+            >
+              News Generator
+            </h1>
+            <div
+              class="rs-picker"
+              data-appearance="default"
+              data-focus="false"
+              data-picker="tag"
+              data-size="md"
+              data-testid="picker"
+            >
+              <div
+                aria-controls="rs-_r_6_-listbox"
+                aria-describedby="rs-_r_6_-describe"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+                class="rs-picker-toggle rs-btn"
+                data-active="false"
+                data-appearance="default"
+                data-cleanable="true"
+                data-has-value="false"
+                data-size="md"
+                id="rs-_r_6_"
+                role="combobox"
+                tabindex="0"
+              >
+                <div
+                  class="rs-picker-toggle-stack rs-stack"
+                >
+                  <div
+                    class="rs-stack-item rs-box-_r_a_"
+                    data-rs="box"
+                    overflow="hidden"
+                  >
+                    <input
+                      aria-hidden="true"
+                      class="rs-picker-toggle-textbox"
+                      data-testid="picker-toggle-input"
+                      readonly=""
+                      style="pointer-events: none;"
+                      tabindex="-1"
+                      value=""
+                    />
+                    <span
+                      class="rs-picker-toggle-placeholder"
+                      data-testid="picker-describe"
+                      id="rs-_r_6_-describe"
+                    >
+                      Select news category
+                    </span>
+                  </div>
+                  <div
+                    class="rs-picker-toggle-indicator rs-stack-item rs-box-_r_b_"
+                    data-rs="box"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      aria-label="arrow down line"
+                      class="rs-picker-caret-icon rs-icon rs-icon"
+                      data-category="direction"
+                      data-testid="caret"
+                      fill="currentColor"
+                      focusable="false"
+                      height="1em"
+                      viewBox="0 0 16 16"
+                      width="1em"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M3.166 5.128a.5.5 0 0 1 .706.037L8 9.752l4.128-4.587a.5.5 0 1 1 .743.669l-4.5 5a.5.5 0 0 1-.744 0l-4.5-5a.5.5 0 0 1 .037-.706z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="rs-picker-textbox"
+              >
+                <div
+                  class="rs-picker-tag-list"
+                  id="rs-_r_6_-describe"
+                  role="listbox"
+                >
+                  <div
+                    class="rs-picker-search"
+                  >
+                    <div
+                      class="rs-picker-search-input rs-box-_r_c_"
+                      data-rs="box"
+                    >
+                      <input
+                        style="box-sizing: content-box; width: 10px; max-width: 40px;"
+                        tabindex="-1"
+                        type="text"
+                        value=""
+                      />
+                      <div
+                        style="position: absolute; top: 0px; left: 0px; visibility: hidden; height: 0px; overflow: scroll; white-space: pre; letter-spacing: initial; text-transform: initial;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input
+              class="rs-input"
+              data-size="md"
+              id="rs-_r_d_"
+              placeholder="Enter search term"
+              type="text"
+            />
+            <button
+              class="rs-btn"
+              data-appearance="primary"
+              data-loading="false"
+              data-size="md"
+              type="button"
+            >
+              Fetch News
+              <span
+                class="rs-ripple-pond"
+              >
+                <span
+                  class="rs-ripple"
+                />
+              </span>
+            </button>
+          </div>
+          <h6>
+            No results found...
+          </h6>
+        </div>
+      </div>
+    </main>
+  </section>
+</DocumentFragment>
+`;
+
+exports[`renders and responds to mouse events 3`] = `
+<DocumentFragment>
+  <section
+    class="app-header rs-container"
+  >
+    <main
+      class="rs-content"
+    >
+      <div
+        class="rs-center"
+        style="height: 100%;"
+      >
+        <div
+          class="rs-stack rs-stack-column rs-box-_r_3_"
+          data-rs="box"
+          style="width: 100%;"
+        >
+          <div
+            class="rs-stack rs-stack-column rs-box-_r_4_"
+            data-rs="box"
+            style="width: 100%; max-width: 400px;"
+          >
+            <h1
+              class="rs-heading"
+            >
+              News Generator
+            </h1>
+            <div
+              class="rs-picker"
+              data-appearance="default"
+              data-focus="false"
+              data-picker="tag"
+              data-size="md"
+              data-testid="picker"
+            >
+              <div
+                aria-controls="rs-_r_6_-listbox"
+                aria-describedby="rs-_r_6_-describe"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+                class="rs-picker-toggle rs-btn"
+                data-active="false"
+                data-appearance="default"
+                data-cleanable="true"
+                data-has-value="false"
+                data-size="md"
+                id="rs-_r_6_"
+                role="combobox"
+                tabindex="0"
+              >
+                <div
+                  class="rs-picker-toggle-stack rs-stack"
+                >
+                  <div
+                    class="rs-stack-item rs-box-_r_a_"
+                    data-rs="box"
+                    overflow="hidden"
+                  >
+                    <input
+                      aria-hidden="true"
+                      class="rs-picker-toggle-textbox"
+                      data-testid="picker-toggle-input"
+                      readonly=""
+                      style="pointer-events: none;"
+                      tabindex="-1"
+                      value=""
+                    />
+                    <span
+                      class="rs-picker-toggle-placeholder"
+                      data-testid="picker-describe"
+                      id="rs-_r_6_-describe"
+                    >
+                      Select news category
+                    </span>
+                  </div>
+                  <div
+                    class="rs-picker-toggle-indicator rs-stack-item rs-box-_r_b_"
+                    data-rs="box"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      aria-label="arrow down line"
+                      class="rs-picker-caret-icon rs-icon rs-icon"
+                      data-category="direction"
+                      data-testid="caret"
+                      fill="currentColor"
+                      focusable="false"
+                      height="1em"
+                      viewBox="0 0 16 16"
+                      width="1em"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M3.166 5.128a.5.5 0 0 1 .706.037L8 9.752l4.128-4.587a.5.5 0 1 1 .743.669l-4.5 5a.5.5 0 0 1-.744 0l-4.5-5a.5.5 0 0 1 .037-.706z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="rs-picker-textbox"
+              >
+                <div
+                  class="rs-picker-tag-list"
+                  id="rs-_r_6_-describe"
+                  role="listbox"
+                >
+                  <div
+                    class="rs-picker-search"
+                  >
+                    <div
+                      class="rs-picker-search-input rs-box-_r_c_"
+                      data-rs="box"
+                    >
+                      <input
+                        style="box-sizing: content-box; width: 10px; max-width: 40px;"
+                        tabindex="-1"
+                        type="text"
+                        value=""
+                      />
+                      <div
+                        style="position: absolute; top: 0px; left: 0px; visibility: hidden; height: 0px; overflow: scroll; white-space: pre; letter-spacing: initial; text-transform: initial;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input
+              class="rs-input"
+              data-size="md"
+              id="rs-_r_d_"
+              placeholder="Enter search term"
+              type="text"
+            />
+            <button
+              class="rs-btn"
+              data-appearance="primary"
+              data-loading="false"
+              data-size="md"
+              type="button"
+            >
+              Fetch News
+              <span
+                class="rs-ripple-pond"
+              >
+                <span
+                  class="rs-ripple"
+                />
+              </span>
+            </button>
+          </div>
+          <h6>
+            No results found...
+          </h6>
+        </div>
+      </div>
+    </main>
+  </section>
+</DocumentFragment>
+`;

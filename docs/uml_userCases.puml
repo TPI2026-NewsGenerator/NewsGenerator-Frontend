@@ -1,0 +1,65 @@
+@startuml Website Flow Diagram
+
+!define RECTANGLE class
+
+skinparam backgroundColor #FEFEFE
+
+title Website User Flow Architecture
+
+package "Landing Zone" {
+    [Homepage] as Home
+}
+
+package "Authentication" {
+    [Login Page] as Login
+    [Registration] as Register
+    [Forgot Password] as Forgot
+    [User Authenticated?] as AuthCheck
+}
+
+package "User Dashboard" {
+    [Profile Management] as Profile
+    [Settings] as Settings
+    [Newsletter] as Newsletter
+}
+
+package "Contact" {
+    [Contact Form] as ContactForm
+}
+
+
+' Flow connections
+Home --> Login : Existing User
+Home --> Register : New User
+Home --> Forgot : Existing User
+Home --> ContactForm
+
+'Forgot --> Reset : Existing User
+'Reset --> Login : Existing User
+'Register --> Verify : Submit
+'Verify --> Login : Verified
+
+Login --> AuthCheck
+
+AuthCheck --> Home : Failed
+AuthCheck --> Profile : Success
+
+Profile --> Settings
+Profile --> Newsletter
+
+' Exit points
+
+note right of Profile
+    Set + and - keywords
+    Set timeframe
+    Set languages
+end note
+
+' note top of PayCheck
+'   Webhook to Inventory
+'   Email Confirmation Sent
+
+'   Persistent storage
+'   Cross-device sync
+
+@enduml
