@@ -1,7 +1,7 @@
 //
 //  Author: Fabian Rostello
 //  Date: 03.04.2026
-//  File: FetchPage.jsx
+//  File: Fetch.jsx
 //  Description: 
 //
 
@@ -62,7 +62,7 @@ const model = SchemaModel({
     //     .isRequired('This field is required.')
 });
 
-export const FetchPage = () => {
+export const Fetch = () => {
     const [newsList, setNewsList] = useState([])
     const [isLoading, setIsLoading] = useState(false);
     const hasSearched = useRef(false);
