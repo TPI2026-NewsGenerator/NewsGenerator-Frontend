@@ -18,7 +18,7 @@ import {SchemaModel, StringType, ArrayType} from 'rsuite/Schema';
 import TextPressure from '../features/news-feed/components/text-pressure/TextPressure.jsx';
 import TextType from '../features/news-feed/components/text-type/TextType.jsx';
 import {FeedList} from "../features/news-feed/components/feed-list/FeedList.jsx";
-import {getNews} from "../features/news-feed/api/getNews.js";
+import {News} from "../features/news-feed/api/news.js";
 
 // rsuite SelectPicker data
 const languageOptions = [
@@ -84,7 +84,7 @@ export const FetchPage = () => {
         hasSearched.current = true;
 
         // Get all links from category
-        const allNews = await getNews({
+        const allNews = await News.getNews({
             category: formValue.category,
             keywords: [formValue.keyword]
         });
