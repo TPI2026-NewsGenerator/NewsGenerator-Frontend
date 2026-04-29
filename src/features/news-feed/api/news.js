@@ -8,11 +8,12 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const News = {
-    getNews: async (query) => {
+    getNews: async (query, token) => {
         const response = await fetch(`${API_URL}/news`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(query),
         });
