@@ -62,10 +62,13 @@ const model = SchemaModel({
     //     .isRequired('This field is required.')
 });
 
-export const Fetch = () => {
+export const FetchPage = () => {
+    const navigate = useNavigate();
     const [newsList, setNewsList] = useState([])
     const [isLoading, setIsLoading] = useState(false);
     const hasSearched = useRef(false);
+    const [token, setToken] = useState(localStorage.getItem("JWT"))
+    const [user, setUser] = useState(token ? jwtDecode(token) : null)
     const formRef = useRef();
     const [formError, setFormError] = useState({});
     const [formValue, setFormValue] = useState({
@@ -75,6 +78,14 @@ export const Fetch = () => {
     });
 
     const handleSubmit = async () => {
+        // check if registered
+        if (!user) {
+            toaster.push(<Message type="error">Please log in to fetch news</Message>);
+            navigate("/login");
+            return;
+        }
+
+        // check form
         if (!formRef.current.check()) {
             toaster.push(<Message type="error">Missing fields</Message>);
             return;
@@ -87,7 +98,12 @@ export const Fetch = () => {
         const allNews = await News.getNews({
             category: formValue.category,
             keywords: [formValue.keyword]
-        });
+        }, token);
+
+        if (allNews.error && allNews.error.includes('Forbidden, invalid or expired')) {
+            toaster.push(<Message type="error">Token is invalid or has expired, please log in</Message>);
+            removeAuthCredentials()
+        }
 
         console.log('App: allNews: ');
         console.log(allNews);
@@ -96,6 +112,19 @@ export const Fetch = () => {
 
         setIsLoading(false);
     };
+
+    const handleLogout = () => {
+        if (token) {
+            removeAuthCredentials()
+            // navigate('/login')
+        }
+    }
+
+    const removeAuthCredentials = () => {
+        localStorage.removeItem("JWT");
+        setToken(null);
+        setUser(null);
+    }
 
     return (
         <CustomProvider theme="light">
@@ -188,7 +217,8 @@ export const Fetch = () => {
                                     </Field>
                                 </Form.Stack>
                                 <ButtonToolbar mt={20}>
-                                    <Button appearance="primary" name='fetchNews' color={'orange'} onClick={handleSubmit}
+                                    <Button appearance="primary" name='fetchNews' color={'orange'}
+                                            onClick={handleSubmit}
                                             loading={isLoading}>
                                         Fetch News
                                     </Button>
