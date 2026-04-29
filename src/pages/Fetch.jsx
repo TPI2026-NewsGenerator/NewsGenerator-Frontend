@@ -12,8 +12,12 @@ import {
     Content,
     CustomProvider,
     VStack,
-    Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card,
+    Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card, Popover, Dropdown, Whisper,
+    Header, Text, Stack
 } from "rsuite";
+import AdminIcon from '@rsuite/icons/Admin';
+import {useNavigate} from "react-router-dom";
+import {jwtDecode} from "jwt-decode";
 import {SchemaModel, StringType, ArrayType} from 'rsuite/Schema';
 import TextPressure from '../features/news-feed/components/text-pressure/TextPressure.jsx';
 import TextType from '../features/news-feed/components/text-type/TextType.jsx';
@@ -129,6 +133,25 @@ export const FetchPage = () => {
     return (
         <CustomProvider theme="light">
             <Container className="app-header">
+                {user && (
+                    <Header width={'100%'} display={'flex'} justifyContent={'flex-end'}>
+                        <Whisper
+                            placement="bottomEnd"
+                            trigger="click"
+                            // speaker={RenderSpeaker(user)}
+                            speaker={(props, ref) => (
+                                <RenderSpeaker
+                                    {...props}
+                                    ref={ref}
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            )}
+                        >
+                            <AdminIcon size="2rem"/>
+                        </Whisper>
+                    </Header>
+                )}
                 <Content width={'75vw'}>
                     <VStack width={'100%'} alignItems={'center'} gap={20}>
                         <VStack width={'100%'} marginBottom={50}>
@@ -232,3 +255,30 @@ export const FetchPage = () => {
         </CustomProvider>
     )
 }
+
+const RenderSpeaker = forwardRef(({onClose, left, top, className, user, onLogout}, ref) => {
+    const handleLogoutClick = () => {
+        onLogout();
+        onClose();
+    };
+
+    return (
+        <Popover ref={ref} className={className} style={{left, top}} full>
+            <Dropdown.Menu onSelect={onClose}>
+                <Dropdown.Item panel style={{padding: 10, width: 160}}>
+                    <Stack spacing={6} wrap>
+                        <Text>Signed in as</Text>
+                        <Text as="b">{user.username}</Text>
+                    </Stack>
+                    {/*<Text>Signed in as {user.username}</Text>*/}
+                    <Text muted>{user.role === 1 ? "Administrateur" : "Utilisateur"}</Text>
+                </Dropdown.Item>
+                <Dropdown.Item divider/>
+                <Dropdown.Item>Profile & account</Dropdown.Item>
+                <Dropdown.Item divider/>
+                <Dropdown.Item>Settings</Dropdown.Item>
+                <Dropdown.Item onClick={handleLogoutClick}>Sign out</Dropdown.Item>
+            </Dropdown.Menu>
+        </Popover>
+    );
+});
