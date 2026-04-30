@@ -81,7 +81,7 @@ export const LoginPage = () => {
                                                     errorPlacement={'static'}
                                                 />
                                             </Form.Group>
-                                            <Form.Group controlId={'password'}>
+                                            <Form.Group controlId='password'>
                                                 <Form.Label>Password</Form.Label>
                                                 <Form.Control
                                                     name="password"
