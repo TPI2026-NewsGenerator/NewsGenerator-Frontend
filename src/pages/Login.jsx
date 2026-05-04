@@ -20,7 +20,7 @@ import {
     CustomProvider,
     Button,
     PasswordInput,
-    Form, Schema,
+    Form, Schema, toaster, Message,
 } from "rsuite";
 import {LoginApi} from '@/features/login/api/loginApi.js'
 import { useNavigate } from "react-router-dom";
@@ -39,6 +39,7 @@ export const LoginPage = () => {
     const navigate = useNavigate();
 
     const handleSubmit = async () => {
+        // check form submission
         if (!formRef.current.check()) {
             return;
         }
@@ -49,6 +50,12 @@ export const LoginPage = () => {
             password: formValue.password
         })
 
+        // if wrong password
+        if (user.error && user.error.includes("Invalid password...")) {
+            toaster.push(<Message type="error">Wrong password...</Message>);
+        }
+
+        // if successfully retrieved user data
         if (user.token) {
             localStorage.setItem("JWT", user.token);
             navigate('/fetch')
@@ -92,7 +99,8 @@ export const LoginPage = () => {
                                                 />
                                             </Form.Group>
                                             <Link href="/register">Don't have an account ? Sign up</Link>
-                                            <Button appearance="primary" onClick={handleSubmit} marginTop={50} width={'100%'}>Login</Button>
+                                            <Button appearance="primary" onClick={handleSubmit} marginTop={50}
+                                                    width={'100%'} type={"submit"}>Login</Button>
                                         </Form>
                                     </Box>
                                 </HStack>
