@@ -1,19 +1,18 @@
 //
 //  Author: Fabian Rostello
 //  Date: 03.04.2026
-//  File: news.js
-//  Description: Fetch news api for news feed component
+//  File: newsApi.js
+//  Description: LoginApi API
 //
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export const News = {
-    getNews: async (query, token) => {
-        const response = await fetch(`${API_URL}/news`, {
+export const LoginApi = {
+    authUser: async (query) => {
+        const response = await fetch(`${API_URL}/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(query),
         });

@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 03.04.2026
 //  File: Fetch.jsx
-//  Description: Login Page for frontend
+//  Description: LoginApi Page for frontend
 //
 
 import {useRef, useState} from "react";
@@ -22,7 +22,7 @@ import {
     PasswordInput,
     Form, Schema,
 } from "rsuite";
-import {Login} from '@/features/login/api/login.js'
+import {LoginApi} from '@/features/login/api/loginApi.js'
 import { useNavigate } from "react-router-dom";
 
 const {StringType} = Schema.Types;
@@ -44,7 +44,7 @@ export const LoginPage = () => {
         }
 
         // authenticate user
-        const user = await Login.authUser({
+        const user = await LoginApi.authUser({
             username: formValue.username,
             password: formValue.password
         })
