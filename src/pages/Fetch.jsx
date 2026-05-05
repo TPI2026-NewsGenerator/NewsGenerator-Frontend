@@ -104,13 +104,17 @@ export const FetchPage = () => {
             keywords: [formValue.keyword]
         }, token);
 
-        if (allNews.error && allNews.error.includes('Forbidden, invalid or expired')) {
+console.log('App: allNews: ');
+console.log(allNews);
+
+        // print error message
+        if (allNews && allNews.error && allNews.error.includes('Forbidden, invalid or expired')) {
             toaster.push(<Message type="error">Token is invalid or has expired, please log in</Message>);
             removeAuthCredentials()
+        } else if (allNews && allNews.error) {
+            toaster.push(<Message type="error">An error has occurred.. Please try again.</Message>);
         }
 
-        console.log('App: allNews: ');
-        console.log(allNews);
 
         setNewsList(allNews.news);
 
