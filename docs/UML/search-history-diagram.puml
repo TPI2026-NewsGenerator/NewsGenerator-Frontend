@@ -1,0 +1,32 @@
+@startuml
+title Flux recherche et historique des recherches (Frontend)
+autonumber
+
+actor "Utilisateur" as User
+participant "UI" as UI
+participant "Backend" as BE
+database "Base de données" as DB
+
+== Création de l'historique ==
+User -> UI : Saisie des filtres
+User -> UI : Clique sur "Fetch News"
+
+UI -> BE : getNews(filters)
+BE --> UI : Résultats de recherche
+
+UI -> BE : Sélectionne des articles à résumer (max. 10)
+BE -> DB : saveToHistory(selectedArticles)
+DB --> BE : confirmation_sauvegarde
+
+== Affichage historique ==
+User -> UI : Clique sur bouton "historique"
+
+UI -> BE : getHistory(user)
+BE -> DB : getHistory(user)
+
+DB --> BE : data_result
+BE --> UI : data_result
+
+UI --> User : Affiche Résultats
+
+@enduml
