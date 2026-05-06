@@ -1,0 +1,114 @@
+//
+//  Author: Fabian Rostello
+//  Date: 03.04.2026
+//  File: Fetch.jsx
+//  Description: LoginApi Page for frontend
+//
+
+import {useRef, useState} from "react";
+import {
+    HStack,
+    VStack,
+    Divider,
+    Box,
+    Card,
+    Heading,
+    Content,
+    Center,
+    Container,
+    Link,
+    CustomProvider,
+    Button,
+    PasswordInput,
+    Form, Schema, toaster, Message,
+} from "rsuite";
+import {LoginApi} from '@/features/login/api/loginApi.js'
+import { useNavigate } from "react-router-dom";
+
+const {StringType} = Schema.Types;
+const model = Schema.Model({
+    username: StringType().isRequired('This field is required'),
+    password: StringType().isRequired('This field is required'),
+});
+
+
+export const LoginPage = () => {
+    const formRef = useRef();
+    const [formValue, setFormValue] = useState({username: '', password: ''});
+    const [formError, setFormError] = useState({});
+    const navigate = useNavigate();
+
+    const handleSubmit = async () => {
+        // check form submission
+        if (!formRef.current.check()) {
+            return;
+        }
+
+        // authenticate user
+        const user = await LoginApi.authUser({
+            username: formValue.username,
+            password: formValue.password
+        })
+
+        // if wrong password
+        if (user.error && user.error.includes("Invalid password...")) {
+            toaster.push(<Message type="error">Wrong password...</Message>);
+        }
+
+        // if successfully retrieved user data
+        if (user.token) {
+            localStorage.setItem("JWT", user.token);
+            navigate('/fetch')
+        }
+    };
+
+    return (
+        <CustomProvider theme="light" alignItems={'center'}>
+            <Container>
+                <Content>
+                    <Center>
+                        <VStack alignItems={'center'} marginTop={50}>
+                            <Heading level={2}>Login</Heading>
+                            <Card padding={20} shaded>
+                                <HStack divider={<Divider vertical/>} marginTop={50} spacing={40}
+                                        align="flex-start" alignItems={'center'}>
+                                    <Box>
+                                        <Form layout="vertical"
+                                              ref={formRef}
+                                              model={model}
+                                              formValue={formValue}
+                                              onChange={setFormValue}
+                                              onCheck={setFormError}
+                                              formError={formError}
+                                        >
+                                            <Form.Group controlId='username'>
+                                                <Form.Label>Username</Form.Label>
+                                                <Form.Control
+                                                    name="username"
+                                                    errorPlacement={'static'}
+                                                />
+                                            </Form.Group>
+                                            <Form.Group controlId='password'>
+                                                <Form.Label>Password</Form.Label>
+                                                <Form.Control
+                                                    name="password"
+                                                    type="password"
+                                                    autoComplete="off"
+                                                    accepter={PasswordInput}
+                                                    errorPlacement={'static'}
+                                                />
+                                            </Form.Group>
+                                            <Link href="/register">Don't have an account ? Sign up</Link>
+                                            <Button appearance="primary" onClick={handleSubmit} marginTop={50}
+                                                    width={'100%'} type={"submit"}>Login</Button>
+                                        </Form>
+                                    </Box>
+                                </HStack>
+                            </Card>
+                        </VStack>
+                    </Center>
+                </Content>
+            </Container>
+        </CustomProvider>
+    );
+}

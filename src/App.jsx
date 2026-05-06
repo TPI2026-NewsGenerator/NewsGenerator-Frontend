@@ -4,8 +4,19 @@ import './App.css'
 import { Routes, Route, Navigate } from "react-router-dom";
 import {FetchPage} from "@/pages/Fetch.jsx";
 import {LoginPage} from "@/pages/Login.jsx";
+import {useEffect} from "react";
+import {jwtDecode} from "jwt-decode";
 
 function App() {
+    useEffect(() => {
+        const token = localStorage.getItem("JWT");
+        if (token) {
+            const { exp } = jwtDecode(token);
+            if (exp && Date.now() >= exp * 1000) {
+                localStorage.removeItem("JWT");
+            }
+        }
+    }, []);
 
     return (
         <Routes>

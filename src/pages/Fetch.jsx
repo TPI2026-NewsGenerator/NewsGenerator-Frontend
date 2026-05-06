@@ -1,7 +1,7 @@
 //
 //  Author: Fabian Rostello
 //  Date: 03.04.2026
-//  File: FetchPage.jsx
+//  File: Fetch.jsx
 //  Description: 
 //
 
@@ -12,13 +12,17 @@ import {
     Content,
     CustomProvider,
     VStack,
-    Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card,
+    Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card, Popover, Dropdown, Whisper,
+    Header, Text, Stack
 } from "rsuite";
+import AdminIcon from '@rsuite/icons/Admin';
+import {useNavigate} from "react-router-dom";
+import {jwtDecode} from "jwt-decode";
 import {SchemaModel, StringType, ArrayType} from 'rsuite/Schema';
 import TextPressure from '../features/news-feed/components/text-pressure/TextPressure.jsx';
 import TextType from '../features/news-feed/components/text-type/TextType.jsx';
 import {FeedList} from "../features/news-feed/components/feed-list/FeedList.jsx";
-import {News} from "../features/news-feed/api/news.js";
+import {NewsApi} from "../features/news-feed/api/newsApi.js";
 
 // rsuite SelectPicker data
 const languageOptions = [
@@ -63,9 +67,12 @@ const model = SchemaModel({
 });
 
 export const FetchPage = () => {
+    const navigate = useNavigate();
     const [newsList, setNewsList] = useState([])
     const [isLoading, setIsLoading] = useState(false);
     const hasSearched = useRef(false);
+    const [token, setToken] = useState(localStorage.getItem("JWT"))
+    const [user, setUser] = useState(token ? jwtDecode(token) : null)
     const formRef = useRef();
     const [formError, setFormError] = useState({});
     const [formValue, setFormValue] = useState({
@@ -75,6 +82,14 @@ export const FetchPage = () => {
     });
 
     const handleSubmit = async () => {
+        // check if registered
+        if (!user) {
+            toaster.push(<Message type="error">Please log in to fetch news</Message>);
+            navigate("/login");
+            return;
+        }
+
+        // check form
         if (!formRef.current.check()) {
             toaster.push(<Message type="error">Missing fields</Message>);
             return;
@@ -84,22 +99,63 @@ export const FetchPage = () => {
         hasSearched.current = true;
 
         // Get all links from category
-        const allNews = await News.getNews({
+        const allNews = await NewsApi.getNews({
             category: formValue.category,
             keywords: [formValue.keyword]
-        });
+        }, token);
 
-        console.log('App: allNews: ');
-        console.log(allNews);
+console.log('App: allNews: ');
+console.log(allNews);
+
+        // print error message
+        if (allNews && allNews.error && allNews.error.includes('Forbidden, invalid or expired')) {
+            toaster.push(<Message type="error">Token is invalid or has expired, please log in</Message>);
+            removeAuthCredentials()
+        } else if (allNews && allNews.error) {
+            toaster.push(<Message type="error">An error has occurred.. Please try again.</Message>);
+        }
+
 
         setNewsList(allNews.news);
 
         setIsLoading(false);
     };
 
+    const handleLogout = () => {
+        if (token) {
+            removeAuthCredentials()
+            // navigate('/login')
+        }
+    }
+
+    const removeAuthCredentials = () => {
+        localStorage.removeItem("JWT");
+        setToken(null);
+        setUser(null);
+    }
+
     return (
         <CustomProvider theme="light">
             <Container className="app-header">
+                {user && (
+                    <Header width={'100%'} display={'flex'} justifyContent={'flex-end'}>
+                        <Whisper
+                            placement="bottomEnd"
+                            trigger="click"
+                            // speaker={RenderSpeaker(user)}
+                            speaker={(props, ref) => (
+                                <RenderSpeaker
+                                    {...props}
+                                    ref={ref}
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            )}
+                        >
+                            <AdminIcon size="2rem"/>
+                        </Whisper>
+                    </Header>
+                )}
                 <Content width={'75vw'}>
                     <VStack width={'100%'} alignItems={'center'} gap={20}>
                         <VStack width={'100%'} marginBottom={50}>
@@ -188,7 +244,8 @@ export const FetchPage = () => {
                                     </Field>
                                 </Form.Stack>
                                 <ButtonToolbar mt={20}>
-                                    <Button appearance="primary" name='fetchNews' color={'orange'} onClick={handleSubmit}
+                                    <Button appearance="primary" name='fetchNews' color={'orange'}
+                                            onClick={handleSubmit}
                                             loading={isLoading}>
                                         Fetch News
                                     </Button>
@@ -202,3 +259,30 @@ export const FetchPage = () => {
         </CustomProvider>
     )
 }
+
+const RenderSpeaker = forwardRef(({onClose, left, top, className, user, onLogout}, ref) => {
+    const handleLogoutClick = () => {
+        onLogout();
+        onClose();
+    };
+
+    return (
+        <Popover ref={ref} className={className} style={{left, top}} full>
+            <Dropdown.Menu onSelect={onClose}>
+                <Dropdown.Item panel style={{padding: 10, width: 160}}>
+                    <Stack spacing={6} wrap>
+                        <Text>Signed in as</Text>
+                        <Text as="b">{user.username}</Text>
+                    </Stack>
+                    {/*<Text>Signed in as {user.username}</Text>*/}
+                    <Text muted>{user.role === 1 ? "Administrateur" : "Utilisateur"}</Text>
+                </Dropdown.Item>
+                <Dropdown.Item divider/>
+                <Dropdown.Item>Profile & account</Dropdown.Item>
+                <Dropdown.Item divider/>
+                <Dropdown.Item>Settings</Dropdown.Item>
+                <Dropdown.Item onClick={handleLogoutClick}>Sign out</Dropdown.Item>
+            </Dropdown.Menu>
+        </Popover>
+    );
+});

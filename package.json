@@ -13,11 +13,13 @@
     },
     "dependencies": {
         "@fontsource-variable/geist": "^5.2.8",
+        "@rsuite/icons": "^1.4.0",
         "@tailwindcss/vite": "^4.2.2",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "dotenv": "^17.2.4",
         "gsap": "^3.13.0",
+        "jwt-decode": "^4.0.0",
         "lucide-react": "^1.8.0",
         "motion": "^12.23.12",
         "radix-ui": "^1.4.3",
