@@ -19,7 +19,7 @@ BE -> DB : saveToHistory(selectedArticles)
 DB --> BE : confirmation_sauvegarde
 
 == Affichage historique ==
-User -> UI : Clique sur bouton "historique"
+User -> UI : Clique sur la page "historique"
 
 UI -> BE : getHistory(user)
 BE -> DB : getHistory(user)
