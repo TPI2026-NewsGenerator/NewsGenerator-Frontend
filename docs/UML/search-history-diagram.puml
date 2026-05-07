@@ -7,26 +7,23 @@ participant "UI" as UI
 participant "Backend" as BE
 database "Base de données" as DB
 
-== Création de l'historique ==
+== Création de recherche personnalisée ==
 User -> UI : Saisie des filtres
-User -> UI : Clique sur "Fetch News"
+User -> UI : Ajout d'un titre pour la recherche personnalisée
+User -> UI : Appuie sur le bouton "Fetch News"
 
-UI -> BE : getNews(filters)
-BE --> UI : Résultats de recherche
-
-UI -> BE : Sélectionne des articles à résumer (max. 10)
-BE -> DB : saveToHistory(selectedArticles)
+UI -> BE : saveCustomSearch(custom_search)
+BE -> DB : saveCustomSearch(selectedArticles)
 DB --> BE : confirmation_sauvegarde
 
-== Affichage historique ==
-User -> UI : Clique sur la page "historique"
+== Récupération de recherche personnalisée ==
+User -> UI : Login par l'utilisateur
+UI -> BE : GET /customsearch(user_id)
+BE -> DB : getUserCustomSearch(user_id)
+DB --> BE : custom_search_result
+BE --> UI : custom_search_result
+User -> UI : Sélectionne sa recherche personnalisée
 
-UI -> BE : getHistory(user)
-BE -> DB : getHistory(user)
-
-DB --> BE : data_result
-BE --> UI : data_result
-
-UI --> User : Affiche Résultats
+UI --> UI : Mise à jour des filtres
 
 @enduml
