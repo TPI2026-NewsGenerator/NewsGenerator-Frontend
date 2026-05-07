@@ -1,11 +1,11 @@
 //
 //  Author: Fabian Rostello
 //  Date: 03.04.2026
-//  File: Fetch.jsx
+//  File: Search.jsx
 //  Description: 
 //
 
-import {forwardRef, useRef, useState} from "react";
+import {forwardRef, useEffect, useRef, useState} from "react";
 import {
     Button,
     Container,
@@ -23,6 +23,7 @@ import TextPressure from '../features/news-feed/components/text-pressure/TextPre
 import TextType from '../features/news-feed/components/text-type/TextType.jsx';
 import {FeedList} from "../features/news-feed/components/feed-list/FeedList.jsx";
 import {NewsApi} from "../features/news-feed/api/newsApi.js";
+import {CustomSearchApi} from "@/features/search-history/api/customSearchApi.js";
 
 // rsuite SelectPicker data
 const languageOptions = [
@@ -73,6 +74,7 @@ export const FetchPage = () => {
     const hasSearched = useRef(false);
     const [token, setToken] = useState(localStorage.getItem("JWT"))
     const [user, setUser] = useState(token ? jwtDecode(token) : null)
+    const [customSearch, setCustomSearch] = useState(false);
     const formRef = useRef();
     const [formError, setFormError] = useState({});
     const [formValue, setFormValue] = useState({
@@ -133,6 +135,15 @@ console.log(allNews);
         setToken(null);
         setUser(null);
     }
+
+    useEffect(() => {
+        // Get user custom searches
+        const userCustomSearches = async () => {
+            setCustomSearch(await CustomSearchApi.getUserCustomSearch(user.id, token))
+        };
+
+        userCustomSearches()
+    }, []);
 
     return (
         <CustomProvider theme="light">
@@ -247,7 +258,7 @@ console.log(allNews);
                                     <Button appearance="primary" name='fetchNews' color={'orange'}
                                             onClick={handleSubmit}
                                             loading={isLoading}>
-                                        Fetch News
+                                        Fetch NewsApi
                                     </Button>
                                 </ButtonToolbar>
                             </Form>
