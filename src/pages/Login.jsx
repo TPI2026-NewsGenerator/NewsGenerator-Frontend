@@ -98,9 +98,9 @@ export const LoginPage = () => {
                                                     errorPlacement={'static'}
                                                 />
                                             </Form.Group>
-                                            <Link href="/register">Don't have an account ? Sign up</Link>
+                                            <Link href="/register" color={'orange'}>Don't have an account ? Sign up</Link>
                                             <Button appearance="primary" onClick={handleSubmit} marginTop={50}
-                                                    width={'100%'} type={"submit"}>Login</Button>
+                                                    width={'100%'} type={"submit"} color={'orange'}>Login</Button>
                                         </Form>
                                     </Box>
                                 </HStack>

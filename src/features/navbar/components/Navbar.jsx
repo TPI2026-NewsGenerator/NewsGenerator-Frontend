@@ -63,16 +63,18 @@ const RenderSpeaker = forwardRef(({onClose, left, top, className, user, onLogout
     return (
         <Popover ref={ref} className={className} style={{left, top}} full>
             <Dropdown.Menu onSelect={onClose}>
-                <Dropdown.Item panel style={{padding: 10, width: 160}}>
-                    <Stack spacing={6} wrap>
-                        <Text>Signed in as</Text>
-                        <Text as="b">{user ? user.username : "Visitor"}</Text>
-                    </Stack>
-                    {user && (
-                        <Text muted>{user.role === 1 ? "Administrateur" : "Utilisateur"}</Text>
-                    )}
-                </Dropdown.Item>
-                <Dropdown.Item divider/>
+                {user && (
+                    <>
+                        <Dropdown.Item panel style={{padding: 10, width: 160}}>
+                            <Stack spacing={6} wrap>
+                                <Text>Signed in as</Text>
+                                <Text as="b">{user.username}</Text>
+                            </Stack>
+                            <Text muted>{user.role === 1 ? "Administrateur" : "Utilisateur"}</Text>
+                        </Dropdown.Item>
+                        <Dropdown.Item divider/>
+                    </>
+                )}
                 {/*{user && (*/}
                 {/*    <>*/}
                 {/*        <Dropdown.Item>Profile & account</Dropdown.Item>*/}
