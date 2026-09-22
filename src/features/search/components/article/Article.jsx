@@ -53,6 +53,7 @@ export const Article = memo(({ id, onSelect, news }) => {
                     <TagGroup marginBottom={10}>
                         {news && (<Tag size="sm">{news?.source}</Tag>)}
                         {news && (<Tag size="sm">{articleTime(news?.publishedAt)}</Tag>)}
+                        {news?.topic && (<Tag size="sm" color="orange">{news.topic}</Tag>)}
                     </TagGroup>
                     {news && (<Heading level={6} style={{marginBottom: 5}}>{news?.title}</Heading>)}
                 </Card.Header>

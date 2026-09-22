@@ -15,7 +15,7 @@ import {TbFilter, TbFilterOff} from "react-icons/tb";
 
 const { Column, HeaderCell, Cell } = Table;
 
-export const FeedList = ({newsList}) => {
+export const FeedList = ({newsList, onGenerate, isGenerating}) => {
     const selectedIds = useRef([]);
     const [selectedCount, setSelectedCount] = useState(0);
     const [filteredData, setFilteredData] = useState(newsList);
@@ -205,9 +205,10 @@ export const FeedList = ({newsList}) => {
                     right={20}
                     bottom={10}
                     startIcon={<FaMagic />}
-                    href={'#'}
                     color={'orange'}
                     appearance="primary"
+                    loading={isGenerating}
+                    onClick={() => onGenerate(selectedIds.current)}
                 >Generate AI Resume</Button>
             )}
         </>

@@ -8,8 +8,9 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const CustomSearchApi = {
-    getUserCustomSearch: async (query, token) => {
-        const response = await fetch(`${API_URL}/customsearch?userId=${query.userId}`, {
+    // the user is identified by the token, no userId is sent
+    getUserCustomSearch: async (token) => {
+        const response = await fetch(`${API_URL}/customsearch`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

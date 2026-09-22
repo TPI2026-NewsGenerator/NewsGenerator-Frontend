@@ -13,7 +13,7 @@ import {
     CustomProvider,
     VStack,
     Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card, Loader,
-    Tag, Text, HStack, TagGroup, Modal
+    Tag, Text, HStack, TagGroup, Modal, CheckPicker
 } from "rsuite";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
@@ -21,6 +21,7 @@ import {SchemaModel, StringType, ArrayType} from 'rsuite/Schema';
 import GradientText from "@/features/search/components/text-gradient/TextGradient.jsx";
 import TextType from '@/features/search/components/text-type/TextType.jsx';
 import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
+import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
 import {CustomNavbar} from '../features/navbar/components/Navbar.jsx'
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
@@ -70,6 +71,11 @@ const model = SchemaModel({
 export const SearchPage = () => {
     const navigate = useNavigate();
     const [newsList, setNewsList] = useState([])
+    // AI resumes of the selected news
+    const [summaries, setSummaries] = useState([])
+    const summaryListRef = useRef(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [topicOptions, setTopicOptions] = useState([])
     const [customSearchItems, setCustomSearchItems] = useState([])
     const [isLoading, setIsLoading] = useState(false);
     const hasSearched = useRef(false);
@@ -83,6 +89,8 @@ export const SearchPage = () => {
         title: '',
         keyword: '',
         category: [],
+        topics: [],
+        undesiredTopics: [],
         language: ''
     });
     // modal
@@ -110,6 +118,8 @@ export const SearchPage = () => {
         // Get all links from category
         const allNews = await SearchApi.getNews({
             category: formValue.category,
+            topics: formValue.topics ?? [],
+            undesiredTopics: formValue.undesiredTopics ?? [],
             keywords: [formValue.keyword]
         }, token);
 
@@ -124,6 +134,43 @@ export const SearchPage = () => {
         setNewsList(allNews.news);
         setIsLoading(false);
     };
+
+    // AI resume of the selected news (the server scrapes them first)
+    const handleGenerate = async (urls) => {
+        setIsGenerating(true);
+        const data = await SearchApi.getNewsSummary(urls, token);
+        setIsGenerating(false);
+
+        if (data && data.error && data.error.includes('Forbidden, invalid or expired')) {
+            toaster.push(<Message type="error">Token is invalid or has expired, please log in</Message>);
+            removeAuthCredentials()
+            return;
+        } else if (!data || data.error) {
+            toaster.push(<Message type="error">An error has occurred.. Please try again.</Message>);
+            return;
+        }
+
+        const summaryCount = data.news.filter(news => news.summary).length;
+        toaster.push(<Message type="success">{summaryCount} / {data.news.length} news summarized.</Message>);
+        setSummaries(data.news);
+    };
+
+    // topics for the topics filter
+    useEffect(() => {
+        SearchApi.getTopics()
+            .then(data => setTopicOptions(data.topics.map(topic => ({
+                value: topic,
+                label: topic.charAt(0).toUpperCase() + topic.slice(1)
+            }))))
+            .catch(e => console.error("Failed to fetch topics", e));
+    }, []);
+
+    // show the resumes once generated
+    useEffect(() => {
+        if (summaries.length > 0) {
+            summaryListRef.current?.scrollIntoView({behavior: 'smooth'});
+        }
+    }, [summaries]);
 
     const handleSaveSearch = async () => {
         if (!user.id) {
@@ -147,17 +194,22 @@ export const SearchPage = () => {
             return;
         }
         try {
-            await CustomSearchApi.postUserCustomSearch({
+            const data = await CustomSearchApi.postUserCustomSearch({
                 id: formValue.id,
-                userId: user.id,
                 title: formValue.title,
                 language: formValue.language,
                 keyword: formValue.keyword,
                 category: formValue.category,
+                topics: formValue.topics ?? [],
+                undesiredTopics: formValue.undesiredTopics ?? [],
             }, token);
-
+console.log(data);
             // close modal
             handleClose()
+
+            // save custom search locally !! to implement
+            // const newTags = customSearchItems.push(item => item !== tag);
+            // setCustomSearchItems(newTags)
 
             // success message
             if (!formValue.id) {
@@ -182,13 +234,15 @@ export const SearchPage = () => {
             id: item.id,
             keyword: item.keyword,
             category: item.category,
+            topics: item.topics ?? [],
+            undesiredTopics: item.undesiredTopics ?? [],
             language: item.language
         })
     }
 
     const removeTag = async (tag) => {
         try {
-            const data = await CustomSearchApi.deleteUserCustomSearch({id: tag.value.id, userId: user.id}, token);
+            const data = await CustomSearchApi.deleteUserCustomSearch({id: tag.value.id}, token);
 
             if (!data) {
                 toaster.push(<Message type="error">Error deleting {tag.value.title}...</Message>);
@@ -214,7 +268,7 @@ export const SearchPage = () => {
         const getUserCustomSearches = async () => {
             if (user) {
                 try {
-                    const data = await CustomSearchApi.getUserCustomSearch({userId: user.id}, token);
+                    const data = await CustomSearchApi.getUserCustomSearch(token);
                     if (data.error && data.error.name.includes("PrismaClientValidationError")) {
                         console.log("Error with Prisma database")
                         return;
@@ -224,7 +278,7 @@ export const SearchPage = () => {
                         label: item.title,
                         value: item
                     }));
-
+console.log(selectPickerData);
                     setCustomSearchItems(selectPickerData);
                 } catch (e) {
                     console.error("Failed to fetch searches", e);
@@ -240,8 +294,8 @@ export const SearchPage = () => {
             <CustomNavbar user={user} removeAuthCredentials={removeAuthCredentials}/>
             <Container className="app-header">
                 <Content width={'75vw'} marginTop={50}>
-                    <VStack width={'100%'} alignItems={'center'} gap={20}>
-                        <VStack width={'100%'} height={'30vh'} marginBottom={50} alignItems={'center'}>
+                    <VStack width={'100%'} alignItems={'center'} gap={10}>
+                        <VStack width={'100%'} height={'20vh'} marginBottom={10} alignItems={'center'}>
                             <GradientText
                                 colors={["#e18e36", "#eabe92", "#ef8717"]}
                                 animationSpeed={8}
@@ -296,16 +350,25 @@ export const SearchPage = () => {
                                         <Form.Control checkAsync name="keyword" id="keyword"
                                                       placeholder="e.g., artificial intelligence, climate change, innovations"/>
                                         <Form.HelpText>
-                                            Enter keywords separated by commas
+                                            Separate alternatives with commas. Use quotes for an exact word or phrase, e.g. referee, "red card"
                                         </Form.HelpText>
                                     </Form.Group>
-                                    <Form.Group controlId="undesiredTopic">
-                                        <Form.Label fontWeight={'600'}>Undesired Topics</Form.Label>
-                                        <Form.Control disabled={true} checkAsync name="undesiredTopic"
-                                                      id="undesiredTopic"
-                                                      placeholder="e.g., celebrity gossip, sports scores"/>
+                                    <Form.Group controlId="topics">
+                                        <Form.Label fontWeight={'600'}>Topics</Form.Label>
+                                        <Form.Control name="topics" accepter={CheckPicker} data={topicOptions}
+                                                      disabledItemValues={formValue.undesiredTopics ?? []}
+                                                      placeholder="All topics" searchable={false} block/>
                                         <Form.HelpText>
-                                            Enter undesired topics separated by commas
+                                            Only news of these topics, classified by the AI
+                                        </Form.HelpText>
+                                    </Form.Group>
+                                    <Form.Group controlId="undesiredTopics">
+                                        <Form.Label fontWeight={'600'}>Undesired Topics</Form.Label>
+                                        <Form.Control name="undesiredTopics" accepter={CheckPicker} data={topicOptions}
+                                                      disabledItemValues={formValue.topics ?? []}
+                                                      placeholder="None" searchable={false} block/>
+                                        <Form.HelpText>
+                                            News of these topics are hidden
                                         </Form.HelpText>
                                     </Form.Group>
                                     <Form.Stack direction={'row'} width={'100%'} fontWeight={'600'}>
@@ -378,7 +441,8 @@ export const SearchPage = () => {
                                 </Modal>
                             </Form>
                         </Card>
-                        <FeedList newsList={newsList}/>
+                        <SummaryList ref={summaryListRef} summaries={summaries}/>
+                        <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}/>
                     </VStack>
                 </Content>
             </Container>
