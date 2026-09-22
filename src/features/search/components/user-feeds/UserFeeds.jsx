@@ -74,6 +74,7 @@ export const UserFeeds = ({token, categories, api}) => {
                     <HStack key={feed.id} spacing={8} alignItems="center">
                         <Tag color="orange">{feed.category}</Tag>
                         <Text style={{flex: 1}}>{feed.site}</Text>
+                        {feed.error && <Tag color="red" title={feed.error}>not working</Tag>}
                         <Text muted size="sm" style={{maxWidth: '45%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                             {feed.url}
                         </Text>
