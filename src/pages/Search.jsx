@@ -23,8 +23,10 @@ import GradientText from "@/features/search/components/text-gradient/TextGradien
 import TextType from '@/features/search/components/text-type/TextType.jsx';
 import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
 import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
+import {UserFeeds} from "@/features/search/components/user-feeds/UserFeeds.jsx";
 import {CustomNavbar} from '../features/navbar/components/Navbar.jsx'
 import {SearchApi} from "@/features/search/api/searchApi.js";
+import {FeedApi} from "@/features/search/api/feedApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
 
 // rsuite SelectPicker data
@@ -140,6 +142,7 @@ export const SearchPage = () => {
         language: ''
     });
     const [customRange, setCustomRange] = useState(null);
+    const [showSources, setShowSources] = useState(false);
     // modal
     const [saveSearchModal, setSaveSearchModal] = useState(false);
     const handleOpen = () => setSaveSearchModal(true);
@@ -456,6 +459,24 @@ console.log(selectPickerData);
                                             ))}
                                         </Field>
                                     </Form.Stack>
+                                    <Form.Group controlId="sources">
+                                        <Form.Label fontWeight={'600'}>
+                                            <HStack spacing={6} alignItems="center">
+                                                My sources
+                                                <Button appearance="subtle" size="xs"
+                                                        onClick={() => setShowSources(!showSources)}
+                                                        style={{padding: '0 6px', color: '#e28e36'}}>
+                                                    {showSources ? 'hide' : 'show'}
+                                                </Button>
+                                            </HStack>
+                                        </Form.Label>
+                                        {showSources && (
+                                            <UserFeeds token={token} categories={categoryOptions} api={FeedApi}/>
+                                        )}
+                                        <Form.HelpText>
+                                            Websites you add are searched with the others, but only in your searches
+                                        </Form.HelpText>
+                                    </Form.Group>
                                 </Form.Stack>
                                 <ButtonToolbar mt={20}>
                                     <Button appearance="primary" name='fetchNews' color={'orange'}
