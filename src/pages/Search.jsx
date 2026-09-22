@@ -24,6 +24,7 @@ import TextType from '@/features/search/components/text-type/TextType.jsx';
 import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
 import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
 import {UserFeeds} from "@/features/search/components/user-feeds/UserFeeds.jsx";
+import {SourceSuggestions} from "@/features/search/components/source-suggestions/SourceSuggestions.jsx";
 import {CustomNavbar} from '../features/navbar/components/Navbar.jsx'
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
@@ -143,6 +144,9 @@ export const SearchPage = () => {
     });
     const [customRange, setCustomRange] = useState(null);
     const [showSources, setShowSources] = useState(false);
+    // the search that gave the results, used to look for the media missing from the sources
+    const [lastSearch, setLastSearch] = useState(null);
+    const [sourcesVersion, setSourcesVersion] = useState(0);
     // modal
     const [saveSearchModal, setSaveSearchModal] = useState(false);
     const handleOpen = () => setSaveSearchModal(true);
@@ -166,11 +170,13 @@ export const SearchPage = () => {
         hasSearched.current = true;
 
         // Get all links from category
-        const allNews = await SearchApi.getNews({
+        const search = {
             category: formValue.category,
             keywords: [formValue.keyword],
             timeframe: toTimeframe(formValue.timeframe, customRange),
-        }, token);
+        };
+        const allNews = await SearchApi.getNews(search, token);
+        setLastSearch(search);
 
         // print error message
         if (allNews && allNews.error && allNews.error.includes('Forbidden, invalid or expired')) {
@@ -471,7 +477,8 @@ console.log(selectPickerData);
                                             </HStack>
                                         </Form.Label>
                                         {showSources && (
-                                            <UserFeeds token={token} categories={categoryOptions} api={FeedApi}/>
+                                            <UserFeeds token={token} categories={categoryOptions} api={FeedApi}
+                                                       reloadKey={sourcesVersion}/>
                                         )}
                                         <Form.HelpText>
                                             Websites you add are searched with the others, but only in your searches
@@ -512,6 +519,11 @@ console.log(selectPickerData);
                             </Form>
                         </Card>
                         <SummaryList ref={summaryListRef} summaries={summaries}/>
+                        {lastSearch && (
+                            <SourceSuggestions token={token} api={FeedApi} search={lastSearch}
+                                               categories={categoryOptions}
+                                               onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
+                        )}
                         <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}/>
                     </VStack>
                 </Content>

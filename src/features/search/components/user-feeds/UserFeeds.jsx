@@ -9,7 +9,7 @@ import {useEffect, useState} from "react";
 import {Button, HStack, IconButton, InputGroup, Input, Message, SelectPicker, Tag, Text, toaster, VStack} from "rsuite";
 import {FaPlus, FaTrash} from "react-icons/fa";
 
-export const UserFeeds = ({token, categories, api}) => {
+export const UserFeeds = ({token, categories, api, reloadKey}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');
     const [category, setCategory] = useState(null);
@@ -21,7 +21,7 @@ export const UserFeeds = ({token, categories, api}) => {
         api.getUserFeeds(token)
             .then(data => setFeeds(data.feeds ?? []))
             .catch(e => console.error("Failed to fetch sources", e));
-    }, [token, api]);
+    }, [token, api, reloadKey]);
 
     const handleAdd = async () => {
         if (!site.trim() || !category) {

@@ -26,6 +26,24 @@ export const FeedApi = {
         });
         return await response.json();
     },
+    // media covering the last search that are missing from the sources of the user
+    suggestSources: async ({keywords, timeframe}, token) => {
+        const response = await fetch(`${API_URL}/feeds/suggestions`, {
+            method: 'POST',
+            headers: headers(token),
+            body: JSON.stringify({keywords, timeframe}),
+        });
+        return await response.json();
+    },
+    // add several suggested sources at once: [{site, feed, category}]
+    importSources: async (sources, token) => {
+        const response = await fetch(`${API_URL}/feeds/import`, {
+            method: 'POST',
+            headers: headers(token),
+            body: JSON.stringify({sources}),
+        });
+        return await response.json();
+    },
     deleteUserFeed: async (id, token) => {
         const response = await fetch(`${API_URL}/feeds/${id}`, {method: 'DELETE', headers: headers(token)});
         return await response.json();
