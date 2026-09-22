@@ -13,8 +13,9 @@ import {
     CustomProvider,
     VStack,
     Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card, Loader,
-    Tag, Text, HStack, TagGroup, Modal, DateRangePicker
+    Tag, Text, HStack, TagGroup, Modal, DateRangePicker, Whisper, Popover
 } from "rsuite";
+import {FaInfoCircle} from "react-icons/fa";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {SchemaModel, StringType, ArrayType} from 'rsuite/Schema';
@@ -66,6 +67,39 @@ const Field = forwardRef((props, ref) => {
         </Form.Group>
     );
 });
+
+// examples shown by the "i" next to the Keywords field
+const KEYWORD_EXAMPLES = [
+    ['referee, VAR', 'one or the other'],
+    ['red card', 'both words, in any order'],
+    ['"red card"', 'this exact phrase'],
+    ['referee -rugby', 'referee, but never rugby'],
+    ['-"red card"', 'excludes an exact phrase too'],
+];
+
+const keywordsHelp = (
+    <Popover title="How to write keywords" style={{maxWidth: 380}}>
+        <Text muted size="sm" marginBottom={10}>
+            Searched in the title, the description and the categories of the news.
+        </Text>
+        <table>
+            <tbody>
+            {KEYWORD_EXAMPLES.map(([example, meaning]) => (
+                <tr key={example}>
+                    <td style={{padding: '3px 12px 3px 0', whiteSpace: 'nowrap'}}>
+                        <code>{example}</code>
+                    </td>
+                    <td style={{padding: '3px 0'}}>{meaning}</td>
+                </tr>
+            ))}
+            </tbody>
+        </table>
+        <Text muted size="sm" marginTop={10}>
+            A word also finds its variants: <code>referee</code> finds "referees".
+            Words of 3 letters or less must match a whole word, so <code>VAR</code> does not find "Alvarez".
+        </Text>
+    </Popover>
+);
 
 const model = SchemaModel({
     keyword: StringType()
@@ -352,11 +386,23 @@ console.log(selectPickerData);
                             >
                                 <Form.Stack width={'100%'}>
                                     <Form.Group controlId="keyword">
-                                        <Form.Label fontWeight={'600'}>Keywords</Form.Label>
+                                        <Form.Label fontWeight={'600'}>
+                                            <HStack spacing={6} alignItems="center">
+                                                Keywords
+                                                <Whisper placement="right" trigger={['hover', 'focus', 'click']}
+                                                         speaker={keywordsHelp}>
+                                                    <Button appearance="subtle" size="xs" circle
+                                                            aria-label="How to write keywords"
+                                                            style={{padding: 0, color: '#e28e36'}}>
+                                                        <FaInfoCircle/>
+                                                    </Button>
+                                                </Whisper>
+                                            </HStack>
+                                        </Form.Label>
                                         <Form.Control checkAsync name="keyword" id="keyword"
-                                                      placeholder="e.g., artificial intelligence, climate change, innovations"/>
+                                                      placeholder='e.g., referee -rugby, "red card"'/>
                                         <Form.HelpText>
-                                            Commas separate alternatives, quotes give an exact phrase, a minus excludes: referee -rugby, "red card"
+                                            Comma = or, several words = all of them, "quotes" = exact phrase, -word = exclude
                                         </Form.HelpText>
                                     </Form.Group>
                                     <Form.Stack direction={'row'} width={'100%'} fontWeight={'600'}>
