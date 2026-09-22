@@ -13,6 +13,9 @@ import './Article.css'
 export const Article = memo(({ id, onSelect, news }) => {
     const [isChecked, setIsChecked] = useState(false);
 
+    // the same news can be in two feeds of the same media, show each source once
+    const otherSources = [...new Map((news?.sources ?? []).map(other => [other.source, other])).values()];
+
     const handleClick = () => {
         const nextChecked = !isChecked;
         const accepted = onSelect(id, nextChecked);
@@ -59,10 +62,10 @@ export const Article = memo(({ id, onSelect, news }) => {
                 </Card.Header>
                 <Card.Body>
                     {news && (<Text marginBottom={30} style={{marginTop: 30}}>{news?.description}</Text>)}
-                    {news?.sources?.length > 0 && (
+                    {otherSources.length > 0 && (
                         <Text muted size="sm" marginBottom={10}>
                             Also covered by{' '}
-                            {news.sources.map((other, index) => (
+                            {otherSources.map((other, index) => (
                                 <span key={other.url}>
                                     {index > 0 && ', '}
                                     <a href={other.url} target="_blank" rel="noreferrer"
