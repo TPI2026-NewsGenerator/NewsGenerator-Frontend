@@ -13,7 +13,7 @@ import {
     CustomProvider,
     VStack,
     Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card, Loader,
-    Tag, Text, HStack, TagGroup, Modal, CheckPicker
+    Tag, Text, HStack, TagGroup, Modal, DateRangePicker
 } from "rsuite";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
@@ -35,13 +35,26 @@ const languageOptions = [
     {value: 'ru', label: 'Russian'},
 ];
 
+// hours: news not older than this, null: no limit or a range chosen by the user
 const timeframeOptions = [
-    {value: 'h', label: 'Last Hour'},
-    {value: 'd', label: 'Last 24 Hours'},
-    {value: 'w', label: 'Last 7 Days'},
-    {value: 'm', label: 'Last 30 Days'},
-    {value: 'a', label: 'All Time'}
+    {value: 'h', label: 'Last Hour', hours: 1},
+    {value: 'd', label: 'Last 24 Hours', hours: 24},
+    {value: 'w', label: 'Last 7 Days', hours: 24 * 7},
+    {value: 'm', label: 'Last 30 Days', hours: 24 * 30},
+    {value: 'a', label: 'All Time', hours: null},
+    {value: 'c', label: 'Custom range...', hours: null},
 ];
+
+// timeframe of the form -> {start, end} sent to the API
+const toTimeframe = (timeframe, range) => {
+    if (timeframe === 'c') {
+        const [start, end] = range ?? [];
+        return {start: start?.toISOString(), end: end?.toISOString()};
+    }
+
+    const hours = timeframeOptions.find(option => option.value === timeframe)?.hours;
+    return hours ? {start: new Date(Date.now() - hours * 3600 * 1000).toISOString()} : {};
+};
 
 const Field = forwardRef((props, ref) => {
     const {name, message, label, accepter, error, ...rest} = props;
@@ -75,7 +88,7 @@ export const SearchPage = () => {
     const [summaries, setSummaries] = useState([])
     const summaryListRef = useRef(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [topicOptions, setTopicOptions] = useState([])
+    const [categoryOptions, setCategoryOptions] = useState([])
     const [customSearchItems, setCustomSearchItems] = useState([])
     const [isLoading, setIsLoading] = useState(false);
     const hasSearched = useRef(false);
@@ -89,10 +102,10 @@ export const SearchPage = () => {
         title: '',
         keyword: '',
         category: [],
-        topics: [],
-        undesiredTopics: [],
+        timeframe: 'd',
         language: ''
     });
+    const [customRange, setCustomRange] = useState(null);
     // modal
     const [saveSearchModal, setSaveSearchModal] = useState(false);
     const handleOpen = () => setSaveSearchModal(true);
@@ -118,9 +131,8 @@ export const SearchPage = () => {
         // Get all links from category
         const allNews = await SearchApi.getNews({
             category: formValue.category,
-            topics: formValue.topics ?? [],
-            undesiredTopics: formValue.undesiredTopics ?? [],
-            keywords: [formValue.keyword]
+            keywords: [formValue.keyword],
+            timeframe: toTimeframe(formValue.timeframe, customRange),
         }, token);
 
         // print error message
@@ -155,14 +167,11 @@ export const SearchPage = () => {
         setSummaries(data.news);
     };
 
-    // topics for the topics filter
+    // categories of feeds that can be searched
     useEffect(() => {
-        SearchApi.getTopics()
-            .then(data => setTopicOptions(data.topics.map(topic => ({
-                value: topic,
-                label: topic.charAt(0).toUpperCase() + topic.slice(1)
-            }))))
-            .catch(e => console.error("Failed to fetch topics", e));
+        SearchApi.getCategories()
+            .then(data => setCategoryOptions(data.categories))
+            .catch(e => console.error("Failed to fetch categories", e));
     }, []);
 
     // show the resumes once generated
@@ -200,8 +209,6 @@ export const SearchPage = () => {
                 language: formValue.language,
                 keyword: formValue.keyword,
                 category: formValue.category,
-                topics: formValue.topics ?? [],
-                undesiredTopics: formValue.undesiredTopics ?? [],
             }, token);
 console.log(data);
             // close modal
@@ -234,8 +241,7 @@ console.log(data);
             id: item.id,
             keyword: item.keyword,
             category: item.category,
-            topics: item.topics ?? [],
-            undesiredTopics: item.undesiredTopics ?? [],
+            timeframe: formValue.timeframe,
             language: item.language
         })
     }
@@ -350,25 +356,7 @@ console.log(selectPickerData);
                                         <Form.Control checkAsync name="keyword" id="keyword"
                                                       placeholder="e.g., artificial intelligence, climate change, innovations"/>
                                         <Form.HelpText>
-                                            Separate alternatives with commas. Use quotes for an exact word or phrase, e.g. referee, "red card"
-                                        </Form.HelpText>
-                                    </Form.Group>
-                                    <Form.Group controlId="topics">
-                                        <Form.Label fontWeight={'600'}>Topics</Form.Label>
-                                        <Form.Control name="topics" accepter={CheckPicker} data={topicOptions}
-                                                      disabledItemValues={formValue.undesiredTopics ?? []}
-                                                      placeholder="All topics" searchable={false} block/>
-                                        <Form.HelpText>
-                                            Only news of these topics, classified by the AI
-                                        </Form.HelpText>
-                                    </Form.Group>
-                                    <Form.Group controlId="undesiredTopics">
-                                        <Form.Label fontWeight={'600'}>Undesired Topics</Form.Label>
-                                        <Form.Control name="undesiredTopics" accepter={CheckPicker} data={topicOptions}
-                                                      disabledItemValues={formValue.topics ?? []}
-                                                      placeholder="None" searchable={false} block/>
-                                        <Form.HelpText>
-                                            News of these topics are hidden
+                                            Commas separate alternatives, quotes give an exact phrase, a minus excludes: referee -rugby, "red card"
                                         </Form.HelpText>
                                     </Form.Group>
                                     <Form.Stack direction={'row'} width={'100%'} fontWeight={'600'}>
@@ -386,14 +374,27 @@ console.log(selectPickerData);
                                         <Field
                                             name="timeframe"
                                             label="Timeframe"
+                                            message={formValue.timeframe === 'c' ? '' : 'News published in this period'}
                                             placeholder={"Select a timeframe..."}
                                             accepter={SelectPicker}
                                             data={timeframeOptions}
-                                            error={formError.language}
-                                            disabled={true}
+                                            searchable={false}
+                                            cleanable={false}
+                                            error={formError.timeframe}
                                             block
                                         />
                                     </Form.Stack>
+                                    {formValue.timeframe === 'c' && (
+                                        <Form.Group controlId="customRange">
+                                            <Form.Label fontWeight={'600'}>From / to</Form.Label>
+                                            <DateRangePicker value={customRange} onChange={setCustomRange}
+                                                             format="dd.MM.yyyy HH:mm" block
+                                                             shouldDisableDate={date => date > new Date()}/>
+                                            <Form.HelpText>
+                                                News published between these two dates
+                                            </Form.HelpText>
+                                        </Form.Group>
+                                    )}
                                     <Form.Stack fontWeight={'600'}>
                                         <Field
                                             name="category"
@@ -402,9 +403,11 @@ console.log(selectPickerData);
                                             error={formError.category}
                                             inline
                                         >
-                                            <Checkbox value={'world'} color={'orange'}>World</Checkbox>
-                                            <Checkbox value={'press'} color={'orange'}>Press</Checkbox>
-                                            <Checkbox value={'sport'} color={'orange'}>Sport</Checkbox>
+                                            {categoryOptions.map(category => (
+                                                <Checkbox key={category} value={category} color={'orange'}>
+                                                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                                                </Checkbox>
+                                            ))}
                                         </Field>
                                     </Form.Stack>
                                 </Form.Stack>

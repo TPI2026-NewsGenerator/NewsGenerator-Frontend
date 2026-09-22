@@ -8,9 +8,9 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const SearchApi = {
-    // topics given by the AI to the news, usable in the "topics" filter
-    getTopics: async () => {
-        const response = await fetch(`${API_URL}/news/topics`);
+    // categories of feeds that can be searched
+    getCategories: async () => {
+        const response = await fetch(`${API_URL}/news/categories`);
         return await response.json();
     },
     getNews: async (query, token) => {

@@ -59,6 +59,18 @@ export const Article = memo(({ id, onSelect, news }) => {
                 </Card.Header>
                 <Card.Body>
                     {news && (<Text marginBottom={30} style={{marginTop: 30}}>{news?.description}</Text>)}
+                    {news?.sources?.length > 0 && (
+                        <Text muted size="sm" marginBottom={10}>
+                            Also covered by{' '}
+                            {news.sources.map((other, index) => (
+                                <span key={other.url}>
+                                    {index > 0 && ', '}
+                                    <a href={other.url} target="_blank" rel="noreferrer"
+                                       onClick={event => event.stopPropagation()}>{other.source}</a>
+                                </span>
+                            ))}
+                        </Text>
+                    )}
                 </Card.Body>
                 <Card.Footer>
                     {news && (
