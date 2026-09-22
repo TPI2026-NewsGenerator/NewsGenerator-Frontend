@@ -43,6 +43,14 @@ To start a development server:
 pnpm run dev
 ```
 
+It starts the frontend (Vite, port 5173) and the backend of `../server` (nodemon, port 3001) together.
+The backend needs its own `pnpm install` and its `.env` (see `server/README.md`).
+To start the frontend alone:
+
+```bash
+pnpm run dev:client
+```
+
 [//]: # (How to set up the database?)
 
 [//]: # (How do you set the sensitive data?)
