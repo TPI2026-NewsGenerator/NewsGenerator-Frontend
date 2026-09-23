@@ -35,6 +35,15 @@ export const FeedApi = {
         });
         return await response.json();
     },
+    // feeds of the directory for a subject ("premier league") or a site
+    searchSources: async (query, token) => {
+        const response = await fetch(`${API_URL}/feeds/search`, {
+            method: 'POST',
+            headers: headers(token),
+            body: JSON.stringify({query}),
+        });
+        return await response.json();
+    },
     // add several suggested sources at once: [{site, feed, category}]
     importSources: async (sources, token) => {
         const response = await fetch(`${API_URL}/feeds/import`, {
