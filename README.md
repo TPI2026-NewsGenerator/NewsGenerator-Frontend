@@ -15,6 +15,11 @@ What the search page shows, beyond the news themselves:
   and next to them the sources that can be added in one click. Those sources are private to the user;
 - the **wider search** offered when asking for every word at once found almost nothing.
 
+The filter panel of the results filters on these measurements too: keeping only the news several
+media carry, only those where each medium wrote its own wording, only the ones a single source has,
+or only the articles that used one of the hedging words — and the list of words offered is built
+from the results themselves, so it shows which papers reached for them.
+
 The search runs in English, French, Spanish, German or Italian, and never mixes two of them.
 
 ## Tech Stack

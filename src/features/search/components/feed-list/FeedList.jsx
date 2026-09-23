@@ -22,6 +22,8 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
     const [showFilterPanel, setShowFilterPanel] = useState(false);
     const [sourceFilter, setSourceFilter] = useState(null);
     const [timeFilter, setTimeFilter] = useState(null);
+    const [coverageFilter, setCoverageFilter] = useState(null);
+    const [wordingFilter, setWordingFilter] = useState(null);
 
     const handleSelect = useCallback((id, checked) => {
         if (checked) {
@@ -40,8 +42,26 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
 
     // Filter values
     const getSources = () => {
-        const sources = [...newsList.map(item => item.source)];
+        const sources = [...new Set(newsList.map(item => item.source))].sort();
         return sources.map(source => ({ label: source, value: source }));
+    };
+
+    // Filters on what the grouping measured. None of them says a news is true: 'several' only means
+    // several media carry it, and a rumour carried by twenty media is still a rumour.
+    const COVERAGE = {
+        several: item => item.corroboration?.media > 1,
+        wordings: item => item.corroboration?.wordings > 1,
+        alone: item => (item.corroboration?.media ?? 1) === 1,
+    };
+
+    // the hedging words actually present in these results, so the user can ask for one of them
+    // rather than for a category we would have invented
+    const getWordings = () => {
+        const found = [...new Set(newsList.map(item => item.hedged).filter(Boolean))].sort();
+        return [
+            { label: 'Any of these words', value: '*' },
+            ...found.map(word => ({ label: `"${word}"`, value: word })),
+        ];
     };
 
     const applyFilters = () => {
@@ -50,6 +70,16 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
         // Apply source filter
         if (sourceFilter) {
             result = result.filter(item => item.source === sourceFilter);
+        }
+
+        // Apply coverage filter: how widely the news is carried
+        if (coverageFilter) {
+            result = result.filter(COVERAGE[coverageFilter]);
+        }
+
+        // Apply wording filter: the articles saying themselves they have no confirmation
+        if (wordingFilter) {
+            result = result.filter(item => wordingFilter === '*' ? item.hedged : item.hedged === wordingFilter);
         }
 
         // Apply time filter
@@ -68,14 +98,13 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
     const clearFilters = () => {
         setSourceFilter(null);
         setTimeFilter(null);
+        setCoverageFilter(null);
+        setWordingFilter(null);
         setFilteredData(newsList);
     };
 
     const countActiveFilters = () => {
-        let count = 0;
-        if (sourceFilter) count++;
-        if (timeFilter) count++;
-        return count;
+        return [sourceFilter, timeFilter, coverageFilter, wordingFilter].filter(Boolean).length;
     };
 
     useEffect(() => {
@@ -118,7 +147,10 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
                     <Text width={'fit-content'} size={'3xl'} weight={'semibold'} className={'title'}>
                         Your News List
                     </Text>
-                    <Text>Found {newsList.length} articles.</Text>
+                    <Text>
+                        Found {newsList.length} articles
+                        {filteredData.length !== newsList.length && `, ${filteredData.length} kept by the filters`}.
+                    </Text>
                     {wider && (
                         <HStack spacing={8} alignItems="center" marginTop={4}>
                             <Text muted size="sm">
@@ -191,6 +223,44 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
                                         />
                                     </VStack>
                                 </HStack>
+
+                                <HStack spacing={10} w="100%" mt={10}>
+                                    <VStack w="100%">
+                                        <Box>How widely it is carried</Box>
+                                        <SelectPicker
+                                            data={[
+                                                { label: 'Carried by several media', value: 'several' },
+                                                { label: 'Several media, each its own wording', value: 'wordings' },
+                                                { label: 'This source only', value: 'alone' },
+                                            ]}
+                                            block
+                                            searchable={false}
+                                            value={coverageFilter}
+                                            onChange={setCoverageFilter}
+                                            cleanable
+                                        />
+                                    </VStack>
+
+                                    <VStack w="100%">
+                                        <Box>The article says it has no confirmation</Box>
+                                        <SelectPicker
+                                            data={getWordings()}
+                                            block
+                                            searchable={false}
+                                            placeholder={getWordings().length > 1 ? 'Any word' : 'None in these results'}
+                                            disabled={getWordings().length <= 1}
+                                            value={wordingFilter}
+                                            onChange={setWordingFilter}
+                                            cleanable
+                                        />
+                                    </VStack>
+                                </HStack>
+
+                                <Text muted size="sm" mt={10}>
+                                    These describe what was counted, not whether a news is true: a rumour
+                                    carried by twenty media is still a rumour, and a paper writing
+                                    "reportedly" is telling you it could not confirm.
+                                </Text>
 
                                 <HStack mt={15} justify="flex-end" spacing={10}>
                                     <Button appearance="subtle" onClick={() => setShowFilterPanel(false)}>
