@@ -16,6 +16,15 @@ export const Article = memo(({ id, onSelect, news }) => {
     // the same news can be in two feeds of the same media, show each source once
     const otherSources = [...new Map((news?.sources ?? []).map(other => [other.source, other])).values()];
 
+    // Past this many articles, a group has stopped being one news. Measured over three days in the
+    // five languages: 93% of the groups holding several articles hold two to four, and those read
+    // as one news. From five up, they are mixed. Some are still one news told by many papers, like
+    // the eight on Hakimi's appeal; others are a running story seen from every angle — thirty
+    // articles on the White House press ban, from the court filing to the late-night jokes — and a
+    // few are only a template, "3 interesting facts about <player>" repeated six times.
+    // So above it the card says how many media are on the story, and stops implying one news.
+    const RUNNING_STORY = 5;
+
     // How many media carry this news, and how many of them wrote their own headline. Twenty media
     // repeating one wire is one report seen twenty times; twenty that wrote their own each went and
     // checked. Neither says the news is true, so nothing here is called reliable.
@@ -26,11 +35,21 @@ export const Article = memo(({ id, onSelect, news }) => {
         if (media === 1) {
             return {label: 'this source only', color: 'yellow', title: 'No other medium of your sources carries this news'};
         }
+        // identical texts are one wire whatever the size of the group, and that is worth saying
         if (wordings === 1) {
             return {
                 label: `${media} media, same wording`,
                 color: 'cyan',
                 title: 'They publish the same text, most likely one wire republished: one report, not several',
+            };
+        }
+        if ((news?.sources?.length ?? 0) + 1 >= RUNNING_STORY) {
+            return {
+                label: `${media} media on this story`,
+                color: 'cyan',
+                title: 'Too many articles here to be a single news: this is a running story, followed from '
+                    + 'several angles. Read the count as the media on the story, not as a news confirmed '
+                    + media + ' times.',
             };
         }
         return {
