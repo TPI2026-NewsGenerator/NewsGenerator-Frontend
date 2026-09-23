@@ -6,6 +6,17 @@ It is a personalizable news generator. <br>
 It must be able to read the news, understand it, and summarize the news it has read, taking into account
 user parameters such as keywords, desired/undesired topics, language and timeframe of the search.
 
+What the search page shows, beyond the news themselves:
+
+- **how widely a news is carried** — how many media tell it, and how many of them wrote their own
+  headline rather than republishing a wire. It says what was counted, never that the news is true;
+- **the words the article used to hedge** (`says "reportedly"`), when it has any;
+- **the media this search missed**, read from Google News and GDELT: their news for reading only,
+  and next to them the sources that can be added in one click. Those sources are private to the user;
+- the **wider search** offered when asking for every word at once found almost nothing.
+
+The search runs in English, French, Spanish, German or Italian, and never mixes two of them.
+
 ## Tech Stack
 
 * [React.js](https://reactjs.org/) [v19.2.0] with framework [React Suite](https://rsuitejs.com/) [v6.1.2]
@@ -96,10 +107,13 @@ pnpm run build
 |   |       |-- api
 |   |       |   `-- searchApi.js
 |   |       `-- components
-|   |           |-- article
-|   |           |-- feed-list
+|   |           |-- article              # one news card, with how widely it is carried
+|   |           |-- feed-list            # the results
+|   |           |-- source-suggestions   # the media this search missed, and the ones to add
+|   |           |-- summary-list         # the AI resumes of the selected news
 |   |           |-- text-gradient
-|   |           `-- text-type
+|   |           |-- text-type
+|   |           `-- user-feeds           # the sources this user added, private to them
 |   |-- pages
 |   `-- styles
 `-- tests

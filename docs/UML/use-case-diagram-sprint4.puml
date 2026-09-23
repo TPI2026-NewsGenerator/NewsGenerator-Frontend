@@ -1,0 +1,74 @@
+' Use cases as they stand at sprint 4. use-case-diagram.puml is the planned scope and is left
+' untouched: this file says what a member can actually do today.
+'
+' Differences with the planned scope:
+'   - "Enregistrement automatique dernier filtre" is gone. The feature was dropped and its two
+'     tables (filters, users_has_last_filters) are no longer created by any script.
+'   - "Modification sources personnalisées" is implemented, and split in three: adding a site by
+'     hand, importing the media a search was missing, and searching a directory of feeds.
+'   - "Enregistrement", "Abonnement newsletter" and the admin features are not implemented.
+
+@startuml
+title Diagramme Use Case - NewsGenerator Sprint 4
+left to right direction
+
+actor "Invité" as g
+actor "Membre" as m #LightBlue
+
+rectangle "NewsGenerator System" {
+    package "Features Invité" {
+        usecase "Connexion" as login
+    }
+
+    package "Rechercher" {
+        usecase "Rechercher des nouvelles" as searchNews
+        usecase "Choisir la langue de recherche" as chooseLanguage #LightBlue
+        usecase "Élargir la recherche quand elle trouve peu" as widen #LightBlue
+        usecase "Voir la reprise d'une nouvelle\n(médias et formulations)" as corroboration #LightBlue
+        usecase "Résumer les nouvelles sélectionnées (IA)" as summarize
+    }
+
+    package "Recherches personnalisées" {
+        usecase "Sauvegarder une recherche" as saveSearch
+        usecase "Voir ses recherches sauvegardées" as listSearches
+        usecase "Supprimer une recherche" as deleteSearch
+    }
+
+    package "Sources" {
+        usecase "Ajouter une source depuis un site" as addSource
+        usecase "Voir les médias manquants à sa recherche" as seeMissing #LightBlue
+        usecase "Lire les nouvelles des médias manquants" as readMissing #LightBlue
+        usecase "Importer les sources suggérées" as importSources #LightBlue
+        usecase "Chercher une source par sujet" as searchDirectory #LightBlue
+        usecase "Supprimer une de ses sources" as deleteSource
+    }
+}
+
+'invité
+g --> login
+
+'membre
+m --|> g
+m --> searchNews
+m --> summarize
+m --> saveSearch
+m --> listSearches
+m --> deleteSearch
+m --> addSource
+m --> seeMissing
+m --> importSources
+m --> searchDirectory
+m --> deleteSource
+
+searchNews ..> chooseLanguage : <<include>>
+searchNews ..> corroboration : <<include>>
+searchNews ..> widen : <<extend>>
+seeMissing ..> readMissing : <<extend>>
+seeMissing ..> importSources : <<extend>>
+
+note bottom of corroboration
+    Décrit ce qui a été mesuré,
+    jamais si la nouvelle est vraie.
+end note
+
+@enduml
