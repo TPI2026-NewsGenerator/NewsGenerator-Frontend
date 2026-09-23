@@ -45,11 +45,13 @@ export const FeedApi = {
         return await response.json();
     },
     // add several suggested sources at once: [{site, feed, category}]
-    importSources: async (sources, token) => {
+    // the language is sent with them: a site that publishes no feed has its own read again by the
+    // server, and the language tells it which section of the site to read
+    importSources: async (sources, token, language = 'en') => {
         const response = await fetch(`${API_URL}/feeds/import`, {
             method: 'POST',
             headers: headers(token),
-            body: JSON.stringify({sources}),
+            body: JSON.stringify({sources, language}),
         });
         return await response.json();
     },
