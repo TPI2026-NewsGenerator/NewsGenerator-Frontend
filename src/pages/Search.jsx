@@ -73,8 +73,9 @@ const Field = forwardRef((props, ref) => {
 
 // examples shown by the "i" next to the Keywords field
 const KEYWORD_EXAMPLES = [
-    ['referee, VAR', 'one or the other'],
-    ['red card', 'both words, in any order'],
+    ['referee', 'one word, the widest search'],
+    ['referee, VAR', 'one or the other, widest still'],
+    ['red card', 'both words in the same news, much narrower'],
     ['"red card"', 'this exact phrase'],
     ['referee -rugby', 'referee, but never rugby'],
     ['-"red card"', 'excludes an exact phrase too'],
@@ -100,6 +101,11 @@ const keywordsHelp = (
         <Text muted size="sm" marginTop={10}>
             A word also finds its variants: <code>referee</code> finds "referees".
             Words of 3 letters or less must match a whole word, so <code>VAR</code> does not find "Alvarez".
+        </Text>
+        <Text muted size="sm" marginTop={10}>
+            Unlike a web search, several words <b>remove</b> the news that do not have them all:
+            <code>referee football soccer</code> asks for the three at once and finds almost nothing.
+            Start with one word, add commas to widen, add words to narrow.
         </Text>
     </Popover>
 );
@@ -146,13 +152,15 @@ export const SearchPage = () => {
     const [showSources, setShowSources] = useState(false);
     // the search that gave the results, used to look for the media missing from the sources
     const [lastSearch, setLastSearch] = useState(null);
+    // set when a search asking for every word found almost nothing: how many a wider one would find
+    const [wider, setWider] = useState(null);
     const [sourcesVersion, setSourcesVersion] = useState(0);
     // modal
     const [saveSearchModal, setSaveSearchModal] = useState(false);
     const handleOpen = () => setSaveSearchModal(true);
     const handleClose = () => setSaveSearchModal(false);
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (keyword = formValue.keyword) => {
         // check if registered
         if (!user) {
             toaster.push(<Message type="error">Please log in to fetch news</Message>);
@@ -172,7 +180,7 @@ export const SearchPage = () => {
         // Get all links from category
         const search = {
             category: formValue.category,
-            keywords: [formValue.keyword],
+            keywords: [keyword],
             language: formValue.language || 'en',
             timeframe: toTimeframe(formValue.timeframe, customRange),
         };
@@ -188,7 +196,15 @@ export const SearchPage = () => {
         }
 
         setNewsList(allNews.news);
+        setWider(allNews.wider ?? null);
         setIsLoading(false);
+    };
+
+    // "Show those 218": the words are put back in the field with commas, so the search that runs is
+    // the one the user can read and change afterwards
+    const handleWiden = (keywords) => {
+        setFormValue({...formValue, keyword: keywords});
+        handleSubmit(keywords);
     };
 
     // AI resume of the selected news (the server scrapes them first)
@@ -412,7 +428,7 @@ console.log(selectPickerData);
                                         <Form.Control checkAsync name="keyword" id="keyword"
                                                       placeholder='e.g., referee -rugby, "red card"'/>
                                         <Form.HelpText>
-                                            Comma = or, several words = all of them, "quotes" = exact phrase, -word = exclude
+                                            Comma = or (widest), several words = all of them in the same news (narrow), "quotes" = exact phrase, -word = exclude
                                         </Form.HelpText>
                                     </Form.Group>
                                     <Form.Stack direction={'row'} width={'100%'} fontWeight={'600'}>
@@ -488,7 +504,7 @@ console.log(selectPickerData);
                                 </Form.Stack>
                                 <ButtonToolbar mt={20}>
                                     <Button appearance="primary" name='fetchNews' color={'orange'}
-                                            onClick={handleSubmit}
+                                            onClick={() => handleSubmit()}
                                             loading={isLoading}>
                                         Search
                                     </Button>
@@ -525,7 +541,8 @@ console.log(selectPickerData);
                                                categories={categoryOptions}
                                                onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
                         )}
-                        <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}/>
+                        <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
+                                  wider={wider} onWiden={handleWiden}/>
                     </VStack>
                 </Content>
             </Container>

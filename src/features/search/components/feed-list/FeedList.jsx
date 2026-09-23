@@ -15,7 +15,7 @@ import {TbFilter, TbFilterOff} from "react-icons/tb";
 
 const { Column, HeaderCell, Cell } = Table;
 
-export const FeedList = ({newsList, onGenerate, isGenerating}) => {
+export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) => {
     const selectedIds = useRef([]);
     const [selectedCount, setSelectedCount] = useState(0);
     const [filteredData, setFilteredData] = useState(newsList);
@@ -90,6 +90,18 @@ export const FeedList = ({newsList, onGenerate, isGenerating}) => {
                         Your News List
                     </Text>
                     <Text>Found {newsList.length} articles.</Text>
+                    {wider && (
+                        <HStack spacing={8} alignItems="center" marginTop={4}>
+                            <Text muted size="sm">
+                                Every word is asked for at once, so only these have
+                                all of {wider.terms.join(', ')}. {wider.found} have at least one.
+                            </Text>
+                            <Button appearance="link" size="sm" style={{padding: 0}}
+                                    onClick={() => onWiden(wider.terms.join(', '))}>
+                                Show those {wider.found}
+                            </Button>
+                        </HStack>
+                    )}
                     <Box pos="relative" paddingTop={20} paddingBottom={20}>
                         <Box mb={10}>
                             <HStack spacing={8} alignItems="center">
