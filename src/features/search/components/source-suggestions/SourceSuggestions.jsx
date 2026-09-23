@@ -29,6 +29,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
     const [news, setNews] = useState(null);         // null: not looked for yet
     const [sources, setSources] = useState([]);
     const [missing, setMissing] = useState(0);
+    const [tried, setTried] = useState(0);        // media whose feed was looked for, out of the missing ones
     const [selected, setSelected] = useState([]);
     const [category, setCategory] = useState(null);
     const [isLooking, setIsLooking] = useState(false);
@@ -56,6 +57,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
         setNews(data.news ?? []);
         setSources(data.sources ?? []);
         setMissing(data.missing ?? 0);
+        setTried(data.tried ?? 0);
         setSelected((data.sources ?? []).map(source => source.feed));
     };
 
@@ -146,10 +148,10 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
                 <VStack align="stretch" spacing={10}>
                     <Divider/>
                     <Text muted size="sm">
-                        {missing} media published on these keywords without being in your sources.{' '}
-                        {sources.length === 1
-                            ? 'One of them has an RSS feed, add it to read it here from now on:'
-                            : `These ${sources.length} have an RSS feed, add them to read them here from now on:`}
+                        {missing} media published on these keywords without being in your sources.
+                        Looking for the feed of a site costs several requests, so only the {tried} publishing
+                        the most were tried: {sources.length === 1 ? 'one has' : `${sources.length} have`} an
+                        RSS feed. Add them to read them here from now on:
                     </Text>
 
                     <CheckboxGroup value={selected} onChange={setSelected}>
