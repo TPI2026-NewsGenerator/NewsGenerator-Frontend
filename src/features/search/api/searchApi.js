@@ -9,8 +9,9 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export const SearchApi = {
     // categories of feeds that can be searched
-    getCategories: async () => {
-        const response = await fetch(`${API_URL}/news/categories`);
+    // the categories are those of the sources of this language
+    getCategories: async (language = 'en') => {
+        const response = await fetch(`${API_URL}/news/categories?language=${encodeURIComponent(language)}`);
         return await response.json();
     },
     getNews: async (query, token) => {

@@ -35,8 +35,8 @@ const languageOptions = [
     {value: 'en', label: 'English'},
     {value: 'fr', label: 'French'},
     {value: 'es', label: 'Spanish'},
-    {value: 'ch', label: 'Chinese'},
-    {value: 'ru', label: 'Russian'},
+    {value: 'de', label: 'German'},
+    {value: 'it', label: 'Italian'},
 ];
 
 // hours: news not older than this, null: no limit or a range chosen by the user
@@ -173,6 +173,7 @@ export const SearchPage = () => {
         const search = {
             category: formValue.category,
             keywords: [formValue.keyword],
+            language: formValue.language || 'en',
             timeframe: toTimeframe(formValue.timeframe, customRange),
         };
         const allNews = await SearchApi.getNews(search, token);
@@ -210,12 +211,12 @@ export const SearchPage = () => {
         setSummaries(data.news);
     };
 
-    // categories of feeds that can be searched
+    // categories of feeds that can be searched, they belong to the language chosen
     useEffect(() => {
-        SearchApi.getCategories()
+        SearchApi.getCategories(formValue.language || 'en')
             .then(data => setCategoryOptions(data.categories))
             .catch(e => console.error("Failed to fetch categories", e));
-    }, []);
+    }, [formValue.language]);
 
     // show the resumes once generated
     useEffect(() => {
@@ -422,7 +423,6 @@ console.log(selectPickerData);
                                             accepter={SelectPicker}
                                             data={languageOptions}
                                             defaultValue={'en'}
-                                            disabledItemValues={['fr', 'es', 'ch', 'ru']}
                                             error={formError.language}
                                             block
                                         />
@@ -478,7 +478,8 @@ console.log(selectPickerData);
                                         </Form.Label>
                                         {showSources && (
                                             <UserFeeds token={token} categories={categoryOptions} api={FeedApi}
-                                                       reloadKey={sourcesVersion}/>
+                                                       reloadKey={sourcesVersion}
+                                                       language={formValue.language || 'en'}/>
                                         )}
                                         <Form.HelpText>
                                             Websites you add are searched with the others, but only in your searches

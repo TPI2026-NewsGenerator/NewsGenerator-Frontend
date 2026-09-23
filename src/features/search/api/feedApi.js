@@ -18,20 +18,20 @@ export const FeedApi = {
         return await response.json();
     },
     // site: the address of a website ("fortune.com"), the server finds its feed
-    addUserFeed: async ({site, category}, token) => {
+    addUserFeed: async ({site, category, language}, token) => {
         const response = await fetch(`${API_URL}/feeds`, {
             method: 'POST',
             headers: headers(token),
-            body: JSON.stringify({site, category}),
+            body: JSON.stringify({site, category, language}),
         });
         return await response.json();
     },
     // media covering the last search that are missing from the sources of the user
-    suggestSources: async ({keywords, timeframe}, token) => {
+    suggestSources: async ({keywords, timeframe, language}, token) => {
         const response = await fetch(`${API_URL}/feeds/suggestions`, {
             method: 'POST',
             headers: headers(token),
-            body: JSON.stringify({keywords, timeframe}),
+            body: JSON.stringify({keywords, timeframe, language}),
         });
         return await response.json();
     },

@@ -46,7 +46,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
 
     const handleLook = async () => {
         setIsLooking(true);
-        const data = await api.suggestSources({keywords: search.keywords, timeframe: search.timeframe}, token);
+        const data = await api.suggestSources({keywords: search.keywords, timeframe: search.timeframe, language: search.language}, token);
         setIsLooking(false);
 
         if (!data || data.error) {

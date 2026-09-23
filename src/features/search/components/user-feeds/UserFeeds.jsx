@@ -12,7 +12,7 @@ import {
 } from "rsuite";
 import {FaPlus, FaSearch, FaTrash} from "react-icons/fa";
 
-export const UserFeeds = ({token, categories, api, reloadKey}) => {
+export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');
     const [category, setCategory] = useState(null);
@@ -45,7 +45,7 @@ export const UserFeeds = ({token, categories, api, reloadKey}) => {
         if (!needCategory()) return;
 
         setIsAdding(true);
-        const data = await api.addUserFeed({site: site.trim(), category}, token);
+        const data = await api.addUserFeed({site: site.trim(), category, language}, token);
         setIsAdding(false);
 
         if (!data || data.error) {
