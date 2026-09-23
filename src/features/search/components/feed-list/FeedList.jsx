@@ -6,7 +6,7 @@
 //
 
 import {List, Box, Table, Loader, VStack, toaster, Message, Text, Button, SelectPicker, HStack, Tag, } from "rsuite";
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {FaMagic} from "react-icons/fa";
 import {Article} from "../article/Article.jsx";
 import {VscFilter, VscFilterFilled} from "react-icons/vsc";
@@ -81,6 +81,35 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
     useEffect(() => {
         setFilteredData(newsList);
     }, [newsList]);
+
+    // The table holds every card of the list, 200 and more of them. Selecting one changes
+    // 'selectedCount', which renders this component again: without these two, a new renderRow is
+    // built each time and the table walks all its rows again, which took 3 seconds a click.
+    // Kept apart, the table is only rebuilt when the news themselves change.
+    const renderRow = useCallback((children, rowData) => (
+        <Box padding={20}>
+            <Article id={rowData.url} onSelect={handleSelect} news={rowData}/>
+        </Box>
+    ), [handleSelect]);
+
+    const table = useMemo(() => (
+        <Table
+            virtualized
+            data={filteredData}
+            bordered={true}
+            autoHeight={true}
+            rowKey="url"
+            rowHeight={300}
+            hover={false}
+            showHeader={false}
+            renderRow={renderRow}
+        >
+            <Column flexGrow={1}>
+                <HeaderCell/>
+                <Cell dataKey="title"/>
+            </Column>
+        </Table>
+    ), [filteredData, renderRow]);
 
     return (
         <>
@@ -173,30 +202,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
                                 </HStack>
                             </VStack>
                         )}
-                        <Table
-                            virtualized
-                            data={filteredData}
-                            bordered={true}
-                            autoHeight={true}
-                            rowKey="url"
-                            rowHeight={300}
-                            hover={false}
-                            showHeader={false}
-                            renderRow={(children, rowData) => (
-                                <Box padding={20}>
-                                    <Article
-                                        id={rowData.url}
-                                        onSelect={handleSelect}
-                                        news={rowData}
-                                    />
-                                </Box>
-                            )}
-                        >
-                            <Column flexGrow={1} >
-                                <HeaderCell/>
-                                <Cell dataKey="title"/>
-                            </Column>
-                        </Table>
+                        {table}
                         {/*{loading && <FixedLoader />}*/}
                     </Box>
                     {/*<List divider={false} hover={false} size={'lg'}>*/}
