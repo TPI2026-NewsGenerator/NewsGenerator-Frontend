@@ -9,6 +9,15 @@ import {forwardRef} from "react";
 import {Button, Card, Heading, Message, Tag, TagGroup, Text, VStack} from "rsuite";
 import {FaExternalLinkAlt} from "react-icons/fa";
 
+// Who the article credits for what it reports, read by the AI while it summarizes. It describes
+// the article, never whether the news is true: an official statement can be a lie and an
+// unnamed source can be right.
+const SOURCING = {
+    named: {label: 'named sources', color: 'green', title: 'The article names who it credits: a person, a club, an institution'},
+    anonymous: {label: 'unnamed sources', color: 'yellow', title: 'The article relies on sources it does not name'},
+    none: {label: 'no source given', color: 'yellow', title: 'The article credits nobody for what it reports'},
+};
+
 export const SummaryList = forwardRef(({summaries}, ref) => {
     if (!summaries || summaries.length === 0) return null;
 
@@ -26,6 +35,10 @@ export const SummaryList = forwardRef(({summaries}, ref) => {
                                 <Tag size="sm">{new Date(news.publishedAt).toLocaleDateString()}</Tag>
                             )}
                             {news.topic && (<Tag size="sm" color="orange">{news.topic}</Tag>)}
+                            {news.sourcing && (<Tag size="sm" color={SOURCING[news.sourcing]?.color}
+                                                    title={SOURCING[news.sourcing]?.title}>
+                                {SOURCING[news.sourcing]?.label ?? news.sourcing}
+                            </Tag>)}
                         </TagGroup>
                         <Heading level={5}>{news.title}</Heading>
                     </Card.Header>

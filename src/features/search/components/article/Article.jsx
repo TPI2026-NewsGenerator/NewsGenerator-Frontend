@@ -16,6 +16,30 @@ export const Article = memo(({ id, onSelect, news }) => {
     // the same news can be in two feeds of the same media, show each source once
     const otherSources = [...new Map((news?.sources ?? []).map(other => [other.source, other])).values()];
 
+    // How many media carry this news, and how many of them wrote their own headline. Twenty media
+    // repeating one wire is one report seen twenty times; twenty that wrote their own each went and
+    // checked. Neither says the news is true, so nothing here is called reliable.
+    const coverage = (() => {
+        const {media, wordings} = news?.corroboration ?? {};
+        if (!media) return null;
+
+        if (media === 1) {
+            return {label: 'this source only', color: 'yellow', title: 'No other medium of your sources carries this news'};
+        }
+        if (wordings === 1) {
+            return {
+                label: `${media} media, same wording`,
+                color: 'cyan',
+                title: 'They publish the same text, most likely one wire republished: one report, not several',
+            };
+        }
+        return {
+            label: `${media} media, ${wordings} wordings`,
+            color: 'green',
+            title: `${wordings} of them wrote their own headline about it`,
+        };
+    })();
+
     const handleClick = () => {
         const nextChecked = !isChecked;
         const accepted = onSelect(id, nextChecked);
@@ -57,6 +81,12 @@ export const Article = memo(({ id, onSelect, news }) => {
                         {news && (<Tag size="sm">{news?.source}</Tag>)}
                         {news && (<Tag size="sm">{articleTime(news?.publishedAt)}</Tag>)}
                         {news?.topic && (<Tag size="sm" color="orange">{news.topic}</Tag>)}
+                        {coverage && (<Tag size="sm" color={coverage.color} title={coverage.title}>{coverage.label}</Tag>)}
+                        {news?.hedged && (
+                            <Tag size="sm" color="yellow" title={`The article says "${news.hedged}", so it has no confirmation of its own`}>
+                                says "{news.hedged}"
+                            </Tag>
+                        )}
                     </TagGroup>
                     {news && (<Heading level={6} style={{marginBottom: 5}}>{news?.title}</Heading>)}
                 </Card.Header>
