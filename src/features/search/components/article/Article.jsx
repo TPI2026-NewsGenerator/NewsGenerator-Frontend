@@ -16,14 +16,18 @@ export const Article = memo(({ id, onSelect, news }) => {
     // the same news can be in two feeds of the same media, show each source once
     const otherSources = [...new Map((news?.sources ?? []).map(other => [other.source, other])).values()];
 
-    // Past this many articles, a group has stopped being one news. Measured over three days in the
-    // five languages: 93% of the groups holding several articles hold two to four, and those read
-    // as one news. From five up, they are mixed. Some are still one news told by many papers, like
-    // the eight on Hakimi's appeal; others are a running story seen from every angle — thirty
-    // articles on the White House press ban, from the court filing to the late-night jokes — and a
-    // few are only a template, "3 interesting facts about <player>" repeated six times.
-    // So above it the card says how many media are on the story, and stops implying one news.
-    const RUNNING_STORY = 5;
+    // Past this many articles, a group has stopped being one news.
+    //
+    // This used to be five, when the server grouped on single links and a card could hold thirty
+    // articles chained from a court filing to the late-night jokes about it. The server now asks an
+    // article to resemble a whole group and not one of its members, and those chains are gone:
+    // measured over 522 cards in five searches, the largest true group holds eight articles — the
+    // eight papers on the diesel export ban, the seven on Burnham's first meeting with Trump — and
+    // nothing between nine and eleven exists at all. So the bar sits above them, at ten.
+    //
+    // It is a safety net rather than a common case: no group reaches it today. It stays because a
+    // group that large is not something to describe as one news on the word of one measurement.
+    const RUNNING_STORY = 10;
 
     // How many media carry this news, and how many of them wrote their own headline. Twenty media
     // repeating one wire is one report seen twenty times; twenty that wrote their own each went and

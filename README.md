@@ -10,8 +10,8 @@ What the search page shows, beyond the news themselves:
 
 - **how widely a news is carried** — how many media tell it, and how many of them wrote their own
   headline rather than republishing a wire. It says what was counted, never that the news is true.
-  Above five articles the card says `N media on this story` instead: a group that large is a running
-  story followed from several angles, not one news confirmed that many times;
+  Above ten articles the card says `N media on this story` instead, as a safety net: a group that
+  large is a running story followed from several angles, not one news confirmed that many times;
 - **the words the article used to hedge** (`says "reportedly"`), when it has any;
 - **the media this search missed**, read from Google News and GDELT: their news for reading only,
   and next to them the sources that can be added in one click. Those sources are private to the user;
