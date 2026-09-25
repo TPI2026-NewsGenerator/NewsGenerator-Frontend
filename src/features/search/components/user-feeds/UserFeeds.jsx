@@ -10,7 +10,7 @@ import {
     Button, Checkbox, CheckboxGroup, HStack, IconButton, InputGroup, Input, Message, SelectPicker,
     Tag, Text, toaster, VStack
 } from "rsuite";
-import {FaPlus, FaRegStar, FaSearch, FaStar, FaTrash} from "react-icons/fa";
+import {FaPlus, FaRegStar, FaSearch, FaShareAlt, FaStar, FaTrash} from "react-icons/fa";
 
 export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) => {
     const [feeds, setFeeds] = useState([]);
@@ -106,16 +106,17 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         setSelected(selected.filter(feed => !done.includes(feed)));
     };
 
-    // a trusted source: among the stories close to the profile, the ones it tells come first
-    const handleTrust = async (feed) => {
-        const data = await api.setTrusted(feed.id, !feed.trusted, token);
+    // trusted: among the stories close to the profile, the ones it tells come first
+    // shared: it can be recommended to the other readers whose interests it publishes on
+    const handleChange = async (feed, changes) => {
+        const data = await api.updateFeed(feed.id, changes, token);
 
         if (!data || data.error) {
             toaster.push(<Message type="error">{data?.error ?? "This source could not be changed."}</Message>);
             return;
         }
 
-        setFeeds(feeds.map(other => other.id === feed.id ? {...other, trusted: data.trusted} : other));
+        setFeeds(feeds.map(other => other.id === feed.id ? {...other, trusted: data.trusted, shared: data.shared} : other));
     };
 
     const handleDelete = async (feed) => {
@@ -196,7 +197,17 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
                                         title={feed.trusted
                                             ? 'Trusted: its stories come first in your briefing when they fit your interests'
                                             : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                        onClick={() => handleTrust(feed)}/>
+                                        onClick={() => handleChange(feed, {trusted: !feed.trusted})}/>
+                        )}
+                        {feed.origin !== 'profile' && (
+                            <IconButton size="xs" appearance={feed.shared ? 'primary' : 'subtle'} color="blue"
+                                        icon={<FaShareAlt/>}
+                                        aria-label={feed.shared ? `Stop sharing ${feed.site}` : `Share ${feed.site}`}
+                                        aria-pressed={Boolean(feed.shared)}
+                                        title={feed.shared
+                                            ? 'Shared: it can be recommended to the other readers who follow its subjects'
+                                            : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
+                                        onClick={() => handleChange(feed, {shared: !feed.shared})}/>
                         )}
                         <Tag color="orange">{feed.category}</Tag>
                         <Text style={{flex: 1}}>{feed.site}</Text>

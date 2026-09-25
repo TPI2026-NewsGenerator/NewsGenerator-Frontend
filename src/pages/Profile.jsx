@@ -14,6 +14,8 @@ import {
 import TrashIcon from '@rsuite/icons/Trash';
 import {CustomNavbar} from "@/features/navbar/components/Navbar.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
+import {FeedApi} from "@/features/search/api/feedApi.js";
+import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 
 const POLL_MS = 5000;
@@ -114,6 +116,7 @@ export const ProfilePage = () => {
     };
 
     const discovery = DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
+    const limits = data?.limits ?? {profileFeeds: 60, relevanceDays: 14};
 
     return (
         <CustomProvider theme="light">
@@ -173,8 +176,10 @@ export const ProfilePage = () => {
                                     <Tag color={discovery.color}>{discovery.label}</Tag>
                                 </HStack>
                                 <Text muted size="sm" marginTop={6}>
-                                    The media that publish on your interests, and in each of them the section about them.
-                                    They are read with the shared sources, only for you.
+                                    The media that publish on your interests, and in each of them the section about them,
+                                    read with the shared sources, only for you. Each search adds new ones to these, up
+                                    to {limits.profileFeeds}; a source with no news on your interests
+                                    in {limits.relevanceDays} days is removed.
                                 </Text>
                                 {discovering && <Loader content="This takes a few minutes…" style={{marginTop: 10}}/>}
                                 {data.profile.discovery.status === 'failed' && (
@@ -186,7 +191,11 @@ export const ProfilePage = () => {
                                 <ul className="briefing-sources">
                                     {data.sources.map(source => (
                                         <li key={source.id}>
-                                            <b>{source.site}</b> <Tag size="sm">{source.category}</Tag> {source.language && <Tag size="sm">{source.language}</Tag>}
+                                            <b>{source.site}</b> <Tag size="sm">{source.category}</Tag> {source.language && <Tag size="sm">{source.language}</Tag>}{' '}
+                                            <Tag size="sm" color={source.relevant > 0 ? 'green' : undefined}
+                                                 title={`Its news of the last ${limits.relevanceDays} days on your interests`}>
+                                                {source.relevant > 0 ? `${source.relevant} news on your interests` : 'nothing on your interests lately'}
+                                            </Tag>
                                             {source.error && <Text as="span" size="sm" style={{color: "var(--rs-red-500)"}}> {source.error}</Text>}
                                             <Text muted size="sm">{source.url}</Text>
                                         </li>
@@ -194,9 +203,14 @@ export const ProfilePage = () => {
                                 </ul>
                                 <Button style={{marginTop: 10}} disabled={discovering || busy}
                                         onClick={() => change(() => ProfileApi.rediscover(token))}>
-                                    Find my sources again
+                                    Find more sources
                                 </Button>
                             </Card>
+                        )}
+
+                        {data?.profile && (
+                            <RecommendedSources token={token} api={FeedApi} expired={expired}
+                                                reloadKey={`${data.profile.discovery.status}:${data.interests.map(interest => interest.id).join(',')}`}/>
                         )}
 
                         {data?.refusedSources?.length > 0 && (

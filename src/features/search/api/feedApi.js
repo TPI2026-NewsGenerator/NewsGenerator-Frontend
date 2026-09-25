@@ -59,12 +59,27 @@ export const FeedApi = {
         const response = await fetch(`${API_URL}/feeds/${id}`, {method: 'DELETE', headers: headers(token)});
         return await response.json();
     },
-    // a source added by hand the user trusts: its stories come first in the briefing
-    setTrusted: async (id, trusted, token) => {
+    // a source added by hand, {trusted} and/or {shared}. Trusted: its stories come first in the
+    // briefing. Shared: it can be recommended to the other readers whose interests it publishes on
+    updateFeed: async (id, changes, token) => {
         const response = await fetch(`${API_URL}/feeds/${id}`, {
             method: 'PATCH',
             headers: headers(token),
-            body: JSON.stringify({trusted}),
+            body: JSON.stringify(changes),
+        });
+        return await response.json();
+    },
+    // {sources}: feeds found for other readers, or shared by them, that publish on the interests of this one
+    getRecommended: async (token) => {
+        const response = await fetch(`${API_URL}/feeds/recommended`, {method: 'GET', headers: headers(token)});
+        return await response.json();
+    },
+    // {feeds, errors}: the recommended sources added, by their id
+    addRecommended: async (ids, token) => {
+        const response = await fetch(`${API_URL}/feeds/recommended`, {
+            method: 'POST',
+            headers: headers(token),
+            body: JSON.stringify({ids}),
         });
         return await response.json();
     },
