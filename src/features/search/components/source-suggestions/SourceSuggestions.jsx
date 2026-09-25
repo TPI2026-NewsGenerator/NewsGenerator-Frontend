@@ -72,7 +72,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
             .map(source => ({site: source.site, feed: source.feed, category}));
 
         setIsAdding(true);
-        const data = await api.importSources(chosen, token, search.language);
+        const data = await api.importSources(chosen, token, search.language, search.keywords);
         setIsAdding(false);
 
         if (!data || data.error) {

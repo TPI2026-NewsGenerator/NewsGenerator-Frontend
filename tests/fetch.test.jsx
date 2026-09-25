@@ -9,17 +9,20 @@ import '@testing-library/jest-dom';
 import { it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {MemoryRouter} from "react-router-dom";
-import {FetchPage} from "@/pages/Search.jsx";
+import {SearchPage} from "@/pages/Search.jsx";
 
 
 it('display the fetch button', () => {
     render(
         <MemoryRouter>
-            <FetchPage />
+            <SearchPage />
         </MemoryRouter>
     );
 
-    const button = screen.getByRole('button', {name: /Fetch SearchApi/i });
+    // the button that fetches the news, next to "Save search" which also mentions search
+    const button = screen.getByRole('button', {name: 'Search'});
 
     expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute('name', 'fetchNews');
+    expect(button).toBeEnabled();
 });

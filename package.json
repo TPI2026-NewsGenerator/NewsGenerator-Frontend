@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "type": "module",
     "scripts": {
-        "dev": "concurrently --names server,client --prefix-colors blue,magenta --kill-others-on-fail \"pnpm --dir ../server run ndm_server\" \"vite\"",
+        "dev": "concurrently --names server,embedder,client --prefix-colors blue,green,magenta --kill-others-on-fail \"pnpm --dir ../server run ndm_server\" \"pnpm --dir ../server run embedder\" \"vite\"",
         "dev:client": "vite",
         "test": "vitest",
         "coverage": "vitest run --coverage",

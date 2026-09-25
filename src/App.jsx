@@ -11,6 +11,8 @@ import './App.css'
 import { Routes, Route, Navigate } from "react-router-dom";
 import {SearchPage} from "@/pages/Search.jsx";
 import {LoginPage} from "@/pages/Login.jsx";
+import {BriefingPage} from "@/pages/Briefing.jsx";
+import {ProfilePage} from "@/pages/Profile.jsx";
 import {useEffect} from "react";
 import {jwtDecode} from "jwt-decode";
 
@@ -27,9 +29,11 @@ function App() {
 
     return (
         <Routes>
+            <Route path="/briefing" element={<BriefingPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<Navigate to="/search" />} />
+            <Route path="/" element={<Navigate to="/briefing" />} />
         </Routes>
     );
 }

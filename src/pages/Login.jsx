@@ -58,7 +58,7 @@ export const LoginPage = () => {
         // if successfully retrieved user data
         if (user.token) {
             localStorage.setItem("JWT", user.token);
-            navigate('/search')
+            navigate('/')
         }
     };
 

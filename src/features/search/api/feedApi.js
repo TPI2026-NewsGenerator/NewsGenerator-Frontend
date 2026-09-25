@@ -45,18 +45,27 @@ export const FeedApi = {
         return await response.json();
     },
     // add several suggested sources at once: [{site, feed, category}]
-    // the language is sent with them: a site that publishes no feed has its own read again by the
-    // server, and the language tells it which section of the site to read
-    importSources: async (sources, token, language = 'en') => {
+    // the language and the keywords are sent with them: a site that publishes no feed has its own
+    // read again by the server, and they tell it which section of the site to read
+    importSources: async (sources, token, language = 'en', subject = null) => {
         const response = await fetch(`${API_URL}/feeds/import`, {
             method: 'POST',
             headers: headers(token),
-            body: JSON.stringify({sources, language}),
+            body: JSON.stringify({sources, language, subject}),
         });
         return await response.json();
     },
     deleteUserFeed: async (id, token) => {
         const response = await fetch(`${API_URL}/feeds/${id}`, {method: 'DELETE', headers: headers(token)});
+        return await response.json();
+    },
+    // a source added by hand the user trusts: its stories come first in the briefing
+    setTrusted: async (id, trusted, token) => {
+        const response = await fetch(`${API_URL}/feeds/${id}`, {
+            method: 'PATCH',
+            headers: headers(token),
+            body: JSON.stringify({trusted}),
+        });
         return await response.json();
     },
 }

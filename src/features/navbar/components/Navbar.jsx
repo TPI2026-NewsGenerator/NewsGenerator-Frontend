@@ -5,7 +5,7 @@ import {forwardRef} from "react";
 import {useNavigate} from "react-router-dom";
 
 const Brand = () => (
-    <Navbar.Brand href="/search" color={'orange'}>
+    <Navbar.Brand href="/briefing" color={'orange'}>
         {/*<IoLogoReact size={26}/>*/}NewsGenerator
     </Navbar.Brand>
 );
@@ -25,6 +25,8 @@ export const CustomNavbar = ({user, removeAuthCredentials}) => {
             <Navbar.Content showFrom="xs">
                 <Brand/>
                 <Nav>
+                    <Nav.Item href={'/briefing'}>Briefing</Nav.Item>
+                    <Nav.Item href={'/profile'}>Profile</Nav.Item>
                     <Nav.Item href={'/search'}>Search</Nav.Item>
                 </Nav>
             </Navbar.Content>

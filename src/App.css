@@ -152,3 +152,19 @@
     pointer-events: none;
     transition: opacity 0.3s ease;
 }
+
+/* the articles of a story in the briefing, the sources of the profile */
+.briefing-sources {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+}
+
+.briefing-sources li {
+    padding: 4px 0;
+    overflow-wrap: anywhere;
+}
+
+.briefing-sources a {
+    color: inherit;
+}
