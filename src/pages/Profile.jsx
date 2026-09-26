@@ -181,6 +181,12 @@ export const ProfilePage = () => {
                                     to {limits.profileFeeds}; a source with no news on your interests
                                     in {limits.relevanceDays} days is removed.
                                 </Text>
+                                {data.googleSearches > 0 && (
+                                    <Text muted size="sm" marginTop={6}>
+                                        Google News is also searched for your interests ({data.googleSearches} searches,
+                                        every hour): a story it alone tells needs two media, or one we already read.
+                                    </Text>
+                                )}
                                 {discovering && <Loader content="This takes a few minutes…" style={{marginTop: 10}}/>}
                                 {data.profile.discovery.status === 'failed' && (
                                     <Message type="error" marginTop={10}>{data.profile.discovery.error}</Message>
