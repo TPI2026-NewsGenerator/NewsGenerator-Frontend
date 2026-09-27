@@ -1,43 +1,38 @@
-/*from: "https://github.com/rsuite/rsuite/blob/95a673b8fcc828d439a0989861ee8dc13ce641e8/examples/create-react-app/src/index.css"*/
+/* Editorial design: paper and ink, one oxblood accent, a serif display face (Fraunces) and a text
+   face (Source Serif 4), structure drawn with hairline rules on a 12-column grid. */
 
-@import 'rsuite/TagPicker/styles/index.css';
+@import "@fontsource-variable/fraunces/opsz.css";
+@import "@fontsource-variable/fraunces/opsz-italic.css";
+@import "@fontsource-variable/source-serif-4/opsz.css";
+@import "@fontsource-variable/source-serif-4/opsz-italic.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-/*---break---*/
+
 @custom-variant dark (&:is(.dark *));
 
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
-    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+/* the fallback takes the size of the webfont, so the page does not move when the font arrives */
+@font-face {
+    font-family: "Serif Fallback";
+    src: local("Georgia");
+    size-adjust: 104%;
+    ascent-override: 92%;
+    descent-override: 24%;
 }
 
-code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+@theme {
+    --font-display: "Fraunces Variable", "Serif Fallback", Georgia, serif;
+    --font-text: "Source Serif 4 Variable", "Serif Fallback", Georgia, serif;
 }
-
-/*---break---*/
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
+    --font-sans: var(--font-text);
+    --font-heading: var(--font-display);
+    --color-paper: var(--paper);
+    --color-ink: var(--ink);
+    --color-ink-mute: var(--ink-mute);
+    --color-rule: var(--rule);
+    --color-accent-ink: var(--accent-ink);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -56,98 +51,253 @@ code {
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+    --radius-sm: 0;
+    --radius-md: 0;
+    --radius-lg: 0;
+    --radius-xl: 0;
 }
 
-/*---break---*/
-
+/* the shadcn names point at the same paper and ink, so a component added later fits in */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --paper: #FBF9F4;
+    --ink: #1A1815;
+    --ink-mute: #6B655C;
+    --rule: #DAD3C7;
+    --accent-ink: #A6301F;
+
+    --background: var(--paper);
+    --foreground: var(--ink);
+    --card: var(--paper);
+    --card-foreground: var(--ink);
+    --popover: var(--paper);
+    --popover-foreground: var(--ink);
+    --primary: var(--ink);
+    --primary-foreground: var(--paper);
+    --secondary: #F3EFE6;
+    --secondary-foreground: var(--ink);
+    --muted: #F3EFE6;
+    --muted-foreground: var(--ink-mute);
+    --accent: #F3EFE6;
+    --accent-foreground: var(--ink);
+    --destructive: var(--accent-ink);
+    --border: var(--rule);
+    --input: var(--rule);
+    --ring: var(--accent-ink);
+    --radius: 0;
 }
 
-/*---break---*/
+@media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+        --paper: #17150F;
+        --ink: #ECE7DC;
+        --ink-mute: #9A9384;
+        --rule: #35312A;
+        --accent-ink: #E0654F;
+        --secondary: #221F18;
+        --muted: #221F18;
+        --accent: #221F18;
+    }
+}
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --paper: #17150F;
+    --ink: #ECE7DC;
+    --ink-mute: #9A9384;
+    --rule: #35312A;
+    --accent-ink: #E0654F;
+    --secondary: #221F18;
+    --muted: #221F18;
+    --accent: #221F18;
 }
 
-/*---break---*/
-
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-rule outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+
+    html {
+        -webkit-text-size-adjust: 100%;
     }
-  html {
-    @apply font-sans;
+
+    body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-text);
+        font-size: 1.0625rem;
+        line-height: 1.6;
+        font-optical-sizing: auto;
+        font-variant-numeric: oldstyle-nums proportional-nums;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4 {
+        font-family: var(--font-display);
+        font-optical-sizing: auto;
+        font-weight: 450;
+        margin: 0;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    ::selection {
+        background: color-mix(in srgb, var(--accent-ink) 22%, transparent);
+    }
+
+    code {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 0.85em;
+        padding: 0.05em 0.3em;
+        background: var(--secondary);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--accent-ink);
+        outline-offset: 2px;
+    }
+}
+
+@layer components {
+    /* the page: one container, one grid, the spans change */
+    .page {
+        @apply mx-auto w-full max-w-[1280px] px-6 md:px-10;
+    }
+
+    .grid-12 {
+        @apply grid grid-cols-12 gap-x-6 xl:gap-x-8;
+    }
+
+    .display {
+        font-family: var(--font-display);
+        font-size: clamp(2.5rem, 6vw, 5rem);
+        line-height: 1.04;
+        letter-spacing: -0.01em;
+        font-weight: 420;
+    }
+
+    .section-head {
+        font-family: var(--font-display);
+        font-size: clamp(1.6rem, 3vw, 2.5rem);
+        line-height: 1.1;
+        letter-spacing: -0.005em;
+        font-weight: 480;
+    }
+
+    .story-head {
+        font-family: var(--font-display);
+        font-size: clamp(1.45rem, 2.4vw, 2.1rem);
+        line-height: 1.12;
+        letter-spacing: -0.005em;
+        font-weight: 460;
+    }
+
+    .standfirst {
+        font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+        line-height: 1.4;
+        max-width: 50ch;
+    }
+
+    .body-text {
+        font-size: 1.125rem;
+        line-height: 1.6;
+        max-width: 66ch;
+    }
+
+    .body-text p + p {
+        margin-top: 1em;
+    }
+
+    /* real small caps, never uppercase text made smaller */
+    .kicker {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.1em;
+        line-height: 1.2;
+        color: var(--ink-mute);
+    }
+
+    .kicker-rule {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .kicker-rule::before {
+        content: "";
+        width: 3rem;
+        height: 1px;
+        background: var(--ink);
+    }
+
+    .caption {
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        letter-spacing: 0.01em;
+        color: var(--ink-mute);
+    }
+
+    .folio {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        line-height: 1.3;
+        letter-spacing: 0.02em;
+        color: var(--ink-mute);
+    }
+
+    .tabular {
+        font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    .link {
+        color: var(--accent-ink);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 4px;
+    }
+
+    .link:hover {
+        text-decoration-thickness: 2px;
+    }
+
+    /* the one drop cap of a page, on the first paragraph of its main text */
+    .lede::first-letter {
+        float: left;
+        font-family: var(--font-display);
+        font-size: 5.1em;
+        line-height: 0.76;
+        margin: 0.07em 0.08em 0 -0.02em;
+        color: var(--accent-ink);
+        font-weight: 500;
+    }
+
+    /* a long list of news: the rows off the screen are not laid out */
+    .lazy-row {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 220px;
+    }
+}
+
+@keyframes rule-run {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+.working-rule {
+    height: 1px;
+    background: var(--ink);
+    transform-origin: left;
+    animation: rule-run 2.4s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
     }
 }

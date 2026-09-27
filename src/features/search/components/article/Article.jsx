@@ -6,135 +6,133 @@
 //
 
 import {memo, useState} from "react";
-import {Button, Card, Checkbox, Heading, Tag, TagGroup, Text, VStack} from "rsuite";
-import { FaExternalLinkAlt } from "react-icons/fa";
-import './Article.css'
+import {Meta, MetaLine} from "@/components/ui/text.jsx";
+import {cn} from "@/lib/utils.js";
 
-export const Article = memo(({ id, onSelect, news }) => {
+// Past this many articles, a group has stopped being one news.
+//
+// This used to be five, when the server grouped on single links and a card could hold thirty
+// articles chained from a court filing to the late-night jokes about it. The server now asks an
+// article to resemble a whole group and not one of its members, and those chains are gone:
+// measured over 522 cards in five searches, the largest true group holds eight articles — the
+// eight papers on the diesel export ban, the seven on Burnham's first meeting with Trump — and
+// nothing between nine and eleven exists at all. So the bar sits above them, at ten.
+//
+// It is a safety net rather than a common case: no group reaches it today. It stays because a
+// group that large is not something to describe as one news on the word of one measurement.
+const RUNNING_STORY = 10;
+
+const articleTime = (at) => {
+    const minDiff = Math.floor((Date.now() - new Date(at)) / (1000 * 60));
+    const hourDiff = Math.floor(minDiff / 60);
+    const rtf = new Intl.RelativeTimeFormat('en', {numeric: 'auto'});
+
+    if (minDiff < 60) return rtf.format(-minDiff, 'minute');
+    if (hourDiff < 24) return rtf.format(-hourDiff, 'hour');
+    return rtf.format(-Math.floor(hourDiff / 24), 'day');
+};
+
+// How many media carry this news, and how many of them wrote their own headline. Twenty media
+// repeating one wire is one report seen twenty times; twenty that wrote their own each went and
+// checked. Neither says the news is true, so nothing here is called reliable.
+const coverageOf = (news) => {
+    const {media, wordings} = news?.corroboration ?? {};
+    if (!media) return null;
+
+    if (media === 1) {
+        return {label: 'this source only', title: 'No other medium of your sources carries this news'};
+    }
+    // identical texts are one wire whatever the size of the group, and that is worth saying
+    if (wordings === 1) {
+        return {
+            label: `${media} media, same wording`,
+            title: 'They publish the same text, most likely one wire republished: one report, not several',
+        };
+    }
+    if ((news?.sources?.length ?? 0) + 1 >= RUNNING_STORY) {
+        return {
+            label: `${media} media on this story`,
+            title: 'Too many articles here to be a single news: this is a running story, followed from '
+                + 'several angles. Read the count as the media on the story, not as a news confirmed '
+                + media + ' times.',
+        };
+    }
+    return {
+        label: `${media} media, ${wordings} wordings`,
+        title: `${wordings} of them wrote their own headline about it`,
+        tone: 'ink',
+    };
+};
+
+// a click on the row selects it for the AI resume, except on its links
+export const Article = memo(({id, onSelect, news}) => {
     const [isChecked, setIsChecked] = useState(false);
 
     // the same news can be in two feeds of the same media, show each source once
     const otherSources = [...new Map((news?.sources ?? []).map(other => [other.source, other])).values()];
+    const coverage = coverageOf(news);
 
-    // Past this many articles, a group has stopped being one news.
-    //
-    // This used to be five, when the server grouped on single links and a card could hold thirty
-    // articles chained from a court filing to the late-night jokes about it. The server now asks an
-    // article to resemble a whole group and not one of its members, and those chains are gone:
-    // measured over 522 cards in five searches, the largest true group holds eight articles — the
-    // eight papers on the diesel export ban, the seven on Burnham's first meeting with Trump — and
-    // nothing between nine and eleven exists at all. So the bar sits above them, at ten.
-    //
-    // It is a safety net rather than a common case: no group reaches it today. It stays because a
-    // group that large is not something to describe as one news on the word of one measurement.
-    const RUNNING_STORY = 10;
-
-    // How many media carry this news, and how many of them wrote their own headline. Twenty media
-    // repeating one wire is one report seen twenty times; twenty that wrote their own each went and
-    // checked. Neither says the news is true, so nothing here is called reliable.
-    const coverage = (() => {
-        const {media, wordings} = news?.corroboration ?? {};
-        if (!media) return null;
-
-        if (media === 1) {
-            return {label: 'this source only', color: 'yellow', title: 'No other medium of your sources carries this news'};
-        }
-        // identical texts are one wire whatever the size of the group, and that is worth saying
-        if (wordings === 1) {
-            return {
-                label: `${media} media, same wording`,
-                color: 'cyan',
-                title: 'They publish the same text, most likely one wire republished: one report, not several',
-            };
-        }
-        if ((news?.sources?.length ?? 0) + 1 >= RUNNING_STORY) {
-            return {
-                label: `${media} media on this story`,
-                color: 'cyan',
-                title: 'Too many articles here to be a single news: this is a running story, followed from '
-                    + 'several angles. Read the count as the media on the story, not as a news confirmed '
-                    + media + ' times.',
-            };
-        }
-        return {
-            label: `${media} media, ${wordings} wordings`,
-            color: 'green',
-            title: `${wordings} of them wrote their own headline about it`,
-        };
-    })();
-
-    const handleClick = () => {
+    const toggle = () => {
         const nextChecked = !isChecked;
         const accepted = onSelect(id, nextChecked);
         if (accepted) setIsChecked(nextChecked);
     };
 
-    const articleTime = (at) => {
-        const currentTime = new Date();
-        const articleTime = new Date(at);
+    const handleRowClick = (event) => {
+        if (event.target.closest('a, input, button')) return;
+        toggle();
+    };
 
-        // get diff time
-        const msDiff = currentTime - articleTime;
-        const minDiff = Math.floor(msDiff / (1000 * 60));
-        const hourDiff = Math.floor(minDiff / 60);
-        const dayDiff = Math.floor(hourDiff / 24);
-
-        const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
-        if (minDiff < 60) {
-            return rtf.format(-minDiff, 'minute');
-        } else if (hourDiff < 24) {
-            return rtf.format(-hourDiff, 'hour');
-        } else {
-            return rtf.format(-dayDiff, 'day');
-        }
-    }
+    if (!news) return null;
 
     return (
-        <Card className={`article ${isChecked ? 'checked' : ''}`} onClick={handleClick} direction="row" shaded>
-            {news && news.thumbnail !== null && (<img
-                src={news?.thumbnail}
-                alt="Shadow"
-                width={200}
-                style={{objectFit: 'cover'}}
-            />)}
-            <VStack spacing={2}>
-                <Card.Header>
-                    <TagGroup marginBottom={10}>
-                        {news && (<Tag size="sm">{news?.source}</Tag>)}
-                        {news && (<Tag size="sm">{articleTime(news?.publishedAt)}</Tag>)}
-                        {news?.topic && (<Tag size="sm" color="orange">{news.topic}</Tag>)}
-                        {coverage && (<Tag size="sm" color={coverage.color} title={coverage.title}>{coverage.label}</Tag>)}
-                        {news?.hedged && (
-                            <Tag size="sm" color="yellow" title={`The article says "${news.hedged}", so it has no confirmation of its own`}>
-                                says "{news.hedged}"
-                            </Tag>
-                        )}
-                    </TagGroup>
-                    {news && (<Heading level={6} style={{marginBottom: 5}}>{news?.title}</Heading>)}
-                </Card.Header>
-                <Card.Body>
-                    {news && (<Text marginBottom={30} style={{marginTop: 30}}>{news?.description}</Text>)}
-                    {otherSources.length > 0 && (
-                        <Text muted size="sm" marginBottom={10}>
-                            Also covered by{' '}
-                            {otherSources.map((other, index) => (
-                                <span key={other.url}>
-                                    {index > 0 && ', '}
-                                    <a href={other.url} target="_blank" rel="noreferrer"
-                                       onClick={event => event.stopPropagation()}>{other.source}</a>
-                                </span>
-                            ))}
-                        </Text>
+        <article onClick={handleRowClick}
+                 className={cn('grid-12 cursor-pointer gap-y-4 py-7 transition-colors',
+                     isChecked ? 'bg-secondary shadow-[inset_3px_0_0_var(--accent-ink)]' : 'hover:bg-secondary/60')}>
+            <div className="col-span-1 flex justify-center pt-1">
+                <input type="checkbox" checked={isChecked} onChange={toggle}
+                       aria-label={`Select “${news.title}” for the AI resume`}
+                       className="size-4 cursor-pointer accent-[var(--accent-ink)]"/>
+            </div>
+
+            {news.thumbnail && (
+                <figure className="col-span-11 m-0 md:col-span-3">
+                    <img src={news.thumbnail} alt="" loading="lazy" width={300} height={200}
+                         className="aspect-[3/2] w-full object-cover"/>
+                    <figcaption className="caption mt-1.5">Picture — {news.source}</figcaption>
+                </figure>
+            )}
+
+            <div className={cn('col-span-11 col-start-2', news.thumbnail ? 'md:col-span-7 md:col-start-5' : 'md:col-span-8')}>
+                <MetaLine>
+                    <Meta tone="ink">{news.source}</Meta>
+                    {news.publishedAt && <Meta><time dateTime={news.publishedAt}>{articleTime(news.publishedAt)}</time></Meta>}
+                    {news.topic && <Meta>{news.topic}</Meta>}
+                    {coverage && <Meta tone={coverage.tone} title={coverage.title}>{coverage.label}</Meta>}
+                    {news.hedged && (
+                        <Meta tone="accent" title={`The article says "${news.hedged}", so it has no confirmation of its own`}>
+                            says "{news.hedged}"
+                        </Meta>
                     )}
-                </Card.Body>
-                <Card.Footer>
-                    {news && (
-                        <Button startIcon={<FaExternalLinkAlt/>} href={news?.url} color={'orange'} appearance="ghost"> Read More</Button>
-                    )}
-                </Card.Footer>
-            </VStack>
-            <Checkbox checked={isChecked} position={'absolute'} top={13} right={5} color={'orange'} readOnly/>
-        </Card>
-    )
-})
+                </MetaLine>
+                <h3 className="mt-2 font-display text-[1.45rem] leading-[1.15] font-medium text-balance">{news.title}</h3>
+                {news.description && <p className="mt-3 max-w-[66ch] text-[1.0625rem] leading-relaxed text-ink/85">{news.description}</p>}
+                {otherSources.length > 0 && (
+                    <p className="caption mt-3 max-w-[66ch]">
+                        Also covered by{' '}
+                        {otherSources.map((other, index) => (
+                            <span key={other.url}>
+                                {index > 0 && ', '}
+                                <a href={other.url} target="_blank" rel="noreferrer" className="underline decoration-rule underline-offset-4 hover:text-ink">{other.source}</a>
+                            </span>
+                        ))}
+                    </p>
+                )}
+                <a href={news.url} target="_blank" rel="noreferrer" className="link mt-4 inline-block text-[0.9375rem]">
+                    Read the article ↗
+                </a>
+            </div>
+        </article>
+    );
+});
+Article.displayName = 'Article';

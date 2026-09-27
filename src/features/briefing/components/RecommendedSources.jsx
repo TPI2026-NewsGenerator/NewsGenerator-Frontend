@@ -7,7 +7,10 @@
 //
 
 import {useEffect, useState} from "react";
-import {Button, Card, Heading, HStack, Loader, Message, Tag, Text, toaster} from "rsuite";
+import {Section} from "@/components/layout/Page.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
+import {toast} from "@/lib/toast.js";
 
 // api: FeedApi. reloadKey: asked again when it changes (a discovery done, the interests changed)
 export const RecommendedSources = ({token, api, expired, reloadKey}) => {
@@ -35,65 +38,69 @@ export const RecommendedSources = ({token, api, expired, reloadKey}) => {
             const answer = await api.addRecommended(ids, token);
             if (expired(answer)) return;
             if (answer.error) {
-                toaster.push(<Message type="error">{answer.error}</Message>);
+                toast.error(answer.error);
                 return;
             }
             const done = new Set((answer.feeds ?? []).map(feed => feed.url));
             if (done.size > 0) {
-                toaster.push(<Message type="success">
-                    {done.size} source{done.size > 1 ? 's' : ''} added: you find them with the ones you added by hand, on the search page.
-                </Message>);
+                toast.success(`${done.size} source${done.size > 1 ? 's' : ''} added: you find them with the ones you added by hand, on the search page.`);
             }
             for (const failed of answer.errors ?? []) {
-                toaster.push(<Message type="error">{failed.site ?? 'A source'}: {failed.error}</Message>);
+                toast.error(`${failed.site ?? 'A source'}: ${failed.error}`);
             }
             const failedIds = new Set((answer.errors ?? []).map(failed => failed.id));
             setSources(sources.filter(source => !ids.includes(source.id) || failedIds.has(source.id)));
         } catch (err) {
-            toaster.push(<Message type="error">{err.message}</Message>);
+            toast.error(err.message);
         } finally {
             setAdding(null);
         }
     };
 
-    if (error) return <Message type="error">{error}</Message>;
-    if (sources === null) return <Loader content="Looking for sources you could add…"/>;
+    if (error) return <div className="page mt-20"><Notice type="error">{error}</Notice></div>;
+    if (sources === null) return <div className="page mt-20"><Working>Looking for sources you could add…</Working></div>;
     if (sources.length === 0) return null;
 
     return (
-        <Card padding={20} bordered>
-            <HStack justifyContent="space-between" alignItems="center">
-                <Heading level={5}>Sources you could add</Heading>
-                <Button size="sm" appearance="primary" color="orange" loading={adding?.length > 1} disabled={adding !== null}
+        <Section
+            kicker="From other readers"
+            title="Sources you could add"
+            intro={<>
+                Found for the profiles of other readers, or shared by them, they published on your interests this week.
+                A source another reader added by hand is never shown here unless they chose to share it.
+            </>}
+            aside={
+                <Button variant="primary" size="sm" loading={adding?.length > 1} disabled={adding !== null}
                         onClick={() => add(sources.map(source => source.id))}>
                     Add all {sources.length}
                 </Button>
-            </HStack>
-            <Text muted size="sm" marginTop={6}>
-                Found for the profiles of other readers, or shared by them, they published on your interests this week.
-                A source another reader added by hand is never shown here unless they chose to share it.
-            </Text>
-            <ul className="briefing-sources">
+            }
+        >
+            <ul className="border-t border-rule">
                 {sources.map(source => (
-                    <li key={source.id}>
-                        <HStack justifyContent="space-between" alignItems="center">
-                            <div style={{minWidth: 0}}>
-                                <b>{source.site}</b>{' '}
-                                <Tag size="sm" color="green">{source.relevant} of {source.news} news on your interests</Tag>{' '}
-                                <Tag size="sm">{source.category}</Tag>{' '}
-                                {source.language && <Tag size="sm">{source.language}</Tag>}
-                                {source.samples?.map(title => (
-                                    <Text key={title} muted size="sm" style={{overflowWrap: 'anywhere'}}>“{title}”</Text>
-                                ))}
-                            </div>
+                    <li key={source.id} className="grid-12 items-baseline gap-y-2 border-b border-rule py-5">
+                        <div className="col-span-12 md:col-span-3">
+                            <p className="font-semibold [overflow-wrap:anywhere]">{source.site}</p>
+                            <MetaLine className="mt-1">
+                                <Meta>{source.category}</Meta>
+                                {source.language && <Meta>{source.language}</Meta>}
+                            </MetaLine>
+                        </div>
+                        <div className="col-span-12 md:col-span-6">
+                            <Meta tone="ink">{source.relevant} of {source.news} news on your interests</Meta>
+                            {source.samples?.map(title => (
+                                <p key={title} className="caption mt-1 italic [overflow-wrap:anywhere]">“{title}”</p>
+                            ))}
+                        </div>
+                        <div className="col-span-12 md:col-span-3 md:justify-self-end">
                             <Button size="sm" disabled={adding !== null} loading={adding?.length === 1 && adding[0] === source.id}
                                     onClick={() => add([source.id])}>
                                 Add
                             </Button>
-                        </HStack>
+                        </div>
                     </li>
                 ))}
             </ul>
-        </Card>
+        </Section>
     );
 };

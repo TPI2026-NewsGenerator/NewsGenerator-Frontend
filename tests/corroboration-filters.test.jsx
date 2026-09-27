@@ -38,11 +38,10 @@ const openFilters = () => {
     fireEvent.click(screen.getByRole('button', {name: /filter/i}));
 };
 
-// the pickers are rsuite comboboxes: clicking one opens its list, the option is clicked in it
+// the pickers are native selects: the option is found by its text, and chosen by its value
 const choose = (label, option) => {
-    const picker = screen.getByText(label).parentElement;
-    fireEvent.click(within(picker).getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', {name: option}));
+    const picker = screen.getByLabelText(label);
+    fireEvent.change(picker, {target: {value: within(picker).getByRole('option', {name: option}).value}});
 };
 
 const apply = () => fireEvent.click(screen.getByRole('button', {name: /apply filters/i}));

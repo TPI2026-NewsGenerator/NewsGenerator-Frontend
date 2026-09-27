@@ -5,32 +5,22 @@
 //  Description: Search page for frontend
 //
 
-import {forwardRef, useEffect, useRef, useState} from "react";
-import {
-    Button,
-    Container,
-    Content,
-    CustomProvider,
-    VStack,
-    Form, Checkbox, CheckboxGroup, toaster, Message, ButtonToolbar, SelectPicker, Card, Loader,
-    Tag, Text, HStack, TagGroup, Modal, DateRangePicker, Whisper, Popover
-} from "rsuite";
-import {FaInfoCircle} from "react-icons/fa";
+import {useEffect, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
-import {SchemaModel, StringType, ArrayType} from 'rsuite/Schema';
-import GradientText from "@/features/search/components/text-gradient/TextGradient.jsx";
-import TextType from '@/features/search/components/text-type/TextType.jsx';
+import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {CheckboxGroup, FieldError, Help, Input, Label, Select} from "@/components/ui/field.jsx";
+import {Dialog} from "@/components/ui/overlay.jsx";
 import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
 import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
 import {UserFeeds} from "@/features/search/components/user-feeds/UserFeeds.jsx";
 import {SourceSuggestions} from "@/features/search/components/source-suggestions/SourceSuggestions.jsx";
-import {CustomNavbar} from '../features/navbar/components/Navbar.jsx'
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
+import {toast} from "@/lib/toast.js";
 
-// rsuite SelectPicker data
 const languageOptions = [
     {value: 'en', label: 'English'},
     {value: 'fr', label: 'French'},
@@ -41,12 +31,12 @@ const languageOptions = [
 
 // hours: news not older than this, null: no limit or a range chosen by the user
 const timeframeOptions = [
-    {value: 'h', label: 'Last Hour', hours: 1},
-    {value: 'd', label: 'Last 24 Hours', hours: 24},
-    {value: 'w', label: 'Last 7 Days', hours: 24 * 7},
-    {value: 'm', label: 'Last 30 Days', hours: 24 * 30},
-    {value: 'a', label: 'All Time', hours: null},
-    {value: 'c', label: 'Custom range...', hours: null},
+    {value: 'h', label: 'Last hour', hours: 1},
+    {value: 'd', label: 'Last 24 hours', hours: 24},
+    {value: 'w', label: 'Last 7 days', hours: 24 * 7},
+    {value: 'm', label: 'Last 30 days', hours: 24 * 30},
+    {value: 'a', label: 'All time', hours: null},
+    {value: 'c', label: 'Custom range…', hours: null},
 ];
 
 // timeframe of the form -> {start, end} sent to the API
@@ -60,18 +50,10 @@ const toTimeframe = (timeframe, range) => {
     return hours ? {start: new Date(Date.now() - hours * 3600 * 1000).toISOString()} : {};
 };
 
-const Field = forwardRef((props, ref) => {
-    const {name, message, label, accepter, error, ...rest} = props;
-    return (
-        <Form.Group controlId={`${name}-10`} ref={ref} className={error ? 'has-error' : ''}>
-            <Form.Label>{label} </Form.Label>
-            <Form.Control name={name} accepter={accepter} errorMessage={error} {...rest} />
-            <Form.Text>{message}</Form.Text>
-        </Form.Group>
-    );
-});
+// "2026-09-28T10:30" of a datetime-local field, in the time of the user
+const localInput = (date) => date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
 
-// examples shown by the "i" next to the Keywords field
+// examples set beside the Keywords field
 const KEYWORD_EXAMPLES = [
     ['referee', 'one word, the widest search'],
     ['referee, VAR', 'one or the other, widest still'],
@@ -81,64 +63,34 @@ const KEYWORD_EXAMPLES = [
     ['-"red card"', 'excludes an exact phrase too'],
 ];
 
-const keywordsHelp = (
-    <Popover title="How to write keywords" style={{maxWidth: 380}}>
-        <Text muted size="sm" marginBottom={10}>
-            Searched in the title, the description and the categories of the news.
-        </Text>
-        <table>
-            <tbody>
-            {KEYWORD_EXAMPLES.map(([example, meaning]) => (
-                <tr key={example}>
-                    <td style={{padding: '3px 12px 3px 0', whiteSpace: 'nowrap'}}>
-                        <code>{example}</code>
-                    </td>
-                    <td style={{padding: '3px 0'}}>{meaning}</td>
-                </tr>
-            ))}
-            </tbody>
-        </table>
-        <Text muted size="sm" marginTop={10}>
-            A word also finds its variants: <code>referee</code> finds "referees".
-            Words of 3 letters or less must match a whole word, so <code>VAR</code> does not find "Alvarez".
-        </Text>
-        <Text muted size="sm" marginTop={10}>
-            Unlike a web search, several words <b>remove</b> the news that do not have them all:
-            <code>referee football soccer</code> asks for the three at once and finds almost nothing.
-            Start with one word, add commas to widen, add words to narrow.
-        </Text>
-    </Popover>
-);
+const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
-const model = SchemaModel({
-    keyword: StringType()
-        .isRequired('At least 1 keyword required.'),
-    category: ArrayType()
-        .minLength(1, 'Please select at least 1 category.')
-        .isRequired('At least 1 category required.'),
-    language: StringType()
-        .minLength(1, 'Please select a language.')
-        .isRequired('A language required.'),
-    // timeframe: ArrayType()
-    //     .minLength(1, 'Please select a timeframe.')
-    //     .isRequired('A timeframe required.')
+// the fields a search needs, with what to tell when one is missing
+const check = (form) => ({
+    keyword: form.keyword.trim() ? null : 'At least 1 keyword required.',
+    category: form.category.length > 0 ? null : 'Please select at least 1 category.',
+    language: form.language ? null : 'A language required.',
 });
 
 export const SearchPage = () => {
     const navigate = useNavigate();
-    const [newsList, setNewsList] = useState([])
+    const [newsList, setNewsList] = useState([]);
     // AI resumes of the selected news
-    const [summaries, setSummaries] = useState([])
+    const [summaries, setSummaries] = useState([]);
     const summaryListRef = useRef(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [categoryOptions, setCategoryOptions] = useState([])
-    const [customSearchItems, setCustomSearchItems] = useState([])
+    const [categoryOptions, setCategoryOptions] = useState([]);
+    const [customSearchItems, setCustomSearchItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const hasSearched = useRef(false);
-    const [token, setToken] = useState(localStorage.getItem("JWT"))
-    const [user, setUser] = useState(token ? jwtDecode(token) : null)
+    const [token, setToken] = useState(localStorage.getItem("JWT"));
+    const [user, setUser] = useState(() => {
+        try {
+            return token ? jwtDecode(token) : null;
+        } catch {
+            return null;
+        }
+    });
     // form
-    const formRef = useRef();
     const [formError, setFormError] = useState({});
     const [formValue, setFormValue] = useState({
         id: null,
@@ -146,36 +98,46 @@ export const SearchPage = () => {
         keyword: '',
         category: [],
         timeframe: 'd',
-        language: ''
+        language: 'en',
     });
     const [customRange, setCustomRange] = useState(null);
     const [showSources, setShowSources] = useState(false);
     // the search that gave the results, used to look for the media missing from the sources
     const [lastSearch, setLastSearch] = useState(null);
+    const [searchCount, setSearchCount] = useState(0);
     // set when a search asking for every word found almost nothing: how many a wider one would find
     const [wider, setWider] = useState(null);
     const [sourcesVersion, setSourcesVersion] = useState(0);
-    // modal
     const [saveSearchModal, setSaveSearchModal] = useState(false);
-    const handleOpen = () => setSaveSearchModal(true);
-    const handleClose = () => setSaveSearchModal(false);
+
+    const setField = (name, value) => {
+        setFormValue(current => ({...current, [name]: value}));
+        if (formError[name]) setFormError({...formError, [name]: null});
+    };
+
+    const removeAuthCredentials = () => {
+        localStorage.removeItem("JWT");
+        setToken(null);
+        setUser(null);
+    };
 
     const handleSubmit = async (keyword = formValue.keyword) => {
         // check if registered
         if (!user) {
-            toaster.push(<Message type="error">Please log in to fetch news</Message>);
+            toast.error('Please log in to fetch news');
             navigate("/login");
             return;
         }
 
         // check form
-        if (!formRef.current.check()) {
-            toaster.push(<Message type="error">Missing fields</Message>);
+        const errors = check({...formValue, keyword});
+        setFormError(errors);
+        if (Object.values(errors).some(Boolean)) {
+            toast.error('Missing fields');
             return;
         }
 
         setIsLoading(true);
-        hasSearched.current = true;
 
         // Get all links from category
         const search = {
@@ -184,53 +146,59 @@ export const SearchPage = () => {
             language: formValue.language || 'en',
             timeframe: toTimeframe(formValue.timeframe, customRange),
         };
-        const allNews = await SearchApi.getNews(search, token);
-        setLastSearch(search);
+        try {
+            const allNews = await SearchApi.getNews(search, token);
+            setLastSearch(search);
+            setSearchCount(count => count + 1);
 
-        // print error message
-        if (allNews && allNews.error && allNews.error.includes('Forbidden, invalid or expired')) {
-            toaster.push(<Message type="error">Token is invalid or has expired, please log in</Message>);
-            removeAuthCredentials()
-        } else if (allNews && allNews.error) {
-            toaster.push(<Message type="error">An error has occurred.. Please try again.</Message>);
+            // print error message
+            if (allNews?.error?.includes?.('Forbidden, invalid or expired')) {
+                toast.error('Token is invalid or has expired, please log in');
+                removeAuthCredentials();
+            } else if (allNews?.error) {
+                toast.error('An error has occurred.. Please try again.');
+            }
+
+            setNewsList(allNews.news);
+            setWider(allNews.wider ?? null);
+        } catch {
+            toast.error('An error has occurred.. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
-
-        setNewsList(allNews.news);
-        setWider(allNews.wider ?? null);
-        setIsLoading(false);
     };
 
     // "Show those 218": the words are put back in the field with commas, so the search that runs is
     // the one the user can read and change afterwards
     const handleWiden = (keywords) => {
-        setFormValue({...formValue, keyword: keywords});
+        setField('keyword', keywords);
         handleSubmit(keywords);
     };
 
     // AI resume of the selected news (the server scrapes them first)
     const handleGenerate = async (urls) => {
         setIsGenerating(true);
-        const data = await SearchApi.getNewsSummary(urls, token);
+        const data = await SearchApi.getNewsSummary(urls, token).catch(() => null);
         setIsGenerating(false);
 
-        if (data && data.error && data.error.includes('Forbidden, invalid or expired')) {
-            toaster.push(<Message type="error">Token is invalid or has expired, please log in</Message>);
-            removeAuthCredentials()
+        if (data?.error?.includes?.('Forbidden, invalid or expired')) {
+            toast.error('Token is invalid or has expired, please log in');
+            removeAuthCredentials();
             return;
         } else if (!data || data.error) {
-            toaster.push(<Message type="error">An error has occurred.. Please try again.</Message>);
+            toast.error('An error has occurred.. Please try again.');
             return;
         }
 
         const summaryCount = data.news.filter(news => news.summary).length;
-        toaster.push(<Message type="success">{summaryCount} / {data.news.length} news summarized.</Message>);
+        toast.success(`${summaryCount} / ${data.news.length} news summarized.`);
         setSummaries(data.news);
     };
 
     // categories of feeds that can be searched, they belong to the language chosen
     useEffect(() => {
         SearchApi.getCategories(formValue.language || 'en')
-            .then(data => setCategoryOptions(data.categories))
+            .then(data => setCategoryOptions(data.categories ?? []))
             .catch(e => console.error("Failed to fetch categories", e));
     }, [formValue.language]);
 
@@ -242,310 +210,250 @@ export const SearchPage = () => {
     }, [summaries]);
 
     const handleSaveSearch = async () => {
-        if (!user.id) {
-            toaster.push(<Message type="error">You must be logged in...</Message>);
+        if (!user?.id) {
+            toast.error('You must be logged in...');
             return;
         }
         if (!formValue.title) {
-            toaster.push(<Message type="error">You must enter a title...</Message>);
+            toast.error('You must enter a title...');
             return;
         }
         if (!formValue.language) {
-            toaster.push(<Message type="error">You must select a language...</Message>);
+            toast.error('You must select a language...');
             return;
         }
         if (!formValue.keyword) {
-            toaster.push(<Message type="error">You must enter a keyword at least...</Message>);
+            toast.error('You must enter a keyword at least...');
             return;
         }
         if (formValue.category.length < 1) {
-            toaster.push(<Message type="error">You must select at least 1 category...</Message>);
+            toast.error('You must select at least 1 category...');
             return;
         }
         try {
-            const data = await CustomSearchApi.postUserCustomSearch({
+            await CustomSearchApi.postUserCustomSearch({
                 id: formValue.id,
                 title: formValue.title,
                 language: formValue.language,
                 keyword: formValue.keyword,
                 category: formValue.category,
             }, token);
-console.log(data);
-            // close modal
-            handleClose()
+            setSaveSearchModal(false);
 
-            // save custom search locally !! to implement
-            // const newTags = customSearchItems.push(item => item !== tag);
-            // setCustomSearchItems(newTags)
-
-            // success message
             if (!formValue.id) {
-                toaster.push(<Message type="success">{formValue.title} created successfully !</Message>);
+                toast.success(`${formValue.title} created successfully !`);
             } else {
-                toaster.push(<Message type="success">{formValue.title} modified successfully !</Message>);
+                toast.success(`${formValue.title} modified successfully !`);
             }
         } catch (e) {
             console.error("Failed to fetch searches", e);
-            // error message
             if (!formValue.id) {
-                toaster.push(<Message type="error">Error while creating {formValue.title}...</Message>);
+                toast.error(`Error while creating ${formValue.title}...`);
             } else {
-                toaster.push(<Message type="error">Error while modifying {formValue.title}...</Message>);
+                toast.error(`Error while modifying ${formValue.title}...`);
             }
         }
-    }
+    };
 
-    const handleSelectPicker = (item) => {
+    // a saved search fills the form, the timeframe chosen stays
+    const applySavedSearch = (item) => {
         setFormValue({
-            title:item.title,
+            title: item.title,
             id: item.id,
             keyword: item.keyword,
             category: item.category,
             timeframe: formValue.timeframe,
-            language: item.language
-        })
-    }
+            language: item.language,
+        });
+        setFormError({});
+    };
 
-    const removeTag = async (tag) => {
+    const removeSavedSearch = async (item) => {
         try {
-            const data = await CustomSearchApi.deleteUserCustomSearch({id: tag.value.id}, token);
+            const data = await CustomSearchApi.deleteUserCustomSearch({id: item.id}, token);
 
             if (!data) {
-                toaster.push(<Message type="error">Error deleting {tag.value.title}...</Message>);
-                return
+                toast.error(`Error deleting ${item.title}...`);
+                return;
             }
-            const nextTags = customSearchItems.filter(item => item !== tag);
-
-            toaster.push(<Message type="success">{tag.value.title} deleted successfully !</Message>);
-
-            setCustomSearchItems(nextTags);
+            setCustomSearchItems(customSearchItems.filter(other => other !== item));
+            toast.success(`${item.title} deleted successfully !`);
         } catch (e) {
             console.error("Failed to remove search", e);
         }
     };
 
-    const removeAuthCredentials = () => {
-        localStorage.removeItem("JWT");
-        setToken(null);
-        setUser(null);
-    }
-
     useEffect(() => {
         const getUserCustomSearches = async () => {
-            if (user) {
-                try {
-                    const data = await CustomSearchApi.getUserCustomSearch(token);
-                    if (data.error && data.error.name.includes("PrismaClientValidationError")) {
-                        console.log("Error with Prisma database")
-                        return;
-                    }
-
-                    const selectPickerData = data.map(item => ({
-                        label: item.title,
-                        value: item
-                    }));
-console.log(selectPickerData);
-                    setCustomSearchItems(selectPickerData);
-                } catch (e) {
-                    console.error("Failed to fetch searches", e);
+            if (!user) return;
+            try {
+                const data = await CustomSearchApi.getUserCustomSearch(token);
+                if (data?.error) {
+                    console.log("Error with Prisma database");
+                    return;
                 }
+                setCustomSearchItems(Array.isArray(data) ? data : []);
+            } catch (e) {
+                console.error("Failed to fetch searches", e);
             }
-        }
+        };
 
-        getUserCustomSearches()
+        getUserCustomSearches();
     }, [user, token]);
 
     return (
-        <CustomProvider theme="light">
-            <CustomNavbar user={user} removeAuthCredentials={removeAuthCredentials}/>
-            <Container className="app-header">
-                <Content width={'75vw'} marginTop={50}>
-                    <VStack width={'100%'} alignItems={'center'} gap={10}>
-                        <VStack width={'100%'} height={'20vh'} marginBottom={10} alignItems={'center'}>
-                            <GradientText
-                                colors={["#e18e36", "#eabe92", "#ef8717"]}
-                                animationSpeed={8}
-                                showBorder={false}
-                                className="text-6xl font-extrabold"
-                            >
-                                News Generator
-                            </GradientText>
-                            <TextType
-                                text={["It is a personalizable news generator.", "It must be able to read the news, understand it, and summarize the news it has read, taking into account user parameters such as keywords, desired/undesired topics, language and timeframe of the search."]}
-                                className="text-xl font-sans-serif italic"
-                                typingSpeed={40}
-                                pauseDuration={1500}
-                                showCursor
-                                cursorCharacter="|"
-                                deletingSpeed={15}
-                                variableSpeedEnabled={false}
-                                variableSpeedMin={60}
-                                variableSpeedMax={120}
-                                cursorBlinkDuration={0.4}
-                            />
-                        </VStack>
-                        <Card padding={20} width={'75vw'} shaded>
-                            <Text fontWeight={'600'} marginBottom={5}>Saved custom searches</Text>
-                            <SelectPicker
-                                marginBottom={10}
-                                width={'100%'}
-                                data={customSearchItems}
-                                placeholder={"Use a custom search..."}
-                                onSelect={(value) => {
-                                    handleSelectPicker(value)
-                                }}
-                            />
-                            <TagGroup marginBottom={15}>
-                                {customSearchItems.map((item, index) => (
-                                    <Tag key={index} color="orange" closable onClose={() => removeTag(item)}>
-                                        {item.label}
-                                    </Tag>
-                                ))}
-                            </TagGroup>
-                            <Form fluid
-                                  width={'100%'}
-                                  ref={formRef}
-                                  onChange={setFormValue}
-                                  onCheck={setFormError}
-                                  formValue={formValue}
-                                  model={model}
-                            >
-                                <Form.Stack width={'100%'}>
-                                    <Form.Group controlId="keyword">
-                                        <Form.Label fontWeight={'600'}>
-                                            <HStack spacing={6} alignItems="center">
-                                                Keywords
-                                                <Whisper placement="right" trigger={['hover', 'focus', 'click']}
-                                                         speaker={keywordsHelp}>
-                                                    <Button appearance="subtle" size="xs" circle
-                                                            aria-label="How to write keywords"
-                                                            style={{padding: 0, color: '#e28e36'}}>
-                                                        <FaInfoCircle/>
-                                                    </Button>
-                                                </Whisper>
-                                            </HStack>
-                                        </Form.Label>
-                                        <Form.Control checkAsync name="keyword" id="keyword"
-                                                      placeholder='e.g., referee -rugby, "red card"'/>
-                                        <Form.HelpText>
-                                            Comma = or (widest), several words = all of them in the same news (narrow), "quotes" = exact phrase, -word = exclude
-                                        </Form.HelpText>
-                                    </Form.Group>
-                                    <Form.Stack direction={'row'} width={'100%'} fontWeight={'600'}>
-                                        <Field
-                                            name="language"
-                                            label="Language"
-                                            placeholder={"Select a language..."}
-                                            accepter={SelectPicker}
-                                            data={languageOptions}
-                                            defaultValue={'en'}
-                                            error={formError.language}
-                                            block
-                                        />
-                                        <Field
-                                            name="timeframe"
-                                            label="Timeframe"
-                                            message={formValue.timeframe === 'c' ? '' : 'News published in this period'}
-                                            placeholder={"Select a timeframe..."}
-                                            accepter={SelectPicker}
-                                            data={timeframeOptions}
-                                            searchable={false}
-                                            cleanable={false}
-                                            error={formError.timeframe}
-                                            block
-                                        />
-                                    </Form.Stack>
-                                    {formValue.timeframe === 'c' && (
-                                        <Form.Group controlId="customRange">
-                                            <Form.Label fontWeight={'600'}>From / to</Form.Label>
-                                            <DateRangePicker value={customRange} onChange={setCustomRange}
-                                                             format="dd.MM.yyyy HH:mm" block
-                                                             shouldDisableDate={date => date > new Date()}/>
-                                            <Form.HelpText>
-                                                News published between these two dates
-                                            </Form.HelpText>
-                                        </Form.Group>
-                                    )}
-                                    <Form.Stack fontWeight={'600'}>
-                                        <Field
-                                            name="category"
-                                            label="Category"
-                                            accepter={CheckboxGroup}
-                                            error={formError.category}
-                                            inline
-                                        >
-                                            {categoryOptions.map(category => (
-                                                <Checkbox key={category} value={category} color={'orange'}>
-                                                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                                                </Checkbox>
-                                            ))}
-                                        </Field>
-                                    </Form.Stack>
-                                    <Form.Group controlId="sources">
-                                        <Form.Label fontWeight={'600'}>
-                                            <HStack spacing={6} alignItems="center">
-                                                My sources
-                                                <Button appearance="subtle" size="xs"
-                                                        onClick={() => setShowSources(!showSources)}
-                                                        style={{padding: '0 6px', color: '#e28e36'}}>
-                                                    {showSources ? 'hide' : 'show'}
-                                                </Button>
-                                            </HStack>
-                                        </Form.Label>
-                                        {showSources && (
-                                            <UserFeeds token={token} categories={categoryOptions} api={FeedApi}
-                                                       reloadKey={sourcesVersion}
-                                                       language={formValue.language || 'en'}/>
-                                        )}
-                                        <Form.HelpText>
-                                            Websites you add are searched with the others, but only in your searches
-                                        </Form.HelpText>
-                                    </Form.Group>
-                                </Form.Stack>
-                                <ButtonToolbar mt={20}>
-                                    <Button appearance="primary" name='fetchNews' color={'orange'}
-                                            onClick={() => handleSubmit()}
-                                            loading={isLoading}>
-                                        Search
-                                    </Button>
-                                    <Button appearance="ghost" name='save' color={'orange'} onClick={handleOpen}> Save
-                                        search</Button>
-                                </ButtonToolbar>
+        <PageShell user={user} onSignOut={removeAuthCredentials}>
+            <Opening
+                kicker="Search"
+                title="Search the news"
+                standfirst="Any subject, in the sources of your language and the ones you added. Choose up to ten articles and the AI writes their resume."
+                aside={
+                    <div>
+                        <p className="kicker">Saved searches</p>
+                        {customSearchItems.length === 0
+                            ? <p className="caption mt-2">None yet. Fill the form, then save the search to find it here.</p>
+                            : (
+                                <ul className="mt-2 border-t border-rule">
+                                    {customSearchItems.map(item => (
+                                        <li key={item.id} className="flex items-baseline justify-between gap-3 border-b border-rule py-2">
+                                            <button type="button" onClick={() => applySavedSearch(item)}
+                                                    className={`min-w-0 cursor-pointer text-left hover:text-accent-ink ${formValue.id === item.id ? 'text-accent-ink' : ''}`}>
+                                                {item.title}
+                                            </button>
+                                            <button type="button" onClick={() => removeSavedSearch(item)} aria-label={`Delete ${item.title}`}
+                                                    className="kicker cursor-pointer hover:!text-accent-ink">
+                                                Delete
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                    </div>
+                }
+            />
 
-                                <Modal open={saveSearchModal} onClose={handleClose}>
-                                    <Modal.Header>
-                                        <Modal.Title>Save your custom search</Modal.Title>
-                                    </Modal.Header>
-                                    <Modal.Body>
-                                        <Form fluid onChange={setFormValue} formValue={formValue}>
-                                            <Form.Group controlId="title">
-                                                <Form.ControlLabel fontWeight={'600'}>Search title</Form.ControlLabel>
-                                                <Form.Control name="title"/>
-                                            </Form.Group>
-                                        </Form>
-                                    </Modal.Body>
-                                    <Modal.Footer>
-                                        <Button onClick={handleClose} appearance="subtle" color={'orange'}>
-                                            Cancel
-                                        </Button>
-                                        <Button onClick={handleSaveSearch} onToggle={handleSaveSearch} appearance="primary" color={'orange'}>
-                                            Save
-                                        </Button>
-                                    </Modal.Footer>
-                                </Modal>
-                            </Form>
-                        </Card>
-                        <SummaryList ref={summaryListRef} summaries={summaries}/>
-                        {lastSearch && (
-                            <SourceSuggestions token={token} api={FeedApi} search={lastSearch}
-                                               categories={categoryOptions}
-                                               onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
-                        )}
-                        <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
-                                  wider={wider} onWiden={handleWiden}/>
-                    </VStack>
-                </Content>
-            </Container>
-        </CustomProvider>
-    )
-}
+            <Section kicker="The query" title="What to look for">
+                <form className="grid-12 gap-y-12" noValidate onSubmit={event => {
+                    event.preventDefault();
+                    handleSubmit();
+                }}>
+                    <div className="col-span-12 space-y-10 md:col-span-8">
+                        <div>
+                            <Label htmlFor="keyword">Keywords</Label>
+                            <Input id="keyword" name="keyword" value={formValue.keyword} placeholder='e.g., referee -rugby, "red card"'
+                                   onChange={event => setField('keyword', event.target.value)} invalid={Boolean(formError.keyword)}
+                                   aria-describedby="keyword-help"/>
+                            <Help id="keyword-help">
+                                Comma = or (widest), several words = all of them in the same news (narrow), "quotes" = exact phrase, -word = exclude
+                            </Help>
+                            <FieldError>{formError.keyword}</FieldError>
+                        </div>
+
+
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
+                            <div>
+                                <Label htmlFor="language">Language</Label>
+                                <Select id="language" options={languageOptions} value={formValue.language}
+                                        onChange={event => setFormValue({...formValue, language: event.target.value, category: []})}
+                                        invalid={Boolean(formError.language)}/>
+                                <FieldError>{formError.language}</FieldError>
+                            </div>
+                            <div>
+                                <Label htmlFor="timeframe">Timeframe</Label>
+                                <Select id="timeframe" options={timeframeOptions} value={formValue.timeframe}
+                                        onChange={event => setField('timeframe', event.target.value)}/>
+                                {formValue.timeframe !== 'c' && <Help>News published in this period</Help>}
+                            </div>
+                            {formValue.timeframe === 'c' && (
+                                <>
+                                    <div>
+                                        <Label htmlFor="range-start">From</Label>
+                                        <Input id="range-start" type="datetime-local" value={localInput(customRange?.[0])}
+                                               max={localInput(new Date())}
+                                               onChange={event => setCustomRange([event.target.value ? new Date(event.target.value) : null, customRange?.[1] ?? null])}/>
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="range-end">To</Label>
+                                        <Input id="range-end" type="datetime-local" value={localInput(customRange?.[1])}
+                                               max={localInput(new Date())}
+                                               onChange={event => setCustomRange([customRange?.[0] ?? null, event.target.value ? new Date(event.target.value) : null])}/>
+                                        <Help>News published between these two dates</Help>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <CheckboxGroup legend="Category"
+                                       options={categoryOptions.map(category => ({value: category, label: capitalize(category)}))}
+                                       value={formValue.category} onChange={category => setField('category', category)}
+                                       invalid={Boolean(formError.category)} error={formError.category}/>
+
+                        <div>
+                            <div className="flex items-baseline gap-4">
+                                <p className="kicker !text-ink">My sources</p>
+                                <Button variant="link" size="sm" aria-expanded={showSources} onClick={() => setShowSources(!showSources)}>
+                                    {showSources ? 'hide' : 'show'}
+                                </Button>
+                            </div>
+                            <Help>Websites you add are searched with the others, but only in your searches</Help>
+                            {showSources && (
+                                <div className="mt-6">
+                                    <UserFeeds token={token} categories={categoryOptions} api={FeedApi}
+                                               reloadKey={sourcesVersion} language={formValue.language || 'en'}/>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-3 border-t border-rule pt-6">
+                            <Button variant="primary" type="submit" name="fetchNews" loading={isLoading}>Search</Button>
+                            <Button name="save" onClick={() => setSaveSearchModal(true)}>Save search</Button>
+                        </div>
+                    </div>
+
+                    <aside className="col-span-12 md:col-span-3 md:col-start-10 md:border-l md:border-rule md:pl-5">
+                        <p className="kicker">How to write keywords</p>
+                        <p className="caption mt-2">Searched in the title, the description and the categories of the news.</p>
+                        <table className="mt-3 w-full border-collapse text-[0.8125rem]">
+                            <tbody>
+                            {KEYWORD_EXAMPLES.map(([example, meaning]) => (
+                                <tr key={example} className="border-t border-rule align-baseline">
+                                    <td className="py-1.5 pr-3 whitespace-nowrap"><code>{example}</code></td>
+                                    <td className="py-1.5 text-ink-mute">{meaning}</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                        <p className="caption mt-3">
+                            A word also finds its variants: <code>referee</code> finds "referees". Words of 3 letters or less
+                            must match a whole word, so <code>VAR</code> does not find "Alvarez".
+                        </p>
+                        <p className="caption mt-3">
+                            Unlike a web search, several words <em>remove</em> the news that do not have them all:
+                            {' '}<code>referee football soccer</code> asks for the three at once and finds almost nothing.
+                            Start with one word, add commas to widen, add words to narrow.
+                        </p>
+                    </aside>
+                </form>
+            </Section>
+
+            <Dialog open={saveSearchModal} onOpenChange={setSaveSearchModal} title="Save your custom search"
+                    description="Keywords, language and categories are kept under this title."
+                    footer={<>
+                        <Button variant="subtle" onClick={() => setSaveSearchModal(false)}>Cancel</Button>
+                        <Button variant="primary" onClick={handleSaveSearch}>Save</Button>
+                    </>}>
+                <Label htmlFor="search-title">Search title</Label>
+                <Input id="search-title" value={formValue.title} onChange={event => setField('title', event.target.value)}
+                       onKeyDown={event => event.key === 'Enter' && handleSaveSearch()}/>
+            </Dialog>
+
+            <SummaryList ref={summaryListRef} summaries={summaries}/>
+            {lastSearch && (
+                <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}
+                                   onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
+            )}
+            <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
+                      wider={wider} onWiden={handleWiden}/>
+        </PageShell>
+    );
+};

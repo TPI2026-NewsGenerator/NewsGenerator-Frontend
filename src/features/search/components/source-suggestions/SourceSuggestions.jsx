@@ -6,11 +6,12 @@
 //               only, and those media to add in one click
 //
 
-import {useEffect, useState} from "react";
-import {
-    Button, Checkbox, CheckboxGroup, Divider, HStack, Message, Panel, SelectPicker, Tag, Text, toaster, VStack
-} from "rsuite";
-import {FaSearchPlus} from "react-icons/fa";
+import {useState} from "react";
+import {Section} from "@/components/layout/Page.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {Checkbox, Label, Select} from "@/components/ui/field.jsx";
+import {Meta, MetaLine} from "@/components/ui/text.jsx";
+import {toast} from "@/lib/toast.js";
 
 // "2026-09-22T20:22:47.000Z" -> "2 hours ago", the news of a feed are dated the same way
 const publishedAgo = (at) => {
@@ -25,32 +26,25 @@ const publishedAgo = (at) => {
     return format.format(-Math.floor(hours / 24), 'day');
 };
 
+// given a new key at each search: a new search makes the previous answer obsolete
 export const SourceSuggestions = ({token, api, search, categories, onImported}) => {
     const [news, setNews] = useState(null);         // null: not looked for yet
     const [sources, setSources] = useState([]);
     const [missing, setMissing] = useState(0);
     const [tried, setTried] = useState(0);        // media whose feed was looked for, out of the missing ones
     const [selected, setSelected] = useState([]);
-    const [category, setCategory] = useState(null);
+    // the sources are filed under the first category searched unless the user picks another one
+    const [category, setCategory] = useState(search?.category?.[0] ?? '');
     const [isLooking, setIsLooking] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
 
-    // a new search makes the previous answer obsolete, and the sources are filed under the first
-    // category searched unless the user picks another one
-    useEffect(() => {
-        setNews(null);
-        setSources([]);
-        setSelected([]);
-        setCategory(search?.category?.[0] ?? null);
-    }, [search]);
-
-    const handleLook = async () => {
+        const handleLook = async () => {
         setIsLooking(true);
         const data = await api.suggestSources({keywords: search.keywords, timeframe: search.timeframe, language: search.language}, token);
         setIsLooking(false);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "The web could not be searched."}</Message>);
+            toast.error(data?.error ?? "The web could not be searched.");
             return;
         }
 
@@ -63,7 +57,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
 
     const handleAdd = async () => {
         if (!category) {
-            toaster.push(<Message type="error">Pick the category these sources belong to.</Message>);
+            toast.error('Pick the category these sources belong to.');
             return;
         }
 
@@ -76,20 +70,16 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
         setIsAdding(false);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "These sources could not be added."}</Message>);
+            toast.error(data?.error ?? "These sources could not be added.");
             return;
         }
 
         const added = data.feeds?.length ?? 0;
         if (added > 0) {
-            toaster.push(
-                <Message type="success">
-                    {added} source{added > 1 ? 's' : ''} added. Search again to read their news here, with the AI resume.
-                </Message>
-            );
+            toast.success(`${added} source${added > 1 ? 's' : ''} added. Search again to read their news here, with the AI resume.`);
         }
         for (let failed of data.errors ?? []) {
-            toaster.push(<Message type="error">{failed.site}: {failed.error}</Message>);
+            toast.error(`${failed.site}: ${failed.error}`);
         }
 
         // the added ones leave the list and the selection, the others stay so they can still be added
@@ -101,84 +91,84 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
     };
 
     return (
-        <Panel bordered style={{width: '75vw', background: '#fff'}}
-               header={
-                   <HStack justifyContent="space-between" alignItems="center">
-                       <Text fontWeight={600}>What this search misses</Text>
-                       <Button appearance="ghost" color="orange" size="sm" startIcon={<FaSearchPlus/>}
-                               onClick={handleLook} loading={isLooking}>
-                           {news === null ? 'Look on the web' : 'Look again'}
-                       </Button>
-                   </HStack>
-               }>
-            {news === null && (
-                <Text muted size="sm">
-                    Other media publish on your keywords without being in your sources. This asks Google News
-                    which news you are missing and which media publish them, then adds the ones you choose.
-                    It takes a few seconds.
-                </Text>
+        <Section
+            kicker="Beyond your sources"
+            title="What this search misses"
+            intro={news === null && (
+                "Other media publish on your keywords without being in your sources. This asks Google News which news you "
+                + "are missing and which media publish them, then adds the ones you choose. It takes a few seconds."
             )}
-
+            aside={
+                <Button size="sm" onClick={handleLook} loading={isLooking}>
+                    {news === null ? 'Look on the web' : 'Look again'}
+                </Button>
+            }
+        >
             {news !== null && news.length === 0 && sources.length === 0 && (
-                <Text muted size="sm">
+                <p className="caption">
                     {missing === 0
                         ? "No medium outside your sources published on these keywords."
                         : `${missing} media published on these keywords, but nothing could be read or added from them.`}
-                </Text>
+                </p>
             )}
 
             {news !== null && news.length > 0 && (
-                <VStack align="stretch" spacing={6}>
-                    <Text muted size="sm">
+                <div className="grid-12">
+                    <p className="caption col-span-12 max-w-[60ch] md:col-span-7 md:col-start-3">
                         {news.length} news your sources could not find. They open at the publisher:
                         the server cannot read them, so they have no AI resume.
-                    </Text>
-
-                    {news.map(item => (
-                        <HStack key={item.url} spacing={8} alignItems="flex-start">
-                            <Tag size="sm">{item.name}</Tag>
-                            <Text muted size="sm" style={{whiteSpace: 'nowrap'}}>{publishedAgo(item.publishedAt)}</Text>
-                            <a href={item.url} target="_blank" rel="noreferrer" style={{flex: 1}}>{item.title}</a>
-                        </HStack>
-                    ))}
-                </VStack>
+                    </p>
+                    <ul className="col-span-12 mt-4 border-t border-rule md:col-span-10 md:col-start-3">
+                        {news.map(item => (
+                            <li key={item.url} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule py-3">
+                                <MetaLine className="w-full sm:w-56 sm:shrink-0">
+                                    <Meta tone="ink">{item.name}</Meta>
+                                    <Meta>{publishedAgo(item.publishedAt)}</Meta>
+                                </MetaLine>
+                                <a href={item.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 hover:text-accent-ink">{item.title}</a>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             )}
 
             {news !== null && sources.length > 0 && (
-                <VStack align="stretch" spacing={10}>
-                    <Divider/>
-                    <Text muted size="sm">
-                        {missing} media published on these keywords without being in your sources.
-                        Looking for the feed of a site costs several requests, so only the {tried} publishing
-                        the most were tried: {sources.length === 1 ? 'one has' : `${sources.length} have`} an
-                        RSS feed. Add them to read them here from now on:
-                    </Text>
-
-                    <CheckboxGroup value={selected} onChange={setSelected}>
-                        {sources.map(source => (
-                            <Checkbox key={source.feed} value={source.feed} color="orange">
-                                <HStack spacing={8} alignItems="center">
-                                    <Text fontWeight={600}>{source.name}</Text>
-                                    <Tag size="sm" color="orange">{source.news} news</Tag>
-                                    <Text muted size="sm">{source.feed}</Text>
-                                </HStack>
-                                {source.sample && <Text muted size="sm">e.g. "{source.sample}"</Text>}
-                            </Checkbox>
-                        ))}
-                    </CheckboxGroup>
-
-                    <HStack spacing={8} alignItems="center">
-                        <SelectPicker data={categories.map(name => ({value: name, label: name}))}
-                                      value={category} onChange={setCategory} placeholder="Category"
-                                      searchable={false} cleanable={false} style={{width: 150}}/>
-                        <Button appearance="primary" color="orange" onClick={handleAdd}
-                                loading={isAdding} disabled={selected.length === 0}>
-                            Add {selected.length} source{selected.length > 1 ? 's' : ''}
-                        </Button>
-                        <Text muted size="sm">They stay private to your searches.</Text>
-                    </HStack>
-                </VStack>
+                <div className="grid-12 mt-12">
+                    <div className="col-span-12 md:col-span-10 md:col-start-3">
+                        <p className="caption max-w-[60ch]">
+                            {missing} media published on these keywords without being in your sources.
+                            Looking for the feed of a site costs several requests, so only the {tried} publishing
+                            the most were tried: {sources.length === 1 ? 'one has' : `${sources.length} have`} an
+                            RSS feed. Add them to read them here from now on:
+                        </p>
+                        <div className="mt-4 flex flex-col border-t border-rule pt-3">
+                            {sources.map(source => (
+                                <Checkbox key={source.feed} checked={selected.includes(source.feed)} className="py-2"
+                                          onChange={event => setSelected(event.target.checked
+                                              ? [...selected, source.feed]
+                                              : selected.filter(feed => feed !== source.feed))}>
+                                    <span className="font-semibold">{source.name}</span>{' '}
+                                    <Meta>{source.news} news</Meta>
+                                    <span className="caption block [overflow-wrap:anywhere]">{source.feed}</span>
+                                    {source.sample && <span className="caption block italic">e.g. "{source.sample}"</span>}
+                                </Checkbox>
+                            ))}
+                        </div>
+                        <div className="mt-6 flex flex-wrap items-end gap-4">
+                            <div className="w-48">
+                                <Label htmlFor="suggestion-category">Category</Label>
+                                <Select id="suggestion-category" placeholder="Category" value={category}
+                                        onChange={event => setCategory(event.target.value)}
+                                        options={categories.map(name => ({value: name, label: name}))}/>
+                            </div>
+                            <Button variant="primary" onClick={handleAdd} loading={isAdding} disabled={selected.length === 0}>
+                                Add {selected.length} source{selected.length > 1 ? 's' : ''}
+                            </Button>
+                            <p className="caption">They stay private to your searches.</p>
+                        </div>
+                    </div>
+                </div>
             )}
-        </Panel>
-    )
-}
+        </Section>
+    );
+};

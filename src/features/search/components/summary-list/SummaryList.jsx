@@ -6,56 +6,53 @@
 //
 
 import {forwardRef} from "react";
-import {Button, Card, Heading, Message, Tag, TagGroup, Text, VStack} from "rsuite";
-import {FaExternalLinkAlt} from "react-icons/fa";
+import {Section} from "@/components/layout/Page.jsx";
+import {Meta, MetaLine, Notice} from "@/components/ui/text.jsx";
+import {cn} from "@/lib/utils.js";
 
 // Who the article credits for what it reports, read by the AI while it summarizes. It describes
 // the article, never whether the news is true: an official statement can be a lie and an
 // unnamed source can be right.
 const SOURCING = {
-    named: {label: 'named sources', color: 'green', title: 'The article names who it credits: a person, a club, an institution'},
-    anonymous: {label: 'unnamed sources', color: 'yellow', title: 'The article relies on sources it does not name'},
-    none: {label: 'no source given', color: 'yellow', title: 'The article credits nobody for what it reports'},
+    named: {label: 'named sources', title: 'The article names who it credits: a person, a club, an institution'},
+    anonymous: {label: 'unnamed sources', title: 'The article relies on sources it does not name'},
+    none: {label: 'no source given', title: 'The article credits nobody for what it reports'},
 };
 
 export const SummaryList = forwardRef(({summaries}, ref) => {
     if (!summaries || summaries.length === 0) return null;
 
     return (
-        <VStack ref={ref} align="stretch" width={'75vw'} gap={20} marginTop={50}>
-            <Text width={'fit-content'} size={'3xl'} weight={'semibold'} className={'title'}>
-                Your AI Resume
-            </Text>
-            {summaries.map(news => (
-                <Card key={news.url} padding={20} shaded>
-                    <Card.Header>
-                        <TagGroup marginBottom={10}>
-                            <Tag size="sm">{news.source}</Tag>
-                            {news.publishedAt && (
-                                <Tag size="sm">{new Date(news.publishedAt).toLocaleDateString()}</Tag>
-                            )}
-                            {news.topic && (<Tag size="sm" color="orange">{news.topic}</Tag>)}
-                            {news.sourcing && (<Tag size="sm" color={SOURCING[news.sourcing]?.color}
-                                                    title={SOURCING[news.sourcing]?.title}>
-                                {SOURCING[news.sourcing]?.label ?? news.sourcing}
-                            </Tag>)}
-                        </TagGroup>
-                        <Heading level={5}>{news.title}</Heading>
-                    </Card.Header>
-                    <Card.Body>
-                        {news.summary
-                            ? news.summary.split(/\n\s*\n/).map((paragraph, i) => (
-                                <Text key={i} marginTop={10}>{paragraph}</Text>
-                            ))
-                            : <Message type="warning" marginTop={10}>{news.summaryError}</Message>}
-                    </Card.Body>
-                    <Card.Footer>
-                        <Button startIcon={<FaExternalLinkAlt/>} href={news.url} target="_blank" color={'orange'} appearance="ghost">
-                            Read the article
-                        </Button>
-                    </Card.Footer>
-                </Card>
-            ))}
-        </VStack>
-    )
-})
+        <div ref={ref} className="scroll-mt-8">
+            <Section kicker="Written by the AI" title="Your AI resume">
+                <ol className="list-none p-0">
+                    {summaries.map((news, index) => (
+                        <li key={news.url} className="grid-12 border-t border-rule pt-7 pb-12">
+                            <div className="col-span-12 md:col-span-2">
+                                <p aria-hidden className="font-display text-[2.4rem] leading-none text-ink-mute">{String(index + 1).padStart(2, '0')}</p>
+                            </div>
+                            <div className="col-span-12 mt-3 md:col-span-7 md:mt-0">
+                                <MetaLine>
+                                    <Meta tone="ink">{news.source}</Meta>
+                                    {news.publishedAt && <Meta>{new Date(news.publishedAt).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'})}</Meta>}
+                                    {news.topic && <Meta>{news.topic}</Meta>}
+                                    {news.sourcing && (
+                                        <Meta title={SOURCING[news.sourcing]?.title}>{SOURCING[news.sourcing]?.label ?? news.sourcing}</Meta>
+                                    )}
+                                </MetaLine>
+                                <h3 className="story-head mt-2 text-balance">{news.title}</h3>
+                                <div className="body-text mt-5">
+                                    {news.summary
+                                        ? news.summary.split(/\n\s*\n/).map((paragraph, i) => <p key={i} className={cn(index === 0 && i === 0 && 'lede')}>{paragraph}</p>)
+                                        : <Notice type="error" title="No resume">{news.summaryError}</Notice>}
+                                </div>
+                                <a href={news.url} target="_blank" rel="noreferrer" className="link mt-5 inline-block">Read the article ↗</a>
+                            </div>
+                        </li>
+                    ))}
+                </ol>
+            </Section>
+        </div>
+    );
+});
+SummaryList.displayName = 'SummaryList';

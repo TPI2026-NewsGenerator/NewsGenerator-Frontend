@@ -6,9 +6,10 @@
 //
 
 import {useCallback, useEffect, useState} from "react";
-import {Button, Container, Content, CustomProvider, Loader, Message, Text, VStack} from "rsuite";
 import {Link} from "react-router-dom";
-import {CustomNavbar} from "@/features/navbar/components/Navbar.jsx";
+import {PageShell, Opening} from "@/components/layout/Page.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {useSeenCards} from "@/features/briefing/useSeenCards.js";
@@ -25,6 +26,8 @@ const STEPS = {
     reading: 'Reading the articles of each story…',
     summarizing: 'Writing the summaries…',
 };
+
+const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});
 
 export const BriefingPage = () => {
     const {token, user, logout, expired} = useAuth();
@@ -91,65 +94,69 @@ export const BriefingPage = () => {
     };
 
     const running = briefing?.status === 'running';
+    const ready = briefing?.status === 'ready';
+    const count = ready ? briefing.items.length : 0;
 
     return (
-        <CustomProvider theme="light">
-            <CustomNavbar user={user} removeAuthCredentials={logout}/>
-            <Container className="app-header">
-                <Content width={'75vw'} marginTop={80}>
-                    <VStack align="stretch" gap={20}>
-                        <Text size={'3xl'} weight={'semibold'} className={'title'}>Your briefing</Text>
-
-                        {error && <Message type="error" closable onClose={() => setError(null)}>{error}</Message>}
-
-                        {profile === null && (
-                            <Message type="info">
-                                Tell us what you want to read first: <Link to="/profile">write your profile</Link>.
-                                The briefing is chosen from it, and the sources are found for it.
-                            </Message>
-                        )}
-
-                        {profile && (
+        <PageShell user={user} onSignOut={logout}>
+            <Opening
+                kicker="The briefing"
+                title="Your briefing"
+                standfirst="The stories of the last 48 hours closest to your interests, chosen by the AI. A story you saw in the last 3 days is not shown again; the ones you did not reach can come back."
+                aside={profile && (
+                    <div className="space-y-4">
+                        {ready && (
                             <div>
-                                <Button appearance="primary" color="orange" onClick={start} loading={running} disabled={running}>
-                                    New briefing
-                                </Button>
-                                <Text muted size="sm" marginTop={6}>
-                                    The stories of the last 48 hours closest to your interests, chosen by the AI. A story you saw in the last 3 days is not shown again, the ones you did not reach can come back.
-                                </Text>
+                                <p className="kicker">This edition</p>
+                                <p className="folio mt-1 !text-ink">Written {written(briefing.finishedAt ?? briefing.createdAt)}</p>
+                                {count > 0 && <p className="folio mt-0.5">{count} {count === 1 ? 'story' : 'stories'}</p>}
                             </div>
                         )}
+                        <Button variant="primary" onClick={start} loading={running} disabled={running}>
+                            New briefing
+                        </Button>
+                    </div>
+                )}
+            />
 
-                        {running && (
-                            <Loader content={STEPS[briefing.step] ?? 'Working…'} vertical/>
+            <div className="page mt-12 space-y-8 md:mt-16">
+                <div className="grid-12">
+                    <div className="col-span-12 space-y-8 md:col-span-7 md:col-start-3">
+                        {error && <Notice type="error" onClose={() => setError(null)}>{error}</Notice>}
+
+                        {profile === null && (
+                            <Notice title="First, your profile">
+                                Tell us what you want to read first: <Link className="link" to="/profile">write your profile</Link>.
+                                The briefing is chosen from it, and the sources are found for it.
+                            </Notice>
                         )}
+
+                        {running && <Working>{STEPS[briefing.step] ?? 'Working…'}</Working>}
 
                         {briefing?.status === 'failed' && (
-                            <Message type="error">The last briefing could not be written: {briefing.error}</Message>
+                            <Notice type="error">The last briefing could not be written: {briefing.error}</Notice>
                         )}
 
-                        {briefing?.status === 'ready' && (
-                            <>
-                                <Text muted>
-                                    Written {new Date(briefing.finishedAt ?? briefing.createdAt).toLocaleString()}
-                                    {briefing.items.length > 0 && ` · ${briefing.items.length} ${briefing.items.length === 1 ? 'story' : 'stories'}`}
-                                </Text>
-                                {briefing.items.length === 0 && (
-                                    <Message type="info">
-                                        No story of the last hours really fits your profile. A short briefing is better than an off-topic one:
-                                        try again later, or <Link to="/profile">widen your profile</Link>.
-                                    </Message>
-                                )}
-                                {briefing.items.map(item => (
-                                    <div key={item.storyId} ref={observe(item.storyId)}>
-                                        <BriefingCard item={item} onVote={value => vote(item.storyId, value)}/>
-                                    </div>
-                                ))}
-                            </>
+                        {ready && count === 0 && (
+                            <Notice title="Nothing today">
+                                No story of the last hours really fits your profile. A short briefing is better than an off-topic one:
+                                try again later, or <Link className="link" to="/profile">widen your profile</Link>.
+                            </Notice>
                         )}
-                    </VStack>
-                </Content>
-            </Container>
-        </CustomProvider>
+                    </div>
+                </div>
+
+                {ready && count > 0 && (
+                    <ol className="list-none p-0">
+                        {briefing.items.map((item, index) => (
+                            <li key={item.storyId} ref={observe(item.storyId)}>
+                                <BriefingCard item={item} number={index + 1} lede={index === 0}
+                                              onVote={value => vote(item.storyId, value)}/>
+                            </li>
+                        ))}
+                    </ol>
+                )}
+            </div>
+        </PageShell>
     );
 };

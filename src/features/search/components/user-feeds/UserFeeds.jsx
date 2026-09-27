@@ -6,16 +6,16 @@
 //
 
 import {useEffect, useState} from "react";
-import {
-    Button, Checkbox, CheckboxGroup, HStack, IconButton, InputGroup, Input, Message, SelectPicker,
-    Tag, Text, toaster, VStack
-} from "rsuite";
-import {FaPlus, FaRegStar, FaSearch, FaShareAlt, FaStar, FaTrash} from "react-icons/fa";
+import {FaRegStar, FaShareAlt, FaStar, FaTrash} from "react-icons/fa";
+import {Button, IconButton} from "@/components/ui/button.jsx";
+import {Checkbox, Input, Label, Select} from "@/components/ui/field.jsx";
+import {Meta, MetaLine} from "@/components/ui/text.jsx";
+import {toast} from "@/lib/toast.js";
 
 export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');
-    const [category, setCategory] = useState(null);
+    const [category, setCategory] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     // search of the directory: the feeds found, and the ones ticked
     const [query, setQuery] = useState('');
@@ -33,13 +33,13 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
 
     const needCategory = () => {
         if (category) return true;
-        toaster.push(<Message type="error">Pick a category first.</Message>);
+        toast.error('Pick a category first.');
         return false;
     };
 
     const handleAdd = async () => {
         if (!site.trim()) {
-            toaster.push(<Message type="error">Enter a website.</Message>);
+            toast.error('Enter a website.');
             return;
         }
         if (!needCategory()) return;
@@ -49,18 +49,18 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         setIsAdding(false);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "This source could not be added."}</Message>);
+            toast.error(data?.error ?? "This source could not be added.");
             return;
         }
 
         setFeeds([data.feed, ...feeds]);
         setSite('');
-        toaster.push(<Message type="success">{data.feed.site} added, e.g. "{data.sample?.[0]}"</Message>);
+        toast.success(`${data.feed.site} added, e.g. "${data.sample?.[0]}"`);
     };
 
     const handleSearch = async () => {
         if (!query.trim()) {
-            toaster.push(<Message type="error">Enter a subject, like "premier league".</Message>);
+            toast.error('Enter a subject, like "premier league".');
             return;
         }
 
@@ -69,7 +69,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         setIsSearching(false);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "The directory could not be searched."}</Message>);
+            toast.error(data?.error ?? "The directory could not be searched.");
             return;
         }
 
@@ -89,16 +89,16 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         setIsAdding(false);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "These sources could not be added."}</Message>);
+            toast.error(data?.error ?? "These sources could not be added.");
             return;
         }
 
         const done = (data.feeds ?? []).map(feed => feed.url);
         if (done.length > 0) {
-            toaster.push(<Message type="success">{done.length} source{done.length > 1 ? 's' : ''} added.</Message>);
+            toast.success(`${done.length} source${done.length > 1 ? 's' : ''} added.`);
         }
         for (let failed of data.errors ?? []) {
-            toaster.push(<Message type="error">{failed.site}: {failed.error}</Message>);
+            toast.error(`${failed.site}: ${failed.error}`);
         }
 
         setFeeds([...(data.feeds ?? []), ...feeds]);
@@ -112,7 +112,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         const data = await api.updateFeed(feed.id, changes, token);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "This source could not be changed."}</Message>);
+            toast.error(data?.error ?? "This source could not be changed.");
             return;
         }
 
@@ -123,101 +123,114 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         const data = await api.deleteUserFeed(feed.id, token);
 
         if (!data || data.error) {
-            toaster.push(<Message type="error">{data?.error ?? "This source could not be removed."}</Message>);
+            toast.error(data?.error ?? "This source could not be removed.");
             return;
         }
 
         setFeeds(feeds.filter(other => other.id !== feed.id));
     };
 
-    return (
-        <VStack align="stretch" spacing={8}>
-            <HStack spacing={8} alignItems="flex-start">
-                <InputGroup style={{flex: 1}}>
-                    <Input value={site} onChange={setSite} placeholder="e.g., engadget.com"
-                           onPressEnter={handleAdd} disabled={isAdding}/>
-                </InputGroup>
-                <SelectPicker data={categories.map(name => ({value: name, label: name}))}
-                              value={category} onChange={setCategory} placeholder="Category"
-                              searchable={false} cleanable={false} style={{width: 150}}/>
-                <Button appearance="ghost" color="orange" startIcon={<FaPlus/>}
-                        onClick={handleAdd} loading={isAdding}>Add</Button>
-            </HStack>
+    const onEnter = (action) => (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            action();
+        }
+    };
 
-            <HStack spacing={8} alignItems="flex-start">
-                <InputGroup style={{flex: 1}}>
-                    <Input value={query} onChange={setQuery} placeholder='or search a subject, e.g., "premier league"'
-                           onPressEnter={handleSearch} disabled={isSearching}/>
-                </InputGroup>
-                <Button appearance="ghost" color="orange" startIcon={<FaSearch/>}
-                        onClick={handleSearch} loading={isSearching} style={{width: 150}}>Search</Button>
-            </HStack>
+    return (
+        <div className="space-y-8">
+            <div className="grid-12 items-end gap-y-4">
+                <div className="col-span-12 sm:col-span-6">
+                    <Label htmlFor="own-site">Add a website</Label>
+                    <Input id="own-site" value={site} onChange={event => setSite(event.target.value)} placeholder="e.g., engadget.com"
+                           onKeyDown={onEnter(handleAdd)} disabled={isAdding}/>
+                </div>
+                <div className="col-span-8 sm:col-span-4">
+                    <Label htmlFor="own-category">Category</Label>
+                    <Select id="own-category" placeholder="Category" value={category} onChange={event => setCategory(event.target.value)}
+                            options={categories.map(name => ({value: name, label: name}))}/>
+                </div>
+                <div className="col-span-4 sm:col-span-2">
+                    <Button className="w-full" onClick={handleAdd} loading={isAdding}>Add</Button>
+                </div>
+
+                <div className="col-span-8 sm:col-span-10">
+                    <Label htmlFor="own-query">Or search the directory</Label>
+                    <Input id="own-query" value={query} onChange={event => setQuery(event.target.value)}
+                           placeholder='a subject, e.g., "premier league"' onKeyDown={onEnter(handleSearch)} disabled={isSearching}/>
+                </div>
+                <div className="col-span-4 sm:col-span-2">
+                    <Button className="w-full" onClick={handleSearch} loading={isSearching}>Search</Button>
+                </div>
+            </div>
 
             {found !== null && found.length === 0 && (
-                <Text muted size="sm">No feed found for "{query}" outside the sources you already have.</Text>
+                <p className="caption">No feed found for "{query}" outside the sources you already have.</p>
             )}
 
             {found !== null && found.length > 0 && (
-                <VStack align="stretch" spacing={8}>
-                    <Text muted size="sm">
+                <div className="border-t border-rule pt-4">
+                    <p className="caption">
                         {found.length} feed{found.length > 1 ? 's' : ''}, the most read first. They are checked when added.
-                    </Text>
-
-                    <CheckboxGroup value={selected} onChange={setSelected}>
+                    </p>
+                    <div className="mt-3 flex flex-col">
                         {found.map(source => (
-                            <Checkbox key={source.feed} value={source.feed} color="orange">
-                                <HStack spacing={8} alignItems="center">
-                                    <Text fontWeight={600}>{source.name}</Text>
-                                    <Tag size="sm" color="orange">{source.readers} readers</Tag>
-                                    {source.language && <Tag size="sm">{source.language}</Tag>}
-                                    <Text muted size="sm">{source.site}</Text>
-                                </HStack>
+                            <Checkbox key={source.feed} checked={selected.includes(source.feed)}
+                                      onChange={event => setSelected(event.target.checked
+                                          ? [...selected, source.feed]
+                                          : selected.filter(feed => feed !== source.feed))}>
+                                <span className="font-semibold">{source.name}</span>{' '}
+                                <MetaLine className="inline-flex">
+                                    <Meta>{source.readers} readers</Meta>
+                                    {source.language && <Meta>{source.language}</Meta>}
+                                    <Meta>{source.site}</Meta>
+                                </MetaLine>
                             </Checkbox>
                         ))}
-                    </CheckboxGroup>
-
-                    <HStack>
-                        <Button appearance="primary" color="orange" onClick={handleAddFound}
-                                loading={isAdding} disabled={selected.length === 0}>
-                            Add {selected.length} source{selected.length > 1 ? 's' : ''}
-                        </Button>
-                    </HStack>
-                </VStack>
+                    </div>
+                    <Button variant="primary" size="sm" className="mt-4" onClick={handleAddFound}
+                            loading={isAdding} disabled={selected.length === 0}>
+                        Add {selected.length} source{selected.length > 1 ? 's' : ''}
+                    </Button>
+                </div>
             )}
 
             {feeds.length === 0
-                ? <Text muted size="sm">No source of your own yet. The feed of the site is found automatically.</Text>
-                : feeds.map(feed => (
-                    <HStack key={feed.id} spacing={8} alignItems="center">
-                        {/* any source, one found for the profile too: it is then never removed */}
-                        <IconButton size="xs" appearance="subtle" color="yellow"
-                                    icon={feed.trusted ? <FaStar/> : <FaRegStar/>}
-                                    aria-label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
-                                    aria-pressed={Boolean(feed.trusted)}
-                                    title={feed.trusted
-                                        ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
-                                        : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                    onClick={() => handleChange(feed, {trusted: !feed.trusted})}/>
-                        {feed.origin !== 'profile' && (
-                            <IconButton size="xs" appearance={feed.shared ? 'primary' : 'subtle'} color="blue"
-                                        icon={<FaShareAlt/>}
-                                        aria-label={feed.shared ? `Stop sharing ${feed.site}` : `Share ${feed.site}`}
-                                        aria-pressed={Boolean(feed.shared)}
-                                        title={feed.shared
-                                            ? 'Shared: it can be recommended to the other readers who follow its subjects'
-                                            : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
-                                        onClick={() => handleChange(feed, {shared: !feed.shared})}/>
-                        )}
-                        <Tag color="orange">{feed.category}</Tag>
-                        <Text style={{flex: 1}}>{feed.site}</Text>
-                        {feed.error && <Tag color="red" title={feed.error}>not working</Tag>}
-                        <Text muted size="sm" style={{maxWidth: '45%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                            {feed.url}
-                        </Text>
-                        <IconButton size="xs" appearance="subtle" color="red" icon={<FaTrash/>}
-                                    aria-label={`Remove ${feed.site}`} onClick={() => handleDelete(feed)}/>
-                    </HStack>
-                ))}
-        </VStack>
-    )
-}
+                ? <p className="caption">No source of your own yet. The feed of the site is found automatically.</p>
+                : (
+                    <ul className="border-t border-rule">
+                        {feeds.map(feed => (
+                            <li key={feed.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule py-2.5">
+                                {/* any source, one found for the profile too: it is then never removed */}
+                                <IconButton label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
+                                            pressed={Boolean(feed.trusted)}
+                                            title={feed.trusted
+                                                ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
+                                                : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
+                                            onClick={() => handleChange(feed, {trusted: !feed.trusted})}>
+                                    {feed.trusted ? <FaStar/> : <FaRegStar/>}
+                                </IconButton>
+                                {feed.origin !== 'profile' && (
+                                    <IconButton label={feed.shared ? `Stop sharing ${feed.site}` : `Share ${feed.site}`}
+                                                pressed={Boolean(feed.shared)}
+                                                title={feed.shared
+                                                    ? 'Shared: it can be recommended to the other readers who follow its subjects'
+                                                    : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
+                                                onClick={() => handleChange(feed, {shared: !feed.shared})}>
+                                        <FaShareAlt/>
+                                    </IconButton>
+                                )}
+                                <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{feed.site}</span>
+                                <Meta>{feed.category}</Meta>
+                                {feed.error && <Meta tone="accent" title={feed.error}>not working</Meta>}
+                                <span className="caption hidden max-w-[40%] truncate md:inline" title={feed.url}>{feed.url}</span>
+                                <IconButton label={`Remove ${feed.site}`} className="hover:text-accent-ink" onClick={() => handleDelete(feed)}>
+                                    <FaTrash/>
+                                </IconButton>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+        </div>
+    );
+};
