@@ -189,16 +189,15 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
                 ? <Text muted size="sm">No source of your own yet. The feed of the site is found automatically.</Text>
                 : feeds.map(feed => (
                     <HStack key={feed.id} spacing={8} alignItems="center">
-                        {feed.origin !== 'profile' && (
-                            <IconButton size="xs" appearance="subtle" color="yellow"
-                                        icon={feed.trusted ? <FaStar/> : <FaRegStar/>}
-                                        aria-label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
-                                        aria-pressed={Boolean(feed.trusted)}
-                                        title={feed.trusted
-                                            ? 'Trusted: its stories come first in your briefing when they fit your interests'
-                                            : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                        onClick={() => handleChange(feed, {trusted: !feed.trusted})}/>
-                        )}
+                        {/* any source, one found for the profile too: it is then never removed */}
+                        <IconButton size="xs" appearance="subtle" color="yellow"
+                                    icon={feed.trusted ? <FaStar/> : <FaRegStar/>}
+                                    aria-label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
+                                    aria-pressed={Boolean(feed.trusted)}
+                                    title={feed.trusted
+                                        ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
+                                        : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
+                                    onClick={() => handleChange(feed, {trusted: !feed.trusted})}/>
                         {feed.origin !== 'profile' && (
                             <IconButton size="xs" appearance={feed.shared ? 'primary' : 'subtle'} color="blue"
                                         icon={<FaShareAlt/>}

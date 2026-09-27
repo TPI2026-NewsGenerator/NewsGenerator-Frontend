@@ -12,6 +12,7 @@ import {
     IconButton, Input, Loader, Message, Tag, Text, VStack, HStack, toaster
 } from "rsuite";
 import TrashIcon from '@rsuite/icons/Trash';
+import {FaStar} from "react-icons/fa";
 import {CustomNavbar} from "@/features/navbar/components/Navbar.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
@@ -117,6 +118,8 @@ export const ProfilePage = () => {
 
     const discovery = DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
     const limits = data?.limits ?? {profileFeeds: 60, relevanceDays: 14};
+    // the sources the thumbs left out: still listed with the others, marked
+    const refused = new Set((data?.refusedSources ?? []).map(source => source.url));
 
     return (
         <CustomProvider theme="light">
@@ -197,7 +200,12 @@ export const ProfilePage = () => {
                                 <ul className="briefing-sources">
                                     {data.sources.map(source => (
                                         <li key={source.id}>
-                                            <b>{source.site}</b> <Tag size="sm">{source.category}</Tag> {source.language && <Tag size="sm">{source.language}</Tag>}{' '}
+                                            <b>{source.site}</b>
+                                            {source.trusted && <FaStar size={12} color="var(--rs-yellow-500)" title="A source you trust" aria-label="a source you trust" style={{marginLeft: 4}}/>}
+                                            {' '}<Tag size="sm">{source.category}</Tag> {source.language && <Tag size="sm">{source.language}</Tag>}{' '}
+                                            {refused.has(source.url) && (
+                                                <Tag size="sm" color="red" title="Left out after your thumbs: no longer read for your briefing, see below">left out</Tag>
+                                            )}{' '}
                                             <Tag size="sm" color={source.relevant > 0 ? 'green' : undefined}
                                                  title={`Its news of the last ${limits.relevanceDays} days on your interests`}>
                                                 {source.relevant > 0 ? `${source.relevant} news on your interests` : 'nothing on your interests lately'}
