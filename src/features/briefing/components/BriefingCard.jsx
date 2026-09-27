@@ -63,7 +63,7 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                 <div className="body-text mt-6">
                     {paragraphs.length > 0
                         ? paragraphs.map((paragraph, i) => <p key={i} className={cn(lede && i === 0 && 'lede')}>{paragraph}</p>)
-                        : <Notice>No article of this story could be read (paywall or protected site), no summary.</Notice>}
+                        : <Notice>{item.summaryError ?? 'No article of this story could be read (paywall or protected site), no summary.'}</Notice>}
                 </div>
 
                 <div className="mt-8">

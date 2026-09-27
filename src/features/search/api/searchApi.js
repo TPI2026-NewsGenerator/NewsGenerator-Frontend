@@ -39,15 +39,16 @@ export const SearchApi = {
 
         return await response.json();
     },
-    // AI resume of the selected news (urls from getNews, 10 max)
-    getNewsSummary: async (urls, token) => {
+    // AI resume of the cards chosen (10 max), each with the urls of its articles, its lead first,
+    // written in the language searched
+    getNewsSummary: async (stories, language, token) => {
         const response = await fetch(`${API_URL}/news/summary`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({urls}),
+            body: JSON.stringify({stories, language}),
         });
 
         return await response.json();

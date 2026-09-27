@@ -11,6 +11,7 @@ import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Checkbox, Input, Label, Select} from "@/components/ui/field.jsx";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
+import {feedAddress} from "@/lib/utils.js";
 
 export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) => {
     const [feeds, setFeeds] = useState([]);
@@ -223,7 +224,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
                                 <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{feed.site}</span>
                                 <Meta>{feed.category}</Meta>
                                 {feed.error && <Meta tone="accent" title={feed.error}>not working</Meta>}
-                                <span className="caption hidden max-w-[40%] truncate md:inline" title={feed.url}>{feed.url}</span>
+                                <span className="caption hidden max-w-[40%] truncate md:inline" title={feedAddress(feed.url)}>{feedAddress(feed.url)}</span>
                                 <IconButton label={`Remove ${feed.site}`} className="hover:text-accent-ink" onClick={() => handleDelete(feed)}>
                                     <FaTrash/>
                                 </IconButton>

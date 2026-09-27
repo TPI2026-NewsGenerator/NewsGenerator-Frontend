@@ -71,7 +71,7 @@ export const LoginPage = () => {
         <div className="flex min-h-screen flex-col">
             <header className="border-b-[3px] border-double border-ink">
                 <div className="page flex items-end justify-between gap-6 pt-6 pb-4">
-                    <span className="font-display text-[2rem] leading-none font-medium tracking-[-0.015em] md:text-[2.6rem]">NewsGenerator</span>
+                    <span className="min-w-0 font-display text-[clamp(1.4rem,7.5vw,2rem)] leading-none font-medium tracking-[-0.015em] md:text-[2.6rem]">NewsGenerator</span>
                     <span className="folio hidden sm:block">
                         {new Date().toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}
                     </span>

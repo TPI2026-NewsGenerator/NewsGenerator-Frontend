@@ -60,7 +60,7 @@ export const Masthead = ({user, onSignOut}) => {
                     <p className="folio hidden sm:block">The news of the last 48 hours, chosen for one reader</p>
                 </div>
                 <div className="flex items-end justify-between gap-6 pt-5 pb-4">
-                    <Link to="/briefing" className="font-display text-[2rem] leading-none font-medium tracking-[-0.015em] text-ink no-underline md:text-[2.6rem]">
+                    <Link to="/briefing" className="min-w-0 font-display text-[clamp(1.4rem,7.5vw,2rem)] leading-none font-medium tracking-[-0.015em] text-ink no-underline md:text-[2.6rem]">
                         NewsGenerator
                     </Link>
                     <nav aria-label="Sections" className="hidden items-baseline gap-7 md:flex">

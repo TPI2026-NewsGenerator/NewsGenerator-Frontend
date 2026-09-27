@@ -12,6 +12,7 @@ import {Button} from "@/components/ui/button.jsx";
 import {Checkbox, Label, Select} from "@/components/ui/field.jsx";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
+import {feedAddress} from "@/lib/utils.js";
 
 // "2026-09-22T20:22:47.000Z" -> "2 hours ago", the news of a feed are dated the same way
 const publishedAgo = (at) => {
@@ -149,7 +150,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
                                               : selected.filter(feed => feed !== source.feed))}>
                                     <span className="font-semibold">{source.name}</span>{' '}
                                     <Meta>{source.news} news</Meta>
-                                    <span className="caption block [overflow-wrap:anywhere]">{source.feed}</span>
+                                    <span className="caption block [overflow-wrap:anywhere]">{feedAddress(source.feed)}</span>
                                     {source.sample && <span className="caption block italic">e.g. "{source.sample}"</span>}
                                 </Checkbox>
                             ))}

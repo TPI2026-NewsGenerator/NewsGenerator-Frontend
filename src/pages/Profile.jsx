@@ -16,6 +16,7 @@ import {FeedApi} from "@/features/search/api/feedApi.js";
 import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
+import {feedAddress} from "@/lib/utils.js";
 
 const POLL_MS = 5000;
 const LANGUAGES = {en: 'English', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian'};
@@ -151,6 +152,14 @@ export const ProfilePage = () => {
                 )}
             />
 
+            {data === null && !error && (
+                <div className="page mt-10">
+                    <div className="grid-12">
+                        <Working className="col-span-12 md:col-span-7 md:col-start-3">Opening your profile…</Working>
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <div className="page mt-10">
                     <div className="grid-12">
@@ -260,7 +269,7 @@ export const ProfilePage = () => {
                                         </MetaLine>
                                         {source.error && <p className="caption mt-1 !text-accent-ink">{source.error}</p>}
                                     </div>
-                                    <p className="caption col-span-12 truncate md:col-span-3 md:text-right" title={source.url}>{source.url}</p>
+                                    <p className="caption col-span-12 truncate md:col-span-3 md:text-right" title={feedAddress(source.url)}>{feedAddress(source.url)}</p>
                                 </li>
                             ))}
                         </ul>
@@ -281,7 +290,7 @@ export const ProfilePage = () => {
                             <li key={source.url} className="grid-12 items-baseline gap-y-2 border-b border-rule py-4">
                                 <div className="col-span-12 md:col-span-3">
                                     <p className="font-semibold">{source.site}</p>
-                                    <p className="caption truncate" title={source.url}>{source.url}</p>
+                                    <p className="caption truncate" title={feedAddress(source.url)}>{feedAddress(source.url)}</p>
                                 </div>
                                 <MetaLine className="col-span-12 md:col-span-6">
                                     <Meta tone="accent">{source.refused} not for me</Meta>

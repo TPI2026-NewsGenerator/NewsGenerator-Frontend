@@ -33,7 +33,8 @@ const TIME_OPTIONS = [
     {label: 'Oldest first', value: 'asc'},
 ];
 
-export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) => {
+// resumeCount / onOpenResume: the AI resume written last, opened again from here once closed
+export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, resumeCount = 0, onOpenResume}) => {
     const selectedIds = useRef([]);
     const [selectedCount, setSelectedCount] = useState(0);
     const [filteredData, setFilteredData] = useState(newsList);
@@ -132,6 +133,9 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden}) =
             </>}
             aside={
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                    {resumeCount > 0 && (
+                        <Button size="sm" variant="primary" onClick={onOpenResume}>Read the AI resume ({resumeCount})</Button>
+                    )}
                     <Button size="sm" variant={activeFilters > 0 ? 'primary' : 'quiet'} aria-expanded={showFilterPanel}
                             onClick={() => setShowFilterPanel(!showFilterPanel)}>
                         {activeFilters > 0 ? `Filters applied (${activeFilters})` : 'Filter'}

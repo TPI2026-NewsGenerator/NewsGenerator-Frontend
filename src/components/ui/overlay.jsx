@@ -10,14 +10,19 @@ import {Dialog as RadixDialog} from "radix-ui";
 import {cn} from "@/lib/utils.js";
 import {currentNotes, dismiss, subscribe} from "@/lib/toast.js";
 
-// a sheet of paper over the page, with a hairline and no shadow
-export const Dialog = ({open, onOpenChange, title, description, children, footer}) => (
+// a sheet of paper over the page, with a hairline and no shadow. wide: a reading sheet, for long texts
+export const Dialog = ({open, onOpenChange, title, kicker, description, children, footer, wide = false}) => (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
         <RadixDialog.Portal>
             <RadixDialog.Overlay className="fixed inset-0 z-50 bg-ink/35 data-[state=open]:animate-in data-[state=open]:fade-in-0"/>
             <RadixDialog.Content
-                className="fixed top-1/2 left-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 border border-ink bg-paper p-6 md:p-8 data-[state=open]:animate-in data-[state=open]:fade-in-0">
-                <RadixDialog.Title className="section-head">{title}</RadixDialog.Title>
+                className={cn('fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain border border-ink bg-paper data-[state=open]:animate-in data-[state=open]:fade-in-0',
+                    wide ? 'max-w-6xl p-6 md:p-12' : 'max-w-lg p-6 md:p-8')}>
+                <div className="flex items-baseline justify-between gap-6">
+                    {kicker ? <p className="kicker kicker-rule">{kicker}</p> : <span/>}
+                    <RadixDialog.Close className="kicker cursor-pointer hover:!text-ink">Close</RadixDialog.Close>
+                </div>
+                <RadixDialog.Title className={cn('section-head', kicker && 'mt-4')}>{title}</RadixDialog.Title>
                 {description
                     ? <RadixDialog.Description className="caption mt-2">{description}</RadixDialog.Description>
                     : <RadixDialog.Description className="sr-only">{title}</RadixDialog.Description>}

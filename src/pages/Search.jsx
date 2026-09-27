@@ -5,7 +5,7 @@
 //  Description: Search page for frontend
 //
 
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
@@ -77,7 +77,7 @@ export const SearchPage = () => {
     const [newsList, setNewsList] = useState([]);
     // AI resumes of the selected news
     const [summaries, setSummaries] = useState([]);
-    const summaryListRef = useRef(null);
+    const [showSummaries, setShowSummaries] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [customSearchItems, setCustomSearchItems] = useState([]);
@@ -175,10 +175,13 @@ export const SearchPage = () => {
         handleSubmit(keywords);
     };
 
-    // AI resume of the selected news (the server scrapes them first)
+    // AI resume of the cards chosen, each with all its articles: the server reads up to five of
+    // them, counts who wrote it themselves and summarizes one, in the language searched
     const handleGenerate = async (urls) => {
+        const stories = urls.map(url => newsList.find(news => news.url === url)).filter(Boolean)
+            .map(news => ({urls: [news.url, ...(news.sources ?? []).map(other => other.url)]}));
         setIsGenerating(true);
-        const data = await SearchApi.getNewsSummary(urls, token).catch(() => null);
+        const data = await SearchApi.getNewsSummary(stories, lastSearch?.language ?? formValue.language, token).catch(() => null);
         setIsGenerating(false);
 
         if (data?.error?.includes?.('Forbidden, invalid or expired')) {
@@ -193,6 +196,7 @@ export const SearchPage = () => {
         const summaryCount = data.news.filter(news => news.summary).length;
         toast.success(`${summaryCount} / ${data.news.length} news summarized.`);
         setSummaries(data.news);
+        setShowSummaries(true);
     };
 
     // categories of feeds that can be searched, they belong to the language chosen
@@ -201,13 +205,6 @@ export const SearchPage = () => {
             .then(data => setCategoryOptions(data.categories ?? []))
             .catch(e => console.error("Failed to fetch categories", e));
     }, [formValue.language]);
-
-    // show the resumes once generated
-    useEffect(() => {
-        if (summaries.length > 0) {
-            summaryListRef.current?.scrollIntoView({behavior: 'smooth'});
-        }
-    }, [summaries]);
 
     const handleSaveSearch = async () => {
         if (!user?.id) {
@@ -447,13 +444,14 @@ export const SearchPage = () => {
                        onKeyDown={event => event.key === 'Enter' && handleSaveSearch()}/>
             </Dialog>
 
-            <SummaryList ref={summaryListRef} summaries={summaries}/>
+            <SummaryList summaries={summaries} open={showSummaries} onOpenChange={setShowSummaries}/>
             {lastSearch && (
                 <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}
                                    onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
             )}
             <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
-                      wider={wider} onWiden={handleWiden}/>
+                      wider={wider} onWiden={handleWiden}
+                      resumeCount={summaries.length} onOpenResume={() => setShowSummaries(true)}/>
         </PageShell>
     );
 };

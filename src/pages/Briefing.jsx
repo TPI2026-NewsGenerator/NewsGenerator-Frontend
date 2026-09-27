@@ -131,6 +131,8 @@ export const BriefingPage = () => {
                             </Notice>
                         )}
 
+                        {briefing === undefined && !error && <Working>Opening your briefing…</Working>}
+
                         {running && <Working>{STEPS[briefing.step] ?? 'Working…'}</Working>}
 
                         {briefing?.status === 'failed' && (
