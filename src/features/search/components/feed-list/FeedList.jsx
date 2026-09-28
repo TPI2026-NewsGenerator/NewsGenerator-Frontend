@@ -33,8 +33,10 @@ const TIME_OPTIONS = [
     {label: 'Oldest first', value: 'asc'},
 ];
 
-// resumeCount / onOpenResume: the AI resume written last, opened again from here once closed
-export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, resumeCount = 0, onOpenResume}) => {
+// resumeCount / onOpenResume: the key passages shown last, opened again from here once closed
+// mode: 'meaning' for a sentence (each news has match 'answer' or 'related', in the order of the AI),
+// 'words' for exact words; checked: false when the AI could not sort the news found by meaning
+export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, resumeCount = 0, onOpenResume, mode = null, checked = true}) => {
     const selectedIds = useRef([]);
     const [selectedCount, setSelectedCount] = useState(0);
     const [filteredData, setFilteredData] = useState(newsList);
@@ -72,7 +74,26 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
             </section>
         );
     }
-    if (newsList.length === 0) return null;
+    // no search yet
+    if (newsList.length === 0 && !mode) return null;
+    if (newsList.length === 0) {
+        return (
+            <section className="page mt-20">
+                <p className="section-head border-t border-ink pt-5">
+                    {mode === 'meaning' ? 'No news answers your search in this period.' : 'No news holds these words in this period.'}
+                </p>
+                <p className="mt-3 max-w-[60ch] text-ink-mute">
+                    {mode === 'meaning'
+                        ? 'Try other words, a longer period or more categories.'
+                        : 'Try fewer words, a longer period or more categories.'}
+                    {wider && <>
+                        {' '}{wider.found} have at least one of {wider.terms.join(', ')}.{' '}
+                        <Button variant="link" onClick={() => onWiden(wider.terms.join(', '))}>Show those {wider.found}</Button>
+                    </>}
+                </p>
+            </section>
+        );
+    }
 
     const sources = [...new Set(newsList.map(item => item.source))].sort().map(source => ({label: source, value: source}));
 
@@ -111,16 +132,27 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
 
     const activeFilters = [sourceFilter, timeFilter, coverageFilter, wordingFilter].filter(Boolean).length;
 
+    // a sentence: the answers, then the news only close to it, marked where they start while the
+    // list keeps the order of the AI
+    const byMeaning = mode === 'meaning' && checked;
+    const answerCount = newsList.filter(item => item.match === 'answer').length;
+    const firstRelated = byMeaning && !timeFilter ? filteredData.findIndex(item => item.match === 'related') : -1;
+
     return (
         <Section
             kicker="The results"
             title="Your news list"
             intro={<>
                 <p>
-                    Found {newsList.length} articles
+                    {byMeaning
+                        ? `${answerCount} ${answerCount === 1 ? 'news answers' : 'news answer'} your search, ${newsList.length - answerCount} ${newsList.length - answerCount === 1 ? 'is' : 'are'} close to it`
+                        : `Found ${newsList.length} articles`}
                     {filteredData.length !== newsList.length && `, ${filteredData.length} kept by the filters`}.
-                    {' '}Choose up to {MAX_SELECTED} and the AI writes their resume.
+                    {' '}Choose up to {MAX_SELECTED} and the AI shows their key passages.
                 </p>
+                {mode === 'meaning' && !checked && (
+                    <p className="mt-2">The AI could not read them this time: these are the news closest in meaning to your search, the closest first.</p>
+                )}
                 {wider && (
                     <p className="mt-2">
                         Every word is asked for at once, so only these have all of {wider.terms.join(', ')}.
@@ -186,8 +218,11 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
             )}
 
             <ul className="list-none divide-y divide-rule border-y border-rule p-0">
-                {filteredData.map(news => (
+                {filteredData.map((news, i) => (
                     <li key={news.url} className="lazy-row">
+                        {i === firstRelated && (
+                            <p className={`kicker pb-3 ${i > 0 ? 'border-t border-ink pt-8' : 'pt-3'}`}>Close to your search</p>
+                        )}
                         <Article id={news.url} onSelect={handleSelect} news={news}/>
                     </li>
                 ))}

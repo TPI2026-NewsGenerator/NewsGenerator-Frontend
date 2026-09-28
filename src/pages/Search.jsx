@@ -53,12 +53,12 @@ const toTimeframe = (timeframe, range) => {
 // "2026-09-28T10:30" of a datetime-local field, in the time of the user
 const localInput = (date) => date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
 
-// examples set beside the Keywords field
+// examples of exact words, set beside the search field
 const KEYWORD_EXAMPLES = [
-    ['referee', 'one word, the widest search'],
-    ['referee, VAR', 'one or the other, widest still'],
-    ['red card', 'both words in the same news, much narrower'],
     ['"red card"', 'this exact phrase'],
+    ['"referee"', 'this word, in any news'],
+    ['referee, VAR', 'one or the other'],
+    ['"red" "card"', 'both in the same news, narrower'],
     ['referee -rugby', 'referee, but never rugby'],
     ['-"red card"', 'excludes an exact phrase too'],
 ];
@@ -67,7 +67,7 @@ const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
 // the fields a search needs, with what to tell when one is missing
 const check = (form) => ({
-    keyword: form.keyword.trim() ? null : 'At least 1 keyword required.',
+    keyword: form.keyword.trim() ? null : 'Write what you are looking for.',
     category: form.category.length > 0 ? null : 'Please select at least 1 category.',
     language: form.language ? null : 'A language required.',
 });
@@ -107,6 +107,9 @@ export const SearchPage = () => {
     const [searchCount, setSearchCount] = useState(0);
     // set when a search asking for every word found almost nothing: how many a wider one would find
     const [wider, setWider] = useState(null);
+    // how the last search was made: a sentence by its meaning ('meaning'), or exact words ('words'),
+    // and whether the AI could check the news found by meaning
+    const [searchMode, setSearchMode] = useState({mode: null, checked: true});
     const [sourcesVersion, setSourcesVersion] = useState(0);
     const [saveSearchModal, setSaveSearchModal] = useState(false);
 
@@ -156,11 +159,13 @@ export const SearchPage = () => {
                 toast.error('Token is invalid or has expired, please log in');
                 removeAuthCredentials();
             } else if (allNews?.error) {
-                toast.error('An error has occurred.. Please try again.');
+                // the server words it for the reader (the search by meaning unavailable, a category unknown)
+                toast.error(typeof allNews.error === 'string' ? allNews.error : 'An error has occurred.. Please try again.');
             }
 
             setNewsList(allNews.news);
             setWider(allNews.wider ?? null);
+            setSearchMode({mode: allNews.mode ?? null, checked: allNews.checked ?? true});
         } catch {
             toast.error('An error has occurred.. Please try again.');
         } finally {
@@ -303,7 +308,7 @@ export const SearchPage = () => {
             <Opening
                 kicker="Search"
                 title="Search the news"
-                standfirst="Any subject, in the sources of your language and the ones you added. Choose up to ten articles and the AI writes their resume."
+                standfirst="Write what you are looking for in your own words: the AI finds the news that answer it. Choose up to ten and it shows their key passages, in the articles' own words."
                 aside={
                     <div>
                         <p className="kicker">Saved searches</p>
@@ -336,12 +341,13 @@ export const SearchPage = () => {
                 }}>
                     <div className="col-span-12 space-y-10 md:col-span-8">
                         <div>
-                            <Label htmlFor="keyword">Keywords</Label>
-                            <Input id="keyword" name="keyword" value={formValue.keyword} placeholder='e.g., referee -rugby, "red card"'
+                            <Label htmlFor="keyword">What are you looking for?</Label>
+                            <Input id="keyword" name="keyword" value={formValue.keyword}
+                                   placeholder="e.g., the decisions of the referees in the Champions League"
                                    onChange={event => setField('keyword', event.target.value)} invalid={Boolean(formError.keyword)}
                                    aria-describedby="keyword-help"/>
                             <Help id="keyword-help">
-                                Comma = or (widest), several words = all of them in the same news (narrow), "quotes" = exact phrase, -word = exclude
+                                A sentence, in your own words. For exact words, write them "between quotes" or use the other signs on the right.
                             </Help>
                             <FieldError>{formError.keyword}</FieldError>
                         </div>
@@ -408,8 +414,17 @@ export const SearchPage = () => {
                     </div>
 
                     <aside className="col-span-12 md:col-span-3 md:col-start-10 md:border-l md:border-rule md:pl-5">
-                        <p className="kicker">How to write keywords</p>
-                        <p className="caption mt-2">Searched in the title, the description and the categories of the news.</p>
+                        <p className="kicker">Two ways to search</p>
+                        <p className="mt-2 text-[0.9375rem] font-semibold">A sentence</p>
+                        <p className="caption mt-1">
+                            The AI reads the news closest in meaning to it and keeps the ones that answer it, whatever
+                            their words, then the ones close to it. Several words, a name or a whole question all work.
+                        </p>
+                        <p className="mt-5 text-[0.9375rem] font-semibold">Exact words</p>
+                        <p className="caption mt-1">
+                            As soon as you write quotes, a comma or -word, the news are those holding these words,
+                            in the title, the description or the categories, newest first, without the AI.
+                        </p>
                         <table className="mt-3 w-full border-collapse text-[0.8125rem]">
                             <tbody>
                             {KEYWORD_EXAMPLES.map(([example, meaning]) => (
@@ -421,13 +436,8 @@ export const SearchPage = () => {
                             </tbody>
                         </table>
                         <p className="caption mt-3">
-                            A word also finds its variants: <code>referee</code> finds "referees". Words of 3 letters or less
-                            must match a whole word, so <code>VAR</code> does not find "Alvarez".
-                        </p>
-                        <p className="caption mt-3">
-                            Unlike a web search, several words <em>remove</em> the news that do not have them all:
-                            {' '}<code>referee football soccer</code> asks for the three at once and finds almost nothing.
-                            Start with one word, add commas to widen, add words to narrow.
+                            A word without quotes also finds its variants: in <code>referee, VAR</code>, referee finds
+                            "referees". Words of 3 letters or less must match a whole word, so <code>VAR</code> does not find "Alvarez".
                         </p>
                     </aside>
                 </form>
@@ -450,7 +460,7 @@ export const SearchPage = () => {
                                    onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
             )}
             <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
-                      wider={wider} onWiden={handleWiden}
+                      wider={wider} onWiden={handleWiden} mode={searchMode.mode} checked={searchMode.checked}
                       resumeCount={summaries.length} onOpenResume={() => setShowSummaries(true)}/>
         </PageShell>
     );
