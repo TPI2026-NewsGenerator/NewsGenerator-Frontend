@@ -12,8 +12,9 @@ import {Button} from "@/components/ui/button.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 
-// api: FeedApi. reloadKey: asked again when it changes (a discovery done, the interests changed)
-export const RecommendedSources = ({token, api, expired, reloadKey}) => {
+// api: FeedApi. reloadKey: asked again when it changes (a discovery done, the interests changed).
+// onAdded: told when sources were added, they join the ones added by hand
+export const RecommendedSources = ({token, api, expired, reloadKey, onAdded}) => {
     const [sources, setSources] = useState(null);
     const [adding, setAdding] = useState(null);         // the ids being added
     const [error, setError] = useState(null);
@@ -43,7 +44,8 @@ export const RecommendedSources = ({token, api, expired, reloadKey}) => {
             }
             const done = new Set((answer.feeds ?? []).map(feed => feed.url));
             if (done.size > 0) {
-                toast.success(`${done.size} source${done.size > 1 ? 's' : ''} added: you find them with the ones you added by hand, on the search page.`);
+                toast.success(`${done.size} source${done.size > 1 ? 's' : ''} added: you find them with the ones you added, above.`);
+                onAdded?.();
             }
             for (const failed of answer.errors ?? []) {
                 toast.error(`${failed.site ?? 'A source'}: ${failed.error}`);

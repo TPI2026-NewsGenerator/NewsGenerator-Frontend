@@ -9,7 +9,7 @@ import '@testing-library/jest-dom';
 import {describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {RecommendedSources} from '@/features/briefing/components/RecommendedSources.jsx';
-import {UserFeeds} from '@/features/search/components/user-feeds/UserFeeds.jsx';
+import {UserFeeds} from '@/features/briefing/components/UserFeeds.jsx';
 
 const source = (id, site) => ({
     id, site, url: `https://${site}/rss`, category: 'sport', language: 'en', news: 40, relevant: 9,
@@ -64,5 +64,25 @@ describe('UserFeeds and sharing', () => {
         fireEvent.click(share);
         expect(await screen.findByRole('button', {name: 'Stop sharing mysite.org'})).toHaveAttribute('aria-pressed', 'true');
         expect(api.updateFeed).toHaveBeenCalledWith(7, {shared: true}, 't');
+    });
+    it('should list on the profile only the sources added by hand, and add one in the language picked', async () => {
+        const onLanguage = vi.fn();
+        const api = {
+            getUserFeeds: vi.fn().mockResolvedValue({feeds: [feed, {...feed, id: 8, site: 'found.com', origin: 'profile'}]}),
+            addUserFeed: vi.fn().mockResolvedValue({feed: {...feed, id: 9, site: 'lequipe.fr'}, sample: ['Un titre']}),
+        };
+        render(<UserFeeds token="t" categories={['sport']} api={api} origin="user" language="fr"
+                          languages={[{value: 'en', label: 'English'}, {value: 'fr', label: 'French'}]} onLanguage={onLanguage}/>);
+
+        expect(await screen.findByText('mysite.org')).toBeInTheDocument();
+        expect(screen.queryByText('found.com')).not.toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText('Its language'), {target: {value: 'en'}});
+        expect(onLanguage).toHaveBeenCalledWith('en');
+
+        fireEvent.change(screen.getByLabelText('Add a website'), {target: {value: 'lequipe.fr'}});
+        fireEvent.change(screen.getByLabelText('Category'), {target: {value: 'sport'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+        await waitFor(() => expect(api.addUserFeed).toHaveBeenCalledWith({site: 'lequipe.fr', category: 'sport', language: 'fr'}, 't'));
     });
 });

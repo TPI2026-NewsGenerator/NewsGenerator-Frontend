@@ -6,7 +6,7 @@
 //
 
 import {useEffect, useState} from "react";
-import {useNavigate} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
@@ -14,7 +14,6 @@ import {CheckboxGroup, FieldError, Help, Input, Label, Select} from "@/component
 import {Dialog} from "@/components/ui/overlay.jsx";
 import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
 import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
-import {UserFeeds} from "@/features/search/components/user-feeds/UserFeeds.jsx";
 import {SourceSuggestions} from "@/features/search/components/source-suggestions/SourceSuggestions.jsx";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
@@ -101,7 +100,6 @@ export const SearchPage = () => {
         language: 'en',
     });
     const [customRange, setCustomRange] = useState(null);
-    const [showSources, setShowSources] = useState(false);
     // the search that gave the results, used to look for the media missing from the sources
     const [lastSearch, setLastSearch] = useState(null);
     const [searchCount, setSearchCount] = useState(0);
@@ -110,7 +108,6 @@ export const SearchPage = () => {
     // how the last search was made: a sentence by its meaning ('meaning'), or exact words ('words'),
     // and whether the AI could check the news found by meaning
     const [searchMode, setSearchMode] = useState({mode: null, checked: true});
-    const [sourcesVersion, setSourcesVersion] = useState(0);
     const [saveSearchModal, setSaveSearchModal] = useState(false);
 
     const setField = (name, value) => {
@@ -394,19 +391,11 @@ export const SearchPage = () => {
                                        invalid={Boolean(formError.category)} error={formError.category}/>
 
                         <div>
-                            <div className="flex items-baseline gap-4">
-                                <p className="kicker !text-ink">My sources</p>
-                                <Button variant="link" size="sm" aria-expanded={showSources} onClick={() => setShowSources(!showSources)}>
-                                    {showSources ? 'hide' : 'show'}
-                                </Button>
-                            </div>
-                            <Help>Websites you add are searched with the others, but only in your searches</Help>
-                            {showSources && (
-                                <div className="mt-6">
-                                    <UserFeeds token={token} categories={categoryOptions} api={FeedApi}
-                                               reloadKey={sourcesVersion} language={formValue.language || 'en'}/>
-                                </div>
-                            )}
+                            <p className="kicker !text-ink">My sources</p>
+                            <Help>
+                                The websites you add are searched with the others, only for you, and read for your briefing too.
+                                {' '}<Link to="/profile#own-sources" className="underline underline-offset-2 hover:text-ink">Add or manage them in your profile</Link>
+                            </Help>
                         </div>
 
                         <div className="flex flex-wrap gap-3 border-t border-rule pt-6">
@@ -458,8 +447,7 @@ export const SearchPage = () => {
 
             <SummaryList summaries={summaries} open={showSummaries} onOpenChange={setShowSummaries}/>
             {lastSearch && (
-                <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}
-                                   onImported={() => setSourcesVersion(sourcesVersion + 1)}/>
+                <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}/>
             )}
             <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
                       wider={wider} onWiden={handleWiden} mode={searchMode.mode} checked={searchMode.checked}

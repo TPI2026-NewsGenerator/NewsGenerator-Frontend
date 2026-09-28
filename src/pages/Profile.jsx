@@ -3,23 +3,29 @@
 //  Date: 24.09.2026
 //  File: Profile.jsx
 //  Description: The profile of the user: what they want to read in their own words, the interests
-//               the AI read in it, and the sources found for them
+//               the AI read in it, the sources found for them and the ones they add, all read
+//               for their briefing and their searches
 //
 
 import {useCallback, useEffect, useState} from "react";
+import {useLocation} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
-import {Button} from "@/components/ui/button.jsx";
+import {FaRegStar, FaStar} from "react-icons/fa";
+import {Button, IconButton} from "@/components/ui/button.jsx";
 import {CheckboxGroup, Label, Textarea} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
+import {SearchApi} from "@/features/search/api/searchApi.js";
 import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
+import {UserFeeds} from "@/features/briefing/components/UserFeeds.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
 
 const POLL_MS = 5000;
 const LANGUAGES = {en: 'English', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian'};
+const LANGUAGE_OPTIONS = Object.entries(LANGUAGES).map(([value, label]) => ({value, label}));
 const DISCOVERY = {
     idle: {label: 'not started'},
     running: {label: 'looking for sources…'},
@@ -62,12 +68,18 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
 
 export const ProfilePage = () => {
     const {token, user, logout, expired} = useAuth();
+    const {hash} = useLocation();
     const [options, setOptions] = useState({topics: [], languages: []});
     const [data, setData] = useState(null);         // {profile, interests, sources}
     const [form, setForm] = useState({text: '', topics: [], languages: ['en']});
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
+    // the sources added by hand: the language of the next one and its categories, and a count
+    // bumped when one is added from the recommendations, to list it
+    const [ownLanguage, setOwnLanguage] = useState(null);
+    const [ownCategories, setOwnCategories] = useState([]);
+    const [ownVersion, setOwnVersion] = useState(0);
 
     // every call answers the whole profile, shown as it is
     const apply = useCallback((answer, {fillForm = false} = {}) => {
@@ -91,6 +103,21 @@ export const ProfilePage = () => {
         ProfileApi.getOptions().then(setOptions).catch(err => setError(err.message));
         ProfileApi.get(token).then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
     }, [user, token, logout, apply]);
+
+    // the categories of the shared sources, in the language of the site added (the first one read
+    // by default)
+    const language = ownLanguage ?? data?.profile?.languages?.[0] ?? 'en';
+    useEffect(() => {
+        SearchApi.getCategories(language)
+            .then(answer => setOwnCategories(answer.categories ?? []))
+            .catch(err => console.error("Failed to fetch categories", err));
+    }, [language]);
+
+    // a link to a section (the search page links to the sources added), shown once the profile is there
+    const loaded = data !== null;
+    useEffect(() => {
+        if (loaded && hash) document.getElementById(hash.slice(1))?.scrollIntoView({block: 'start'});
+    }, [loaded, hash]);
 
     // the sources are found in background: asked again until done
     const discovering = data?.profile?.discovery?.status === 'running';
@@ -122,6 +149,13 @@ export const ProfilePage = () => {
             setBusy(false);
         }
     };
+
+    // a source found for the profile trusted or not: its stories come first in the briefing, and it
+    // is never removed
+    const trust = (source) => change(async () => {
+        const answer = await FeedApi.updateFeed(source.id, {trusted: !source.trusted}, token);
+        return answer?.error ? answer : ProfileApi.get(token);
+    });
 
     const discovery = DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
     const limits = data?.limits ?? {profileFeeds: 60, relevanceDays: 14};
@@ -251,9 +285,16 @@ export const ProfilePage = () => {
                         <ul className="mt-6 border-t border-rule">
                             {data.sources.map(source => (
                                 <li key={source.id} className="grid-12 items-baseline gap-y-1 border-b border-rule py-4">
-                                    <p className="col-span-12 font-semibold [overflow-wrap:anywhere] md:col-span-3">
+                                    <p className="col-span-12 flex items-center gap-2 font-semibold [overflow-wrap:anywhere] md:col-span-3">
+                                        <IconButton label={source.trusted ? `Stop trusting ${source.site}` : `Trust ${source.site}`}
+                                                    pressed={Boolean(source.trusted)} disabled={busy}
+                                                    title={source.trusted
+                                                        ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
+                                                        : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
+                                                    onClick={() => trust(source)}>
+                                            {source.trusted ? <FaStar/> : <FaRegStar/>}
+                                        </IconButton>
                                         {source.site}
-                                        {source.trusted && <span className="ml-1 text-accent-ink" title="A source you trust" aria-label="a source you trust">★</span>}
                                     </p>
                                     <div className="col-span-12 md:col-span-6">
                                         <MetaLine>
@@ -277,8 +318,17 @@ export const ProfilePage = () => {
                 </Section>
             )}
 
+            {data && (
+                <Section id="own-sources" kicker="Added by you" title="Sources you added"
+                         intro="Websites you add yourself are read with the others for your briefing and your searches, only for you, and never removed. Star the ones you trust: their stories come first in your briefing when they fit your interests. Share one and it can be suggested to the other readers who follow its subjects.">
+                    <UserFeeds token={token} api={FeedApi} origin="user" reloadKey={ownVersion}
+                               categories={ownCategories} language={language}
+                               languages={LANGUAGE_OPTIONS} onLanguage={setOwnLanguage}/>
+                </Section>
+            )}
+
             {data?.profile && (
-                <RecommendedSources token={token} api={FeedApi} expired={expired}
+                <RecommendedSources token={token} api={FeedApi} expired={expired} onAdded={() => setOwnVersion(version => version + 1)}
                                     reloadKey={`${data.profile.discovery.status}:${data.interests.map(interest => interest.id).join(',')}`}/>
             )}
 

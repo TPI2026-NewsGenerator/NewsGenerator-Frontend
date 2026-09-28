@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 22.09.2026
 //  File: UserFeeds.jsx
-//  Description: Sources added by the user, used in their searches only
+//  Description: Sources added by the user, read for their briefing and their searches, only for them
 //
 
 import {useEffect, useState} from "react";
@@ -13,7 +13,9 @@ import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
 
-export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) => {
+// categories: of 'language', the one of the site added. languages: [{value, label}], when given the
+// reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand
+export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', languages, onLanguage, origin}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');
     const [category, setCategory] = useState('');
@@ -86,7 +88,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
             .map(source => ({site: source.site, feed: source.feed, category}));
 
         setIsAdding(true);
-        const data = await api.importSources(chosen, token);
+        const data = await api.importSources(chosen, token, language);
         setIsAdding(false);
 
         if (!data || data.error) {
@@ -131,6 +133,8 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
         setFeeds(feeds.filter(other => other.id !== feed.id));
     };
 
+    const listed = origin ? feeds.filter(feed => (feed.origin ?? 'user') === origin) : feeds;
+
     const onEnter = (action) => (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -141,17 +145,27 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
     return (
         <div className="space-y-8">
             <div className="grid-12 items-end gap-y-4">
-                <div className="col-span-12 sm:col-span-6">
+                <div className={`col-span-12 ${languages ? 'sm:col-span-4' : 'sm:col-span-6'}`}>
                     <Label htmlFor="own-site">Add a website</Label>
                     <Input id="own-site" value={site} onChange={event => setSite(event.target.value)} placeholder="e.g., engadget.com"
                            onKeyDown={onEnter(handleAdd)} disabled={isAdding}/>
                 </div>
-                <div className="col-span-8 sm:col-span-4">
+                {languages && (
+                    <div className="col-span-6 sm:col-span-3">
+                        <Label htmlFor="own-language">Its language</Label>
+                        <Select id="own-language" options={languages} value={language}
+                                onChange={event => {
+                                    setCategory('');
+                                    onLanguage?.(event.target.value);
+                                }}/>
+                    </div>
+                )}
+                <div className={languages ? 'col-span-6 sm:col-span-3' : 'col-span-8 sm:col-span-4'}>
                     <Label htmlFor="own-category">Category</Label>
                     <Select id="own-category" placeholder="Category" value={category} onChange={event => setCategory(event.target.value)}
                             options={categories.map(name => ({value: name, label: name}))}/>
                 </div>
-                <div className="col-span-4 sm:col-span-2">
+                <div className={languages ? 'col-span-12 sm:col-span-2' : 'col-span-4 sm:col-span-2'}>
                     <Button className="w-full" onClick={handleAdd} loading={isAdding}>Add</Button>
                 </div>
 
@@ -196,11 +210,11 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en'}) 
                 </div>
             )}
 
-            {feeds.length === 0
+            {listed.length === 0
                 ? <p className="caption">No source of your own yet. The feed of the site is found automatically.</p>
                 : (
                     <ul className="border-t border-rule">
-                        {feeds.map(feed => (
+                        {listed.map(feed => (
                             <li key={feed.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule py-2.5">
                                 {/* any source, one found for the profile too: it is then never removed */}
                                 <IconButton label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
