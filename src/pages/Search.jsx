@@ -183,7 +183,9 @@ export const SearchPage = () => {
     // key passages of the cards chosen, each with all its articles: the server reads up to five of
     // them, counts who wrote it themselves and the AI picks the key sentences of one, translated when needed
     const handleGenerate = async (urls) => {
-        const stories = urls.map(url => newsList.find(news => news.url === url)).filter(Boolean)
+        // a card, or a fact of the affair of a card, chosen on its own
+        const chosen = newsList.flatMap(news => [news, ...(news.facts ?? [])]);
+        const stories = urls.map(url => chosen.find(news => news.url === url)).filter(Boolean)
             .map(news => ({urls: [news.url, ...(news.sources ?? []).map(other => other.url)]}));
         setIsGenerating(true);
         const data = await SearchApi.getNewsSummary(stories, lastSearch?.language ?? formValue.language, token).catch(() => null);

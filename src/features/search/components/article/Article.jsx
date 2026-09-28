@@ -8,6 +8,7 @@
 import {memo, useState} from "react";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {cn} from "@/lib/utils.js";
+import {ThreadTimeline} from "../thread-timeline/ThreadTimeline.jsx";
 
 // Past this many articles, a group has stopped being one news.
 //
@@ -64,7 +65,8 @@ const coverageOf = (news) => {
     };
 };
 
-// a click on the row selects it for its key passages, except on its links
+// a click on the row selects it for its key passages, except on its links and in the facts of its
+// affair, each chosen on its own
 export const Article = memo(({id, onSelect, news}) => {
     const [isChecked, setIsChecked] = useState(false);
 
@@ -79,7 +81,7 @@ export const Article = memo(({id, onSelect, news}) => {
     };
 
     const handleRowClick = (event) => {
-        if (event.target.closest('a, input, button')) return;
+        if (event.target.closest('a, input, button, [data-affair]')) return;
         toggle();
     };
 
@@ -131,6 +133,9 @@ export const Article = memo(({id, onSelect, news}) => {
                 <a href={news.url} target="_blank" rel="noreferrer" className="link mt-4 inline-block text-[0.9375rem]">
                     Read the article ↗
                 </a>
+                <div data-affair>
+                    <ThreadTimeline facts={news.facts ?? []} leadUrl={news.url} onSelect={onSelect}/>
+                </div>
             </div>
         </article>
     );
