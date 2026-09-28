@@ -35,13 +35,13 @@ export const FeedApi = {
         });
         return await response.json();
     },
-    // feeds of the directory for a subject ("premier league") or a site
-    // {sources, via}: feeds named like the query, else ('web') the media publishing on it lately
-    searchSources: async (query, token, language = 'en') => {
+    // {sources}: from 'directory' the feeds named like the query ("premier league") or of a site,
+    // from 'web' the media publishing on it lately (about half a minute)
+    searchSources: async (query, token, language = 'en', from = 'directory') => {
         const response = await fetch(`${API_URL}/feeds/search`, {
             method: 'POST',
             headers: headers(token),
-            body: JSON.stringify({query, language}),
+            body: JSON.stringify({query, language, from}),
         });
         return await response.json();
     },

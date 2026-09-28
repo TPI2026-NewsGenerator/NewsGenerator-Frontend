@@ -5,7 +5,7 @@
 //  Description: Sources added by the user, read for their briefing and their searches, only for them
 //
 
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {FaRegStar, FaShareAlt, FaStar, FaTrash} from "react-icons/fa";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Checkbox, Help, Input, Label, Select} from "@/components/ui/field.jsx";
@@ -20,13 +20,15 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
     const [site, setSite] = useState('');
     const [category, setCategory] = useState('');
     const [isAdding, setIsAdding] = useState(false);
-    // search of the directory: the feeds found, where from ('directory', or 'web' when it named
-    // none), and the ones ticked
+    // search of sources: the directory answers in a second, the web half a minute later and completes
+    // the same list. searched: the words of the last search, its results, and the ones ticked
     const [query, setQuery] = useState('');
+    const [searched, setSearched] = useState('');
     const [found, setFound] = useState(null);
-    const [via, setVia] = useState('directory');
     const [selected, setSelected] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [isSearchingWeb, setIsSearchingWeb] = useState(false);
+    const lastSearch = useRef(0);       // a search started meanwhile replaces the answers of this one
 
     useEffect(() => {
         if (!token) return;
@@ -65,22 +67,42 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
 
     const handleSearch = async () => {
         if (!query.trim()) {
-            toast.error('Enter the name of a site or of a feed, like "premier league".');
+            toast.error('Enter a site, a feed or a subject, like "premier league".');
             return;
         }
 
-        setIsSearching(true);
-        const data = await api.searchSources(query.trim(), token, language);
-        setIsSearching(false);
-
-        if (!data || data.error) {
-            toast.error(data?.error ?? "The directory could not be searched.");
-            return;
-        }
-
-        setFound(data.sources ?? []);
-        setVia(data.via ?? 'directory');
+        const words = query.trim();
+        const search = ++lastSearch.current;
+        setSearched(words);
+        setFound(null);
         setSelected([]);
+        setIsSearching(true);
+        setIsSearchingWeb(true);
+
+        // a medium both of them name is listed once, as the directory names it
+        const merge = (first, then) => {
+            const seen = new Set(first.flatMap(source => [source.site, source.feed]));
+            return [...first, ...then.filter(source => !seen.has(source.site) && !seen.has(source.feed))];
+        };
+        const ask = (from) => api.searchSources(words, token, language, from).catch(() => null);
+
+        const web = ask('web').then(data => {
+            if (search !== lastSearch.current) return;
+            setIsSearchingWeb(false);
+            if (data?.sources) setFound(current => merge(current ?? [], data.sources));
+        });
+
+        const directory = await ask('directory');
+        if (search !== lastSearch.current) return;
+        setIsSearching(false);
+        if (!directory || directory.error) {
+            toast.error(directory?.error ?? "The directory could not be searched.");
+            setFound(current => current ?? []);
+        } else {
+            // the web may have answered first: the directory goes on top all the same
+            setFound(current => merge(directory.sources ?? [], current ?? []));
+        }
+        await web;
     };
 
     const handleAddFound = async () => {
@@ -92,7 +114,8 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
 
         setIsAdding(true);
         // the media found on the web are read on their section about these words, when they have one
-        const data = await api.importSources(chosen, token, language, via === 'web' ? [query.trim()] : null);
+        const fromWeb = found.some(source => source.via === 'web' && selected.includes(source.feed));
+        const data = await api.importSources(chosen, token, language, fromWeb ? [searched] : null);
         setIsAdding(false);
 
         if (!data || data.error) {
@@ -174,13 +197,13 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
                 </div>
 
                 <div className="col-span-8 sm:col-span-10">
-                    <Label htmlFor="own-query">Or search a site or a feed by its name</Label>
+                    <Label htmlFor="own-query">Or search a site, a feed or a subject</Label>
                     <Input id="own-query" value={query} onChange={event => setQuery(event.target.value)} aria-describedby="own-query-help"
-                           placeholder='e.g., "premier league", "lequipe"' onKeyDown={onEnter(handleSearch)} disabled={isSearching}/>
+                           placeholder='e.g., "lequipe", "premier league", "rugby top 14"' onKeyDown={event => onEnter(handleSearch)(event)} disabled={isSearching}/>
                     <Help id="own-query-help">
-                        A directory of feeds is searched by their names. When none is named so, the media that published
-                        on these words lately are looked for on the web. A subject you want to follow belongs in your own
-                        words, above: sources are found for it.
+                        A directory of feeds is searched by their names, and the web for the media that published on
+                        these words lately. A subject you want to follow belongs in your own words, above: sources are
+                        found for it.
                     </Help>
                 </div>
                 <div className="col-span-4 sm:col-span-2">
@@ -188,22 +211,23 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
                 </div>
             </div>
 
-            {isSearching && <Working>Searching the directory, then the web if it names nothing: up to half a minute…</Working>}
+            {isSearching && <Working>Searching the directory…</Working>}
+            {!isSearching && isSearchingWeb && (
+                <Working>Looking on the web for the media publishing on it: about half a minute…</Working>
+            )}
 
-            {!isSearching && found !== null && found.length === 0 && (
+            {!isSearching && !isSearchingWeb && found !== null && found.length === 0 && (
                 <p className="caption">
-                    {via === 'web'
-                        ? `No feed is named "${query}", and no medium you don't read yet published on it lately with a feed we could find.`
-                        : `No feed found for "${query}" outside the sources you already have.`}
+                    No feed is named "{searched}", and no medium you don't read yet published on it lately with a feed
+                    we could find.
                 </p>
             )}
 
             {found !== null && found.length > 0 && (
                 <div className="border-t border-rule pt-4">
                     <p className="caption">
-                        {via === 'web'
-                            ? `No feed is named "${query}": ${found.length} medi${found.length > 1 ? 'a' : 'um'} that published on it lately, the most present first, with their feed. They are checked when added.`
-                            : `${found.length} feed${found.length > 1 ? 's' : ''}, the most read first. They are checked when added.`}
+                        {found.length} source{found.length > 1 ? 's' : ''}: the feeds named so, the most read first, then
+                        the media that published on it lately, the most present first. They are checked when added.
                     </p>
                     <div className="mt-3 flex flex-col">
                         {found.map(source => (
@@ -213,7 +237,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
                                           : selected.filter(feed => feed !== source.feed))}>
                                 <span className="font-semibold">{source.name}</span>{' '}
                                 <MetaLine className="inline-flex">
-                                    {via === 'web'
+                                    {source.via === 'web'
                                         ? <Meta tone="ink">{source.news} news on it</Meta>
                                         : <Meta>{source.readers} readers</Meta>}
                                     {source.language && <Meta>{source.language}</Meta>}

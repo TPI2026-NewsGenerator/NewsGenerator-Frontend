@@ -85,4 +85,36 @@ describe('UserFeeds and sharing', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Add'}));
         await waitFor(() => expect(api.addUserFeed).toHaveBeenCalledWith({site: 'lequipe.fr', category: 'sport', language: 'fr'}, 't'));
     });
+    it('should show the directory first, complete it with the web, and read a web medium on the words searched', async () => {
+        let answerWeb;
+        const named = {site: 'rugbyrama.fr', name: 'Rugbyrama Top 14', feed: 'https://rugbyrama.fr/top14.xml', readers: 900, via: 'directory'};
+        const api = {
+            getUserFeeds: vi.fn().mockResolvedValue({feeds: []}),
+            searchSources: vi.fn((query, token, language, from) => from === 'web'
+                ? new Promise(resolve => { answerWeb = resolve; })
+                : Promise.resolve({sources: [named]})),
+            importSources: vi.fn().mockResolvedValue({feeds: [], errors: []}),
+        };
+        render(<UserFeeds token="t" categories={['sport']} api={api}/>);
+
+        fireEvent.change(screen.getByLabelText('Or search a site, a feed or a subject'), {target: {value: 'rugby top 14'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Search'}));
+        expect(await screen.findByText('Rugbyrama Top 14')).toBeInTheDocument();
+        expect(screen.getByText(/Looking on the web/)).toBeInTheDocument();
+
+        // the same medium found on the web is listed once
+        answerWeb({sources: [
+            {...named, name: 'Rugbyrama', feed: 'https://rugbyrama.fr/rss', news: 12, via: 'web'},
+            {site: 'midi-olympique.fr', name: 'Midi Olympique', feed: 'https://midi-olympique.fr/rss', news: 8, sample: 'Un titre', via: 'web'},
+        ]});
+        expect(await screen.findByText('Midi Olympique')).toBeInTheDocument();
+        expect(screen.queryByText('Rugbyrama')).not.toBeInTheDocument();
+        expect(screen.queryByText(/Looking on the web/)).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('Midi Olympique'));
+        fireEvent.change(screen.getByLabelText('Category'), {target: {value: 'sport'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Add 1 source'}));
+        await waitFor(() => expect(api.importSources).toHaveBeenCalledWith(
+            [{site: 'midi-olympique.fr', feed: 'https://midi-olympique.fr/rss', category: 'sport'}], 't', 'en', ['rugby top 14']));
+    });
 });
