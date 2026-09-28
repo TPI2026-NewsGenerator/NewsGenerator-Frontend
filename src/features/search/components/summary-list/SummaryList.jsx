@@ -2,8 +2,8 @@
 //  Author: Fabian Rostello
 //  Date: 22.09.2026
 //  File: SummaryList.jsx
-//  Description: AI resumes of the cards chosen in the Search Page, read in a sheet above it, set
-//               like the stories of the briefing: the resume, who tells it and their articles
+//  Description: The key passages of the cards chosen in the Search Page, read in a sheet above it,
+//               set like the stories of the briefing: the passages, who tells it and their articles
 //
 
 import {Dialog} from "@/components/ui/overlay.jsx";
@@ -17,8 +17,8 @@ export const SummaryList = ({summaries, open, onOpenChange}) => {
     const done = summaries.filter(news => news.summary).length;
 
     return (
-        <Dialog wide open={open} onOpenChange={onOpenChange} kicker="Written by the AI" title="Your AI resume"
-                description={`${done} of ${summaries.length} news summarized. For each one, up to five of its articles were read to count who wrote it themselves.`}>
+        <Dialog wide open={open} onOpenChange={onOpenChange} kicker="Chosen by the AI" title="Key passages"
+                description={`${done} of ${summaries.length} news read. The sentences are the article's own, the AI only chose them; up to five articles of each news were read to count who wrote it themselves.`}>
             <ol className="list-none p-0">
                 {summaries.map((news, index) => (
                     <li key={news.id ?? news.url}>

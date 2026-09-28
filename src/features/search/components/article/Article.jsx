@@ -64,7 +64,7 @@ const coverageOf = (news) => {
     };
 };
 
-// a click on the row selects it for the AI resume, except on its links
+// a click on the row selects it for its key passages, except on its links
 export const Article = memo(({id, onSelect, news}) => {
     const [isChecked, setIsChecked] = useState(false);
 
@@ -91,7 +91,7 @@ export const Article = memo(({id, onSelect, news}) => {
                      isChecked ? 'bg-secondary shadow-[inset_3px_0_0_var(--accent-ink)]' : 'hover:bg-secondary/60')}>
             <div className="col-span-1 flex justify-center pt-1">
                 <input type="checkbox" checked={isChecked} onChange={toggle}
-                       aria-label={`Select “${news.title}” for the AI resume`}
+                       aria-label={`Select “${news.title}” for its key passages`}
                        className="size-4 cursor-pointer accent-[var(--accent-ink)]"/>
             </div>
 

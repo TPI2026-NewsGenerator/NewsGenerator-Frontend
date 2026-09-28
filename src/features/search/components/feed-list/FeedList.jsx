@@ -134,7 +134,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
             aside={
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
                     {resumeCount > 0 && (
-                        <Button size="sm" variant="primary" onClick={onOpenResume}>Read the AI resume ({resumeCount})</Button>
+                        <Button size="sm" variant="primary" onClick={onOpenResume}>Read the key passages ({resumeCount})</Button>
                     )}
                     <Button size="sm" variant={activeFilters > 0 ? 'primary' : 'quiet'} aria-expanded={showFilterPanel}
                             onClick={() => setShowFilterPanel(!showFilterPanel)}>
@@ -200,7 +200,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                             {selectedCount} of {MAX_SELECTED} articles chosen
                         </p>
                         <Button variant="primary" loading={isGenerating} onClick={() => onGenerate(selectedIds.current)}>
-                            Write the AI resume
+                            Show the key passages
                         </Button>
                     </div>
                 </div>

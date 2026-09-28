@@ -39,7 +39,7 @@ export const SearchApi = {
 
         return await response.json();
     },
-    // AI resume of the cards chosen (10 max), each with the urls of its articles, its lead first,
+    // key passages of the cards chosen (10 max), each with the urls of its articles, its lead first,
     // written in the language searched
     getNewsSummary: async (stories, language, token) => {
         const response = await fetch(`${API_URL}/news/summary`, {

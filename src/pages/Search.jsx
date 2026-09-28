@@ -75,7 +75,7 @@ const check = (form) => ({
 export const SearchPage = () => {
     const navigate = useNavigate();
     const [newsList, setNewsList] = useState([]);
-    // AI resumes of the selected news
+    // key passages of the selected news
     const [summaries, setSummaries] = useState([]);
     const [showSummaries, setShowSummaries] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -175,8 +175,8 @@ export const SearchPage = () => {
         handleSubmit(keywords);
     };
 
-    // AI resume of the cards chosen, each with all its articles: the server reads up to five of
-    // them, counts who wrote it themselves and summarizes one, in the language searched
+    // key passages of the cards chosen, each with all its articles: the server reads up to five of
+    // them, counts who wrote it themselves and the AI picks the key sentences of one, translated when needed
     const handleGenerate = async (urls) => {
         const stories = urls.map(url => newsList.find(news => news.url === url)).filter(Boolean)
             .map(news => ({urls: [news.url, ...(news.sources ?? []).map(other => other.url)]}));
@@ -194,7 +194,7 @@ export const SearchPage = () => {
         }
 
         const summaryCount = data.news.filter(news => news.summary).length;
-        toast.success(`${summaryCount} / ${data.news.length} news summarized.`);
+        toast.success(`${summaryCount} / ${data.news.length} news read.`);
         setSummaries(data.news);
         setShowSummaries(true);
     };

@@ -77,7 +77,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
 
         const added = data.feeds?.length ?? 0;
         if (added > 0) {
-            toast.success(`${added} source${added > 1 ? 's' : ''} added. Search again to read their news here, with the AI resume.`);
+            toast.success(`${added} source${added > 1 ? 's' : ''} added. Search again to read their news here, with their key passages.`);
         }
         for (let failed of data.errors ?? []) {
             toast.error(`${failed.site}: ${failed.error}`);
@@ -96,7 +96,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
             kicker="Beyond your sources"
             title="What this search misses"
             intro={news === null && (
-                "Other media publish on your keywords without being in your sources. This asks Google News which news you "
+                "Other media publish on your search without being in your sources. This asks Google News which news you "
                 + "are missing and which media publish them, then adds the ones you choose. It takes a few seconds."
             )}
             aside={
@@ -108,8 +108,8 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
             {news !== null && news.length === 0 && sources.length === 0 && (
                 <p className="caption">
                     {missing === 0
-                        ? "No medium outside your sources published on these keywords."
-                        : `${missing} media published on these keywords, but nothing could be read or added from them.`}
+                        ? "No medium outside your sources published on this subject."
+                        : `${missing} media published on this subject, but nothing could be read or added from them.`}
                 </p>
             )}
 
@@ -117,7 +117,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
                 <div className="grid-12">
                     <p className="caption col-span-12 max-w-[60ch] md:col-span-7 md:col-start-3">
                         {news.length} news your sources could not find. They open at the publisher:
-                        the server cannot read them, so they have no AI resume.
+                        the server cannot read them, so they have no key passages.
                     </p>
                     <ul className="col-span-12 mt-4 border-t border-rule md:col-span-10 md:col-start-3">
                         {news.map(item => (
@@ -137,7 +137,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
                 <div className="grid-12 mt-12">
                     <div className="col-span-12 md:col-span-10 md:col-start-3">
                         <p className="caption max-w-[60ch]">
-                            {missing} media published on these keywords without being in your sources.
+                            {missing} media published on this subject without being in your sources.
                             Looking for the feed of a site costs several requests, so only the {tried} publishing
                             the most were tried: {sources.length === 1 ? 'one has' : `${sources.length} have`} an
                             RSS feed. Add them to read them here from now on:

@@ -6,7 +6,7 @@
 //               many of them wrote it themselves
 //
 
-import {useState} from "react";
+import {Fragment, useState} from "react";
 import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-icons/fa";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
@@ -23,6 +23,17 @@ const SOURCING = {
 
 const SHOWN_ARTICLES = 4;
 
+const paragraphsOf = (text) => text ? text.split(/\n\s*\n/) : [];
+
+// Passages of an article, a gap between two of them: the sentences are the article's own, the AI only
+// chose them (see server/services/utils/extract.js)
+const Passages = ({paragraphs, lede, className}) => paragraphs.map((paragraph, i) => (
+    <Fragment key={i}>
+        {i > 0 && <p aria-hidden className="text-ink-mute">[…]</p>}
+        <p className={cn(lede && i === 0 && 'lede', className)}>{paragraph}</p>
+    </Fragment>
+));
+
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
 // a note of the outer column: its kicker and what it says
@@ -35,12 +46,14 @@ const Margin = ({kicker, tone, children}) => (
 
 // onVote(vote): 'up', 'down', or null when the reader takes back the thumb given. The next briefings
 // learn from it; without onVote no thumb is shown. number: its place in the briefing. lede: the first
-// story of the page, whose summary opens with the drop cap
+// story of the page, whose passages open with the drop cap. item.summary: the key sentences of the
+// article as published, a paragraph per passage; item.translation: their machine translation
 export const BriefingCard = ({item, onVote, number, lede = false}) => {
     const [allArticles, setAllArticles] = useState(false);
     const corroboration = corroborationLabel(item.corroboration);
     const articles = allArticles ? item.articles : item.articles.slice(0, SHOWN_ARTICLES);
-    const paragraphs = item.summary ? item.summary.split(/\n\s*\n/) : [];
+    const paragraphs = paragraphsOf(item.summary);
+    const translation = paragraphsOf(item.translation);
 
     return (
         <article className="grid-12 border-t border-rule pt-7 pb-14">
@@ -60,11 +73,25 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                 <h2 className="story-head text-balance">{item.title}</h2>
                 {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
 
-                <div className="body-text mt-6">
-                    {paragraphs.length > 0
-                        ? paragraphs.map((paragraph, i) => <p key={i} className={cn(lede && i === 0 && 'lede')}>{paragraph}</p>)
-                        : <Notice>{item.summaryError ?? 'No article of this story could be read (paywall or protected site), no summary.'}</Notice>}
-                </div>
+                {paragraphs.length > 0 ? (
+                    <div className="mt-6">
+                        <p className="kicker">In the article's words</p>
+                        <div className="body-text mt-3"><Passages paragraphs={paragraphs} lede={lede}/></div>
+                        <p className="caption mt-3">Sentences chosen by the AI, shown as the article published them.</p>
+                    </div>
+                ) : (
+                    <div className="mt-6">
+                        <Notice>{item.summaryError ?? 'No article of this story could be read (paywall or protected site).'}</Notice>
+                    </div>
+                )}
+
+                {translation.length > 0 && (
+                    <div className="mt-6 border-l border-rule pl-5">
+                        <p className="kicker">Machine translation</p>
+                        <div className="body-text mt-3 text-ink/85 italic"><Passages paragraphs={translation}/></div>
+                        <p className="caption mt-3">Translated by the AI, it may contain errors: the original above is the reference.</p>
+                    </div>
+                )}
 
                 <div className="mt-8">
                     <p className="kicker">Read it at</p>

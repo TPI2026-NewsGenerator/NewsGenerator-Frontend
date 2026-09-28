@@ -94,3 +94,20 @@ describe('BriefingCard and a trusted source', () => {
         expect(screen.getAllByLabelText('a source you trust')).toHaveLength(1);
     });
 });
+
+describe('BriefingCard passages', () => {
+    it('should show the passages of the article with a gap between them, and a translation marked as such', () => {
+        render(<BriefingCard item={item({summary: 'He was fined $10,000.\n\nThe appeal was heard on Thursday.',
+            translation: 'Il a reçu une amende de 10 000 $.\n\nL\'appel a été entendu jeudi.'})}/>);
+        expect(screen.getByText('He was fined $10,000.')).toBeInTheDocument();
+        expect(screen.getAllByText('[…]')).toHaveLength(2);
+        expect(screen.getByText('Machine translation')).toBeInTheDocument();
+        expect(screen.getByText('Il a reçu une amende de 10 000 $.')).toBeInTheDocument();
+        expect(screen.getByText(/the original above is the reference/)).toBeInTheDocument();
+    });
+
+    it('should show no translation for an article in the language of the reader', () => {
+        render(<BriefingCard item={item()}/>);
+        expect(screen.queryByText('Machine translation')).toBeNull();
+    });
+});
