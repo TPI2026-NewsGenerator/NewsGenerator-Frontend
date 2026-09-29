@@ -11,7 +11,7 @@ import {Link, useNavigate} from "react-router-dom";
 import {LoginApi} from "@/features/login/api/loginApi.js";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {AuthShell} from "@/features/login/components/AuthShell.jsx";
-import {LANGUAGES, MIN_PROFILE_TEXT, PLACEHOLDER} from "@/features/briefing/profileWords.js";
+import {LANGUAGES, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {Button} from "@/components/ui/button.jsx";
 import {CheckboxGroup, FieldError, Help, Input, Label, Textarea} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
@@ -21,9 +21,6 @@ import {toast} from "@/lib/toast.js";
 const USERNAME = /^[\p{L}\p{N}._-]{3,30}$/u;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 10;
-
-// the language of the browser ticked first, when the profile can read it
-const browserLanguage = () => (typeof navigator !== 'undefined' ? navigator.language : 'en')?.slice(0, 2);
 
 export const SignupPage = () => {
     const [options, setOptions] = useState({topics: [], languages: []});
@@ -38,7 +35,8 @@ export const SignupPage = () => {
         ProfileApi.getOptions()
             .then(answer => {
                 setOptions(answer);
-                const first = (answer.languages ?? []).includes(browserLanguage()) ? browserLanguage() : 'en';
+                // the language of the browser ticked first, when the profile can read it
+                const first = likelyLanguage(answer.languages);
                 setForm(current => current.languages.length > 0 ? current : {...current, languages: [first]});
             })
             .catch(err => setError(err.message));

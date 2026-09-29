@@ -5,7 +5,7 @@
 //  Description: Search page for frontend
 //
 
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
@@ -203,14 +203,41 @@ export const SearchPage = () => {
         setShowSummaries(true);
     };
 
-    // categories of feeds that can be searched, they belong to the language chosen
+    // categories of feeds that can be searched, they belong to the language chosen. All of them are
+    // ticked, unless some of this language already are (a saved search): with none, the search was
+    // refused until the reader ticked one, every time and again after each change of language
     useEffect(() => {
         SearchApi.getCategories(formValue.language || 'en')
-            .then(data => setCategoryOptions(data.categories ?? []))
+            .then(data => {
+                const categories = data.categories ?? [];
+                setCategoryOptions(categories);
+                setFormValue(current => {
+                    const kept = current.category.filter(category => categories.includes(category));
+                    return {...current, category: kept.length > 0 ? kept : categories};
+                });
+            })
             .catch(e => console.error("Failed to fetch categories", e));
     }, [formValue.language]);
 
-    const handleSaveSearch = async () => {
+    const loadSavedSearches = useCallback(async () => {
+        if (!user) return;
+        try {
+            const data = await CustomSearchApi.getUserCustomSearch(token);
+            if (data?.error) {
+                console.log("Error with Prisma database");
+                return;
+            }
+            setCustomSearchItems(Array.isArray(data) ? data : []);
+        } catch (e) {
+            console.error("Failed to fetch searches", e);
+        }
+    }, [user, token]);
+
+    // the saved search the form was filled from, replaced when saved again unless asNew
+    const loadedSearch = customSearchItems.find(item => item.id === formValue.id) ?? null;
+
+    const handleSaveSearch = async ({asNew = false} = {}) => {
+        const id = asNew ? null : loadedSearch?.id ?? null;
         if (!user?.id) {
             toast.error('You must be logged in...');
             return;
@@ -232,23 +259,27 @@ export const SearchPage = () => {
             return;
         }
         try {
-            await CustomSearchApi.postUserCustomSearch({
-                id: formValue.id,
+            const saved = await CustomSearchApi.postUserCustomSearch({
+                id: id,
                 title: formValue.title,
                 language: formValue.language,
                 keyword: formValue.keyword,
                 category: formValue.category,
             }, token);
+            if (!saved || saved.error) throw new Error(saved?.error ?? 'nothing saved');
             setSaveSearchModal(false);
+            // the form is now the one saved: saving it again replaces it
+            setFormValue(current => ({...current, id: saved.id}));
+            await loadSavedSearches();
 
-            if (!formValue.id) {
+            if (!id) {
                 toast.success(`${formValue.title} created successfully !`);
             } else {
                 toast.success(`${formValue.title} modified successfully !`);
             }
         } catch (e) {
-            console.error("Failed to fetch searches", e);
-            if (!formValue.id) {
+            console.error("Failed to save the search", e);
+            if (!id) {
                 toast.error(`Error while creating ${formValue.title}...`);
             } else {
                 toast.error(`Error while modifying ${formValue.title}...`);
@@ -285,22 +316,8 @@ export const SearchPage = () => {
     };
 
     useEffect(() => {
-        const getUserCustomSearches = async () => {
-            if (!user) return;
-            try {
-                const data = await CustomSearchApi.getUserCustomSearch(token);
-                if (data?.error) {
-                    console.log("Error with Prisma database");
-                    return;
-                }
-                setCustomSearchItems(Array.isArray(data) ? data : []);
-            } catch (e) {
-                console.error("Failed to fetch searches", e);
-            }
-        };
-
-        getUserCustomSearches();
-    }, [user, token]);
+        loadSavedSearches();
+    }, [loadSavedSearches]);
 
     return (
         <PageShell user={user} onSignOut={removeAuthCredentials}>
@@ -434,11 +451,19 @@ export const SearchPage = () => {
                 </form>
             </Section>
 
-            <Dialog open={saveSearchModal} onOpenChange={setSaveSearchModal} title="Save your custom search"
-                    description="Keywords, language and categories are kept under this title."
+            {/* a saved search loaded in the form is replaced by it, unless saved as a new one: said
+                before, a title typed over it renamed the search the reader had */}
+            <Dialog open={saveSearchModal} onOpenChange={setSaveSearchModal}
+                    title={loadedSearch ? `Save “${loadedSearch.title}”` : 'Save your custom search'}
+                    description={loadedSearch
+                        ? `The form comes from your saved search “${loadedSearch.title}”: replace it with the keywords, language and categories of the form, or keep it and save a new one.`
+                        : 'Keywords, language and categories are kept under this title.'}
                     footer={<>
                         <Button variant="subtle" onClick={() => setSaveSearchModal(false)}>Cancel</Button>
-                        <Button variant="primary" onClick={handleSaveSearch}>Save</Button>
+                        {loadedSearch && <Button onClick={() => handleSaveSearch({asNew: true})}>Save as a new search</Button>}
+                        <Button variant="primary" onClick={() => handleSaveSearch()}>
+                            {loadedSearch ? `Replace “${loadedSearch.title}”` : 'Save'}
+                        </Button>
                     </>}>
                 <Label htmlFor="search-title">Search title</Label>
                 <Input id="search-title" value={formValue.title} onChange={event => setField('title', event.target.value)}

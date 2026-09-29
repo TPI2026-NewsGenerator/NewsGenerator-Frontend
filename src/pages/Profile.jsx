@@ -19,7 +19,7 @@ import {FeedApi} from "@/features/search/api/feedApi.js";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
 import {UserFeeds} from "@/features/briefing/components/UserFeeds.jsx";
-import {LANGUAGES, LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER} from "@/features/briefing/profileWords.js";
+import {LANGUAGES, LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
@@ -101,9 +101,9 @@ export const ProfilePage = () => {
         ProfileApi.get(token).then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
     }, [user, token, logout, apply]);
 
-    // the categories of the shared sources, in the language of the site added (the first one read
-    // by default)
-    const language = ownLanguage ?? data?.profile?.languages?.[0] ?? 'en';
+    // the categories of the shared sources, in the language of the site added or searched (by default
+    // the one of the browser when the profile reads it, else the first one read)
+    const language = ownLanguage ?? likelyLanguage(data?.profile?.languages);
     useEffect(() => {
         SearchApi.getCategories(language)
             .then(answer => setOwnCategories(answer.categories ?? []))

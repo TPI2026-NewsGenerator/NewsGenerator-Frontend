@@ -90,7 +90,8 @@ export const RecommendedSources = ({token, api, expired, reloadKey, onAdded}) =>
                         </div>
                         <div className="col-span-12 md:col-span-6">
                             <Meta tone="ink">{source.relevant} of {source.news} news on your interests</Meta>
-                            {source.samples?.map(title => (
+                            {/* once each: a programme publishes its episodes under one title (RTS "Mise au Point") */}
+                            {[...new Set(source.samples ?? [])].map(title => (
                                 <p key={title} className="caption mt-1 italic [overflow-wrap:anywhere]">“{title}”</p>
                             ))}
                         </div>

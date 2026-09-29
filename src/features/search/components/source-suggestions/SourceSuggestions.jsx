@@ -10,7 +10,7 @@ import {useState} from "react";
 import {Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Checkbox, Label, Select} from "@/components/ui/field.jsx";
-import {Meta, MetaLine} from "@/components/ui/text.jsx";
+import {Meta, MetaLine, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
 
@@ -97,7 +97,8 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
             title="What this search misses"
             intro={news === null && (
                 "Other media publish on your search without being in your sources. This asks Google News which news you "
-                + "are missing and which media publish them, then adds the ones you choose. It takes a few seconds."
+                + "are missing and which media publish them, then adds the ones you choose. It takes about a minute: "
+                + "each medium found is opened to look for its feed."
             )}
             aside={
                 <Button size="sm" onClick={handleLook} loading={isLooking}>
@@ -105,7 +106,10 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
                 </Button>
             }
         >
-            {news !== null && news.length === 0 && sources.length === 0 && (
+            {/* measured 40 to 70 s: the button alone looked like nothing happened */}
+            {isLooking && <Working>Asking Google News and opening the media it names: about a minute…</Working>}
+
+            {!isLooking && news !== null && news.length === 0 && sources.length === 0 && (
                 <p className="caption">
                     {missing === 0
                         ? "No medium outside your sources published on this subject."

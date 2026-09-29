@@ -28,6 +28,14 @@ describe('RecommendedSources', () => {
         expect(screen.getByText('“tribuna.com first title”')).toBeInTheDocument();
     });
 
+    it('should show a title given twice once', async () => {
+        const rts = {...source(3, 'rts.ch'), samples: ['Mise au Point', 'Mise au Point']};
+        const api = {getRecommended: vi.fn().mockResolvedValue({sources: [rts]})};
+        render(<RecommendedSources token="t" api={api} expired={expired} reloadKey="done"/>);
+
+        expect(await screen.findAllByText('“Mise au Point”')).toHaveLength(1);
+    });
+
     it('should add one source by its id and take it off the list', async () => {
         const api = {
             getRecommended: vi.fn().mockResolvedValue({sources: [source(1, 'goal.com'), source(2, 'tribuna.com')]}),
