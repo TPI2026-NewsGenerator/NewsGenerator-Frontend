@@ -26,16 +26,6 @@ export const BriefingApi = {
     getLatest: (token) => send('/briefing', token),
     // a new briefing, written in background: getLatest until its status is 'ready' or 'failed'
     start: (token) => send('/briefing', token, {method: 'POST'}),
-    // these cards stayed on the screen (204, no body). keepalive: sent even while the page closes
-    markSeen: async (briefingId, storyIds, token, {keepalive = false} = {}) => {
-        const response = await fetch(`${API_URL}/briefing/${briefingId}/seen`, {
-            method: 'POST',
-            headers: headers(token),
-            body: JSON.stringify({storyIds}),
-            keepalive,
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    },
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote, token) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {

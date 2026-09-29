@@ -12,7 +12,6 @@ import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
-import {useSeenCards} from "@/features/briefing/useSeenCards.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 
 const POLL_MS = 3000;
@@ -34,7 +33,6 @@ export const BriefingPage = () => {
     const [profile, setProfile] = useState(undefined);      // undefined: not loaded yet
     const [briefing, setBriefing] = useState(undefined);
     const [error, setError] = useState(null);
-    const observe = useSeenCards(briefing, token);
 
     const load = useCallback(async () => {
         try {
@@ -102,7 +100,7 @@ export const BriefingPage = () => {
             <Opening
                 kicker="The briefing"
                 title="Your briefing"
-                standfirst="The stories of the last 48 hours closest to your interests, chosen by the AI. A story you saw in the last 3 days is not shown again; the ones you did not reach can come back."
+                standfirst="The stories of the last 48 hours closest to your interests, chosen by the AI. A story already shown can come back in the next edition: pass it."
                 aside={profile && (
                     <div className="space-y-4">
                         {ready && (
@@ -151,7 +149,7 @@ export const BriefingPage = () => {
                 {ready && count > 0 && (
                     <ol className="list-none p-0">
                         {briefing.items.map((item, index) => (
-                            <li key={item.storyId} ref={observe(item.storyId)}>
+                            <li key={item.storyId}>
                                 <BriefingCard item={item} number={index + 1} lede={index === 0}
                                               onVote={value => vote(item.storyId, value)}/>
                             </li>
