@@ -18,5 +18,19 @@ export const LoginApi = {
         });
 
         return await response.json();
-    }
+    },
+
+    // {username, email, password, text, languages, topics} -> {id_user, token}, as the login: the
+    // profile is read by the AI before the account is created
+    register: async (account) => {
+        const response = await fetch(`${API_URL}/signup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(account),
+        });
+
+        return await response.json();
+    },
 }

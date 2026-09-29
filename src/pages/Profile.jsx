@@ -19,21 +19,18 @@ import {FeedApi} from "@/features/search/api/feedApi.js";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
 import {UserFeeds} from "@/features/briefing/components/UserFeeds.jsx";
+import {LANGUAGES, LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER} from "@/features/briefing/profileWords.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
 
 const POLL_MS = 5000;
-const LANGUAGES = {en: 'English', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian'};
-const LANGUAGE_OPTIONS = Object.entries(LANGUAGES).map(([value, label]) => ({value, label}));
 const DISCOVERY = {
     idle: {label: 'not started'},
     running: {label: 'looking for sources…'},
     done: {label: 'done'},
     failed: {label: 'failed', tone: 'accent'},
 };
-const PLACEHOLDER = "I follow rugby: the Top 14, the Six Nations and the transfers. I also love fashion: new collections, brands, shows. " +
-    "I don't want football or celebrity gossip.";
 
 // one interest read by the AI, which the user can correct
 const Interest = ({interest, number, onSave, onDelete, busy}) => {
@@ -227,7 +224,7 @@ export const ProfilePage = () => {
 
                     <div className="col-span-12 md:col-span-8">
                         <Button variant="primary" onClick={save} loading={saving}
-                                disabled={form.text.trim().length < 20 || form.languages.length === 0}>
+                                disabled={form.text.trim().length < MIN_PROFILE_TEXT || form.languages.length === 0}>
                             {data?.profile ? 'Save my profile' : 'Create my profile'}
                         </Button>
                         {saving && <p className="caption mt-3 italic">The AI reads your profile, this takes a few seconds…</p>}
