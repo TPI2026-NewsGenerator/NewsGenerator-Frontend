@@ -18,11 +18,15 @@ vi.mock('@/features/search/api/searchApi.js', () => ({
     },
 }));
 vi.mock('@/features/search/api/feedApi.js', () => ({FeedApi: {}}));
+vi.mock('@/features/briefing/api/briefingApi.js', () => ({
+    ProfileApi: {get: vi.fn(async () => ({profile: {languages: ['en']}}))},
+}));
 vi.mock('@/features/custom-search/api/customSearchApi.js', () => ({
     CustomSearchApi: {getUserCustomSearch: vi.fn(), postUserCustomSearch: vi.fn(), deleteUserCustomSearch: vi.fn()},
 }));
 
 const {CustomSearchApi} = await import('@/features/custom-search/api/customSearchApi.js');
+const {ProfileApi} = await import('@/features/briefing/api/briefingApi.js');
 const {SearchPage} = await import('@/pages/Search.jsx');
 
 const FOOT = {id: 13, title: 'Foot', keyword: 'referee football soccer', language: 'en', timeframe: 'Weekly', category: ['sport']};
@@ -45,6 +49,15 @@ describe('SearchPage', () => {
 
         await waitFor(() => expect(ticked()).toEqual(['World', 'Sport', 'Science']));
         fireEvent.change(screen.getByLabelText('Language'), {target: {value: 'fr'}});
+        await waitFor(() => expect(ticked()).toEqual(['Sport', 'Politics']));
+    });
+
+    it('should start in the language of the reader, with its categories', async () => {
+        CustomSearchApi.getUserCustomSearch.mockResolvedValue([]);
+        ProfileApi.get.mockResolvedValueOnce({profile: {languages: ['fr']}});
+        renderPage();
+
+        await waitFor(() => expect(screen.getByLabelText('Language')).toHaveValue('fr'));
         await waitFor(() => expect(ticked()).toEqual(['Sport', 'Politics']));
     });
 

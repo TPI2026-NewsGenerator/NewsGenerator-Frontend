@@ -5,7 +5,7 @@
 //  Description: Search page for frontend
 //
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
@@ -18,6 +18,8 @@ import {SourceSuggestions} from "@/features/search/components/source-suggestions
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
+import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
+import {likelyLanguage} from "@/features/briefing/profileWords.js";
 import {toast} from "@/lib/toast.js";
 
 const languageOptions = [
@@ -99,6 +101,8 @@ export const SearchPage = () => {
         timeframe: 'd',
         language: 'en',
     });
+    // true once the reader chose a language or loaded a saved search: theirs is never replaced
+    const languageChosen = useRef(false);
     const [customRange, setCustomRange] = useState(null);
     // the search that gave the results, used to look for the media missing from the sources
     const [lastSearch, setLastSearch] = useState(null);
@@ -203,20 +207,44 @@ export const SearchPage = () => {
         setShowSummaries(true);
     };
 
+    // the search starts in the language of the reader (the one of the browser when they read it, else
+    // the first of their profile): English was offered to a reader of French only
+    useEffect(() => {
+        if (!token) return;
+        ProfileApi.get(token)
+            .then(answer => {
+                const languages = answer?.profile?.languages;
+                if (!languages?.length || languageChosen.current) return;
+                const language = likelyLanguage(languages);
+                setFormValue(current => current.language === language ? current : {...current, language, category: []});
+            })
+            .catch(() => {});
+    }, [token]);
+
     // categories of feeds that can be searched, they belong to the language chosen. All of them are
     // ticked, unless some of this language already are (a saved search): with none, the search was
     // refused until the reader ticked one, every time and again after each change of language
+    // An answer for a language no longer chosen is dropped: the ones of English, arrived after the
+    // language of the reader was set, left its categories half ticked
     useEffect(() => {
-        SearchApi.getCategories(formValue.language || 'en')
+        let wanted = true;
+        const language = formValue.language || 'en';
+        SearchApi.getCategories(language)
             .then(data => {
+                if (!wanted) return;
                 const categories = data.categories ?? [];
                 setCategoryOptions(categories);
                 setFormValue(current => {
+                    // the language changed before this answer was applied
+                    if ((current.language || 'en') !== language) return current;
                     const kept = current.category.filter(category => categories.includes(category));
                     return {...current, category: kept.length > 0 ? kept : categories};
                 });
             })
             .catch(e => console.error("Failed to fetch categories", e));
+        return () => {
+            wanted = false;
+        };
     }, [formValue.language]);
 
     const loadSavedSearches = useCallback(async () => {
@@ -289,6 +317,7 @@ export const SearchPage = () => {
 
     // a saved search fills the form, the timeframe chosen stays
     const applySavedSearch = (item) => {
+        languageChosen.current = true;
         setFormValue({
             title: item.title,
             id: item.id,
@@ -373,7 +402,10 @@ export const SearchPage = () => {
                             <div>
                                 <Label htmlFor="language">Language</Label>
                                 <Select id="language" options={languageOptions} value={formValue.language}
-                                        onChange={event => setFormValue({...formValue, language: event.target.value, category: []})}
+                                        onChange={event => {
+                                            languageChosen.current = true;
+                                            setFormValue({...formValue, language: event.target.value, category: []});
+                                        }}
                                         invalid={Boolean(formError.language)}/>
                                 <FieldError>{formError.language}</FieldError>
                             </div>
