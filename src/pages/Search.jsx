@@ -333,8 +333,10 @@ export const SearchPage = () => {
         try {
             const data = await CustomSearchApi.deleteUserCustomSearch({id: item.id}, token);
 
-            if (!data) {
+            // an error answers a body too ({error}): the list is read again, as the server has it
+            if (!data?.deleted) {
                 toast.error(`Error deleting ${item.title}...`);
+                await loadSavedSearches();
                 return;
             }
             setCustomSearchItems(customSearchItems.filter(other => other !== item));

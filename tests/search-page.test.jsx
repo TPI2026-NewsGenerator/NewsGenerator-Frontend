@@ -24,9 +24,11 @@ vi.mock('@/features/briefing/api/briefingApi.js', () => ({
 vi.mock('@/features/custom-search/api/customSearchApi.js', () => ({
     CustomSearchApi: {getUserCustomSearch: vi.fn(), postUserCustomSearch: vi.fn(), deleteUserCustomSearch: vi.fn()},
 }));
+vi.mock('@/lib/toast.js', () => ({toast: {success: vi.fn(), error: vi.fn()}}));
 
 const {CustomSearchApi} = await import('@/features/custom-search/api/customSearchApi.js');
 const {ProfileApi} = await import('@/features/briefing/api/briefingApi.js');
+const {toast} = await import('@/lib/toast.js');
 const {SearchPage} = await import('@/pages/Search.jsx');
 
 const FOOT = {id: 13, title: 'Foot', keyword: 'referee football soccer', language: 'en', timeframe: 'Weekly', category: ['sport']};
@@ -86,6 +88,21 @@ describe('SearchPage', () => {
 
         expect(await screen.findByRole('button', {name: 'Foot 2'})).toBeInTheDocument();
         expect(CustomSearchApi.postUserCustomSearch).toHaveBeenCalledWith(expect.objectContaining({id: null, title: 'Foot 2'}), TOKEN);
+    });
+
+    it('should delete a saved search only when the server did', async () => {
+        CustomSearchApi.getUserCustomSearch.mockResolvedValue([FOOT]);
+        CustomSearchApi.deleteUserCustomSearch.mockResolvedValueOnce({error: 'database down'}).mockResolvedValueOnce({deleted: true});
+        renderPage();
+
+        fireEvent.click(await screen.findByRole('button', {name: 'Delete Foot'}));
+        await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Error deleting Foot...'));
+        expect(toast.success).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', {name: 'Foot'})).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Delete Foot'}));
+        await waitFor(() => expect(screen.queryByRole('button', {name: 'Foot'})).not.toBeInTheDocument());
+        expect(toast.success).toHaveBeenCalledWith('Foot deleted successfully !');
     });
 
     it('should replace the loaded search when asked, under its new title', async () => {
