@@ -44,6 +44,14 @@ describe('FeedList of a search by meaning', () => {
         expect(screen.queryByText('Close to your search')).not.toBeInTheDocument();
     });
 
+    it('should say when Google News was asked the sentence too, and only then', () => {
+        const {rerender} = render(<FeedList newsList={NEWS} onGenerate={() => {}} isGenerating={false} mode="meaning" checked web/>);
+        expect(screen.getByText(/Google News was asked your sentence too/)).toBeInTheDocument();
+
+        rerender(<FeedList newsList={NEWS} onGenerate={() => {}} isGenerating={false} mode="meaning" checked/>);
+        expect(screen.queryByText(/Google News was asked your sentence too/)).not.toBeInTheDocument();
+    });
+
     it('should tell that no news answers, and show nothing before a search', () => {
         const {container, rerender} = render(<FeedList newsList={[]} onGenerate={() => {}} isGenerating={false}/>);
         expect(container).toBeEmptyDOMElement();

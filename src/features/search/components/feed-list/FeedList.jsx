@@ -35,8 +35,9 @@ const TIME_OPTIONS = [
 
 // resumeCount / onOpenResume: the key passages shown last, opened again from here once closed
 // mode: 'meaning' for a sentence (each news has match 'answer' or 'related', in the order of the AI),
-// 'words' for exact words; checked: false when the AI could not sort the news found by meaning
-export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, resumeCount = 0, onOpenResume, mode = null, checked = true}) => {
+// 'words' for exact words; checked: false when the AI could not sort the news found by meaning; web:
+// true when our sources answered little and Google News was asked the sentence too
+export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, resumeCount = 0, onOpenResume, mode = null, checked = true, web = false}) => {
     const selectedIds = useRef([]);
     const [selectedCount, setSelectedCount] = useState(0);
     const [filteredData, setFilteredData] = useState(newsList);
@@ -150,6 +151,9 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                     {filteredData.length !== newsList.length && `, ${filteredData.length} kept by the filters`}.
                     {' '}Choose up to {MAX_SELECTED} and the AI shows their key passages.
                 </p>
+                {web && (
+                    <p className="mt-2">Our sources had little on it, so Google News was asked your sentence too: its news are among these.</p>
+                )}
                 {mode === 'meaning' && !checked && (
                     <p className="mt-2">The AI could not read them this time: these are the news closest in meaning to your search, the closest first.</p>
                 )}

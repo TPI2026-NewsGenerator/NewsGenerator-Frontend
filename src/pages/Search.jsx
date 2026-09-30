@@ -111,7 +111,7 @@ export const SearchPage = () => {
     const [wider, setWider] = useState(null);
     // how the last search was made: a sentence by its meaning ('meaning'), or exact words ('words'),
     // and whether the AI could check the news found by meaning
-    const [searchMode, setSearchMode] = useState({mode: null, checked: true});
+    const [searchMode, setSearchMode] = useState({mode: null, checked: true, web: false});
     const [saveSearchModal, setSaveSearchModal] = useState(false);
 
     const setField = (name, value) => {
@@ -166,7 +166,7 @@ export const SearchPage = () => {
 
             setNewsList(allNews.news);
             setWider(allNews.wider ?? null);
-            setSearchMode({mode: allNews.mode ?? null, checked: allNews.checked ?? true});
+            setSearchMode({mode: allNews.mode ?? null, checked: allNews.checked ?? true, web: allNews.web === true});
         } catch {
             toast.error('An error has occurred.. Please try again.');
         } finally {
@@ -509,7 +509,7 @@ export const SearchPage = () => {
                 <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}/>
             )}
             <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
-                      wider={wider} onWiden={handleWiden} mode={searchMode.mode} checked={searchMode.checked}
+                      wider={wider} onWiden={handleWiden} mode={searchMode.mode} checked={searchMode.checked} web={searchMode.web}
                       resumeCount={summaries.length} onOpenResume={() => setShowSummaries(true)}/>
         </PageShell>
     );
