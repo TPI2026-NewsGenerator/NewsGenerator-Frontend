@@ -12,6 +12,7 @@ import {Checkbox, Help, Input, Label, Select} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
+import {ImportSources} from "@/features/briefing/components/ImportSources.jsx";
 
 // categories: of 'language', the one of the site added. languages: [{value, label}], when given the
 // reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand
@@ -253,6 +254,9 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
                     </Button>
                 </div>
             )}
+
+            <ImportSources token={token} api={api} language={language} category={category} needCategory={needCategory}
+                           onAdded={added => setFeeds(current => [...added, ...current])}/>
 
             {listed.length === 0
                 ? <p className="caption">No source of your own yet. The feed of the site is found automatically.</p>

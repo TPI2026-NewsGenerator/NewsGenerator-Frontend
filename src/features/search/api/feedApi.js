@@ -45,6 +45,16 @@ export const FeedApi = {
         });
         return await response.json();
     },
+    // {sites}: the feed found for each address of a list the reader imports (25 at most), with its
+    // status: ready, bridge, asleep, flood, added or none. Nothing is added
+    checkSites: async (sites, token, language = 'en') => {
+        const response = await fetch(`${API_URL}/feeds/check`, {
+            method: 'POST',
+            headers: headers(token),
+            body: JSON.stringify({sites, language}),
+        });
+        return await response.json();
+    },
     // add several suggested sources at once: [{site, feed, category}]
     // the language and the keywords are sent with them: a site that publishes no feed has its own
     // read again by the server, and they tell it which section of the site to read
