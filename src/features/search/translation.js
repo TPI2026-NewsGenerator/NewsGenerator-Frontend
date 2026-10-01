@@ -24,7 +24,9 @@ export const createTranslator = (language, translate) => {
     const results = new Map();
     const listeners = new Set();
     const waiting = {news: new Set(), titles: new Set()};
-    const asked = new Set();
+    // each news asked, true when its description was asked too: the fact of a card in its affair asks
+    // the title of the card first, the card must still ask its description
+    const asked = new Map();
     let timer = null;
 
     const notify = () => listeners.forEach(listener => listener());
@@ -47,8 +49,9 @@ export const createTranslator = (language, translate) => {
     return {
         language,
         request: (url, withDescription) => {
-            if (asked.has(url)) return;
-            asked.add(url);
+            if (asked.has(url) && (asked.get(url) || !withDescription)) return;
+            asked.set(url, withDescription);
+            if (withDescription) waiting.titles.delete(url);
             (withDescription ? waiting.news : waiting.titles).add(url);
             if (!timer) timer = setTimeout(send, WAIT_MS);
         },

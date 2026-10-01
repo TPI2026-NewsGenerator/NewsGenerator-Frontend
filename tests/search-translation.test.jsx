@@ -45,6 +45,24 @@ describe('createTranslator', () => {
         expect(translate).toHaveBeenCalledTimes(1);
         vi.useRealTimers();
     });
+
+    it('should still ask the description of a card whose title its affair asked first', async () => {
+        vi.useFakeTimers();
+        const translate = vi.fn(async ({news, titles}) => [...news, ...titles].map(url => ({url, language: 'en', title: 'Le titre', description: news.includes(url) ? 'La description' : null})));
+        const translator = createTranslator('fr', translate);
+
+        translator.request('https://a.test', false);
+        await act(async () => vi.runAllTimersAsync());
+        translator.request('https://a.test', true);
+        translator.request('https://b.test', false);
+        translator.request('https://b.test', true);
+        await act(async () => vi.runAllTimersAsync());
+
+        expect(translate).toHaveBeenCalledTimes(2);
+        expect(translate).toHaveBeenLastCalledWith({news: ['https://a.test', 'https://b.test'], titles: []});
+        expect(translator.get('https://a.test').description).toBe('La description');
+        vi.useRealTimers();
+    });
 });
 
 describe('Article in another language', () => {
