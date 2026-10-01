@@ -12,6 +12,7 @@ import {Checkbox} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 import {addressesOfFile} from "@/features/briefing/importFile.js";
+import {languageLabel} from "@/features/briefing/profileWords.js";
 
 const CHECKED_AT_ONCE = 25;     // the server takes 25 sites a request, about 15 seconds
 const ADDED_AT_ONCE = 50;
@@ -168,7 +169,7 @@ export const ImportSources = ({token, api, language, category, needCategory, onA
                                             <Meta tone={result.status === 'ready' ? 'ink' : 'accent'} title={STATUS[result.status].title}>
                                                 {STATUS[result.status].label}
                                             </Meta>
-                                            {result.language && <Meta>{result.language}</Meta>}
+                                            {result.language && <Meta>{languageLabel(result.language)}</Meta>}
                                             {result.recent !== null && <Meta>{result.recent} news this week</Meta>}
                                         </MetaLine>
                                         {result.sample && <span className="caption block">e.g. “{result.sample}”</span>}

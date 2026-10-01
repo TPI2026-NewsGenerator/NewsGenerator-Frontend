@@ -15,8 +15,9 @@ import {feedAddress} from "@/lib/utils.js";
 import {ImportSources} from "@/features/briefing/components/ImportSources.jsx";
 
 // categories: of 'language', the one of the site added. languages: [{value, label}], when given the
-// reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand
-export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', languages, onLanguage, origin}) => {
+// reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand.
+// onChanged: told when sources were added or removed (the languages the reader can choose follow them)
+export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', languages, onLanguage, origin, onChanged}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');
     const [category, setCategory] = useState('');
@@ -62,6 +63,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
         }
 
         setFeeds([data.feed, ...feeds]);
+        onChanged?.();
         setSite('');
         toast.success(`${data.feed.site} added, e.g. "${data.sample?.[0]}"`);
     };
@@ -133,6 +135,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
         }
 
         setFeeds([...(data.feeds ?? []), ...feeds]);
+        if (done.length > 0) onChanged?.();
         setFound(found.filter(source => !done.includes(source.feed)));
         setSelected(selected.filter(feed => !done.includes(feed)));
     };
@@ -159,6 +162,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
         }
 
         setFeeds(feeds.filter(other => other.id !== feed.id));
+        onChanged?.();
     };
 
     const listed = origin ? feeds.filter(feed => (feed.origin ?? 'user') === origin) : feeds;
@@ -256,7 +260,10 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
             )}
 
             <ImportSources token={token} api={api} language={language} category={category} needCategory={needCategory}
-                           onAdded={added => setFeeds(current => [...added, ...current])}/>
+                           onAdded={added => {
+                               setFeeds(current => [...added, ...current]);
+                               onChanged?.();
+                           }}/>
 
             {listed.length === 0
                 ? <p className="caption">No source of your own yet. The feed of the site is found automatically.</p>

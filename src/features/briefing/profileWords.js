@@ -7,6 +7,17 @@
 
 export const LANGUAGES = {en: 'English', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian'};
 export const LANGUAGE_OPTIONS = Object.entries(LANGUAGES).map(([value, label]) => ({value, label}));
+
+// the name of any language a source can be in: "Hungarian" for "hu", the code when the browser names none
+const names = typeof Intl !== 'undefined' && Intl.DisplayNames ? new Intl.DisplayNames(['en'], {type: 'language', fallback: 'code'}) : null;
+export const languageLabel = (code) => {
+    if (LANGUAGES[code]) return LANGUAGES[code];
+    try {
+        return names?.of(code) ?? code;
+    } catch {
+        return code;
+    }
+};
 export const MIN_PROFILE_TEXT = 20;         // the server refuses less: too little to read interests in
 
 // the language of the browser, "fr" of "fr-CH"

@@ -19,7 +19,7 @@ import {FeedApi} from "@/features/search/api/feedApi.js";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
 import {UserFeeds} from "@/features/briefing/components/UserFeeds.jsx";
-import {LANGUAGES, LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
+import {LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER, languageLabel, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
@@ -100,6 +100,10 @@ export const ProfilePage = () => {
         ProfileApi.getOptions().then(setOptions).catch(err => setError(err.message));
         ProfileApi.get(token).then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
     }, [user, token, logout, apply]);
+
+    // the languages of the shared sources, and the ones of the sources of the reader
+    const readable = data?.languages ?? options.languages;
+    const fromSources = readable.filter(language => !options.languages.includes(language));
 
     // the categories of the shared sources, in the language of the site added or searched (by default
     // the one of the browser when the profile reads it, else the first one read)
@@ -213,8 +217,11 @@ export const ProfilePage = () => {
                     </aside>
 
                     <CheckboxGroup className="col-span-12 md:col-span-8" legend="Languages you read"
-                                   options={options.languages.map(language => ({value: language, label: LANGUAGES[language] ?? language}))}
-                                   value={form.languages} onChange={languages => setForm({...form, languages})}/>
+                                   options={readable.map(language => ({value: language, label: languageLabel(language)}))}
+                                   value={form.languages} onChange={languages => setForm({...form, languages})}
+                                   help={fromSources.length > 0
+                                       ? `${fromSources.map(languageLabel).join(', ')}: the language${fromSources.length > 1 ? 's' : ''} of sources you added. Your briefing only shows the news of the languages ticked.`
+                                       : 'Add a source in another language, and you can read it here too.'}/>
 
                     {options.topics.length > 0 && (
                         <CheckboxGroup className="col-span-12 md:col-span-8" legend="Topics (optional)"
@@ -319,6 +326,7 @@ export const ProfilePage = () => {
                 <Section id="own-sources" kicker="Added by you" title="Sources you added"
                          intro="Websites you add yourself are read with the others for your briefing and your searches, only for you, and never removed. Star the ones you trust: their stories come first in your briefing when they fit your interests. Share one and it can be suggested to the other readers who follow its subjects.">
                     <UserFeeds token={token} api={FeedApi} origin="user" reloadKey={ownVersion}
+                               onChanged={() => ProfileApi.get(token).then(answer => apply(answer)).catch(() => {})}
                                categories={ownCategories} language={language}
                                languages={LANGUAGE_OPTIONS} onLanguage={setOwnLanguage}/>
                 </Section>
