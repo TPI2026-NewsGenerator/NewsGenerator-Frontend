@@ -50,7 +50,7 @@ describe('SearchPage', () => {
         renderPage();
 
         await waitFor(() => expect(ticked()).toEqual(['World', 'Sport', 'Science']));
-        fireEvent.change(screen.getByLabelText('Language'), {target: {value: 'fr'}});
+        fireEvent.change(screen.getByLabelText('Display language'), {target: {value: 'fr'}});
         await waitFor(() => expect(ticked()).toEqual(['Sport', 'Politics']));
     });
 
@@ -59,7 +59,7 @@ describe('SearchPage', () => {
         ProfileApi.get.mockResolvedValueOnce({profile: {languages: ['fr']}});
         renderPage();
 
-        await waitFor(() => expect(screen.getByLabelText('Language')).toHaveValue('fr'));
+        await waitFor(() => expect(screen.getByLabelText('Display language')).toHaveValue('fr'));
         await waitFor(() => expect(ticked()).toEqual(['Sport', 'Politics']));
     });
 

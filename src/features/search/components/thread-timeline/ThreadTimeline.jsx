@@ -10,6 +10,8 @@ import {useState} from "react";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {cn} from "@/lib/utils.js";
+import {useTranslation} from "../../translation.js";
+import {languageLabel} from "@/features/briefing/profileWords.js";
 
 // past this many facts the affair is folded: the card is still read for its news first
 const OPEN_UP_TO = 4;
@@ -20,6 +22,8 @@ const dateOf = (fact) => fact.publishedAt ? when.format(new Date(fact.publishedA
 const Fact = ({fact, lead, onSelect}) => {
     const [isChecked, setIsChecked] = useState(false);
     const media = fact.corroboration?.media ?? 1;
+    // its title only, in the language searched
+    const {ref, translation} = useTranslation(fact.url, fact.language, {withDescription: false});
 
     const toggle = () => {
         const nextChecked = !isChecked;
@@ -27,7 +31,7 @@ const Fact = ({fact, lead, onSelect}) => {
     };
 
     return (
-        <li className="grid grid-cols-[1.5rem_1fr] gap-x-3 py-2.5">
+        <li ref={ref} className="grid grid-cols-[1.5rem_1fr] gap-x-3 py-2.5">
             <div className="pt-1">
                 {!lead && (
                     <input type="checkbox" checked={isChecked} onChange={toggle}
@@ -42,10 +46,15 @@ const Fact = ({fact, lead, onSelect}) => {
                     <Meta>{media === 1 ? 'this source only' : `${media} media`}</Meta>
                     {lead && <Meta tone="accent">this news</Meta>}
                     {!lead && !fact.found && <Meta title="Not in the results of your search, part of the same affair">also in the affair</Meta>}
+                    {translation?.title && (
+                        <Meta title={`Machine translation. As written: “${fact.title}”`}>
+                            translated from {languageLabel(translation.language)}
+                        </Meta>
+                    )}
                 </MetaLine>
                 <a href={fact.url} target="_blank" rel="noreferrer"
                    className={cn('mt-1 block max-w-[62ch] leading-snug hover:underline', lead ? 'font-medium' : '')}>
-                    {fact.title}
+                    {translation?.title ?? fact.title}
                 </a>
             </div>
         </li>

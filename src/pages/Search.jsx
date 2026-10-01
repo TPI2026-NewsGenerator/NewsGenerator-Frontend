@@ -5,7 +5,7 @@
 //  Description: Search page for frontend
 //
 
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {jwtDecode} from "jwt-decode";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
@@ -16,6 +16,7 @@ import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
 import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
 import {SourceSuggestions} from "@/features/search/components/source-suggestions/SourceSuggestions.jsx";
 import {SearchApi} from "@/features/search/api/searchApi.js";
+import {createTranslator, TranslationContext} from "@/features/search/translation.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -180,6 +181,13 @@ export const SearchPage = () => {
         setField('keyword', keywords);
         handleSubmit(keywords);
     };
+
+    // a search reads every language: the cards written in another than the one searched are translated
+    // as the reader reaches them, each search its own translations
+    const translator = useMemo(() => lastSearch
+        ? createTranslator(lastSearch.language, (asked) => SearchApi.translateNews(asked, lastSearch.language, token)
+            .then(data => data?.translations ?? []))
+        : null, [lastSearch, token]);
 
     // key passages of the cards chosen, each with all its articles: the server reads up to five of
     // them, counts who wrote it themselves and the AI picks the key sentences of one, translated when needed
@@ -402,13 +410,14 @@ export const SearchPage = () => {
 
                         <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
                             <div>
-                                <Label htmlFor="language">Language</Label>
+                                <Label htmlFor="language">Display language</Label>
                                 <Select id="language" options={languageOptions} value={formValue.language}
                                         onChange={event => {
                                             languageChosen.current = true;
                                             setFormValue({...formValue, language: event.target.value, category: []});
                                         }}
-                                        invalid={Boolean(formError.language)}/>
+                                        invalid={Boolean(formError.language)} aria-describedby="language-help"/>
+                                <Help id="language-help">Every language is searched, the news written in another are translated into this one</Help>
                                 <FieldError>{formError.language}</FieldError>
                             </div>
                             <div>
@@ -508,9 +517,11 @@ export const SearchPage = () => {
             {lastSearch && (
                 <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}/>
             )}
-            <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
-                      wider={wider} onWiden={handleWiden} mode={searchMode.mode} checked={searchMode.checked} web={searchMode.web}
-                      resumeCount={summaries.length} onOpenResume={() => setShowSummaries(true)}/>
+            <TranslationContext.Provider value={translator}>
+                <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}
+                          wider={wider} onWiden={handleWiden} mode={searchMode.mode} checked={searchMode.checked} web={searchMode.web}
+                          resumeCount={summaries.length} onOpenResume={() => setShowSummaries(true)}/>
+            </TranslationContext.Provider>
         </PageShell>
     );
 };
