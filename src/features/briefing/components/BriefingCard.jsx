@@ -11,6 +11,7 @@ import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-ic
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {corroborationLabel} from "@/features/briefing/corroboration.js";
+import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
 
 // Who the article credits for what it reports, read by the AI while it summarizes. It describes the
@@ -47,9 +48,12 @@ const Margin = ({kicker, tone, children}) => (
 // onVote(vote): 'up', 'down', or null when the reader takes back the thumb given. The next briefings
 // learn from it; without onVote no thumb is shown. number: its place in the briefing. lede: the first
 // story of the page, whose passages open with the drop cap. item.summary: the key sentences of the
-// article as published, a paragraph per passage; item.translation: their machine translation
+// article as published, a paragraph per passage; item.translation: their machine translation.
+// item.titleTranslation: the title in the language of the reader, when written in another (item.language)
 export const BriefingCard = ({item, onVote, number, lede = false}) => {
     const [allArticles, setAllArticles] = useState(false);
+    const [originalTitle, setOriginalTitle] = useState(false);
+    const titleTranslated = Boolean(item.titleTranslation) && !originalTitle;
     const corroboration = corroborationLabel(item.corroboration);
     const articles = allArticles ? item.articles : item.articles.slice(0, SHOWN_ARTICLES);
     const paragraphs = paragraphsOf(item.summary);
@@ -70,7 +74,16 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
             </div>
 
             <div className="col-span-12 mt-4 md:col-span-7 md:mt-0">
-                <h2 className="story-head text-balance">{item.title}</h2>
+                <h2 className="story-head text-balance">{titleTranslated ? item.titleTranslation : item.title}</h2>
+                {item.titleTranslation && (
+                    <p className="caption mt-2">
+                        <button type="button" onClick={() => setOriginalTitle(!originalTitle)}
+                                title={titleTranslated ? `Machine translation. As written: “${item.title}”` : 'Show the machine translation'}
+                                className="cursor-pointer underline decoration-rule underline-offset-4 hover:text-ink">
+                            {titleTranslated ? `Title translated from ${languageLabel(item.language)}` : `In ${languageLabel(item.language)}, show the translation`}
+                        </button>
+                    </p>
+                )}
                 {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
 
                 {paragraphs.length > 0 ? (

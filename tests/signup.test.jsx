@@ -43,7 +43,7 @@ describe('SignupPage', () => {
     it('should create the account with the profile, sign in and open the profile', async () => {
         LoginApi.register.mockResolvedValue({id_user: 300, token: 'token'});
         renderPage();
-        expect(await screen.findByLabelText('French')).toBeInTheDocument();
+        expect(await screen.findByRole('option', {name: 'French'})).toBeInTheDocument();
 
         fill();
         fireEvent.click(screen.getByRole('button', {name: 'Create my account'}));
@@ -53,12 +53,12 @@ describe('SignupPage', () => {
         expect(LoginApi.register).toHaveBeenCalledWith(expect.objectContaining({
             username: 'lecteur', email: 'lecteur@example.org', text: 'The Premier League and its coaches', topics: [],
         }));
-        expect(LoginApi.register.mock.calls[0][0].languages).toHaveLength(1);
+        expect(LoginApi.register.mock.calls[0][0].language).toBe('en');      // the browser's
     });
 
     it('should not ask the server while a field is wrong or the profile too short', async () => {
         renderPage();
-        await screen.findByLabelText('French');
+        await screen.findByRole('option', {name: 'French'});
 
         fill({username: 'a b', email: 'lecteur@', password: 'short', text: 'rugby'});
         fireEvent.click(screen.getByRole('button', {name: 'Create my account'}));
@@ -73,7 +73,7 @@ describe('SignupPage', () => {
     it('should show why the server refused the account', async () => {
         LoginApi.register.mockResolvedValue({error: 'This username or this email is already used.'});
         renderPage();
-        await screen.findByLabelText('French');
+        await screen.findByRole('option', {name: 'French'});
 
         fill();
         fireEvent.click(screen.getByRole('button', {name: 'Create my account'}));

@@ -13,7 +13,7 @@ import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {AuthShell} from "@/features/login/components/AuthShell.jsx";
 import {LANGUAGES, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {Button} from "@/components/ui/button.jsx";
-import {CheckboxGroup, FieldError, Help, Input, Label, Textarea} from "@/components/ui/field.jsx";
+import {CheckboxGroup, FieldError, Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 
@@ -24,7 +24,7 @@ const MIN_PASSWORD = 10;
 
 export const SignupPage = () => {
     const [options, setOptions] = useState({topics: [], languages: []});
-    const [form, setForm] = useState({username: '', email: '', password: '', text: '', languages: [], topics: []});
+    const [form, setForm] = useState({username: '', email: '', password: '', text: '', language: '', topics: []});
     const [formError, setFormError] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
@@ -35,9 +35,9 @@ export const SignupPage = () => {
         ProfileApi.getOptions()
             .then(answer => {
                 setOptions(answer);
-                // the language of the browser ticked first, when the profile can read it
+                // the language of the browser chosen first, when the news can be shown in it
                 const first = likelyLanguage(answer.languages);
-                setForm(current => current.languages.length > 0 ? current : {...current, languages: [first]});
+                setForm(current => current.language ? current : {...current, language: first});
             })
             .catch(err => setError(err.message));
     }, []);
@@ -57,7 +57,7 @@ export const SignupPage = () => {
             email: EMAIL.test(form.email.trim()) ? null : 'Enter a valid email',
             password: form.password.length >= MIN_PASSWORD ? null : `At least ${MIN_PASSWORD} characters`,
             text: form.text.trim().length >= MIN_PROFILE_TEXT ? null : `Say a little more: at least ${MIN_PROFILE_TEXT} characters`,
-            languages: form.languages.length > 0 ? null : 'Choose at least one language',
+            language: form.language ? null : 'Choose your language',
         };
         setFormError(errors);
         if (Object.values(errors).some(Boolean)) return;
@@ -69,7 +69,7 @@ export const SignupPage = () => {
                 email: form.email.trim(),
                 password: form.password,
                 text: form.text.trim(),
-                languages: form.languages,
+                language: form.language,
                 topics: form.topics,
             });
 
@@ -149,9 +149,17 @@ export const SignupPage = () => {
                             </Help>
                             <FieldError id="text-error">{formError.text}</FieldError>
                         </div>
-                        <CheckboxGroup legend="Languages you read" invalid={Boolean(formError.languages)} error={formError.languages}
-                                       options={options.languages.map(language => ({value: language, label: LANGUAGES[language] ?? language}))}
-                                       value={form.languages} onChange={languages => set('languages', languages)}/>
+                        <div>
+                            <Label htmlFor="signup-language">Your language</Label>
+                            <Select id="signup-language" className="mt-2" invalid={Boolean(formError.language)}
+                                    aria-describedby={described('language', 'signup-language-help')}
+                                    options={options.languages.map(language => ({value: language, label: LANGUAGES[language] ?? language}))}
+                                    value={form.language} onChange={change('language')}/>
+                            <Help id="signup-language-help">
+                                The news of every language are read for you, and translated into this one.
+                            </Help>
+                            <FieldError id="language-error">{formError.language}</FieldError>
+                        </div>
                         {options.topics.length > 0 && (
                             <CheckboxGroup legend="Topics (optional)"
                                            options={options.topics.map(topic => ({value: topic, label: topic}))}

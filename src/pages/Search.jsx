@@ -20,7 +20,6 @@ import {createTranslator, TranslationContext} from "@/features/search/translatio
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
-import {likelyLanguage} from "@/features/briefing/profileWords.js";
 import {toast} from "@/lib/toast.js";
 
 const languageOptions = [
@@ -215,15 +214,13 @@ export const SearchPage = () => {
         setShowSummaries(true);
     };
 
-    // the search starts in the language of the reader (the one of the browser when they read it, else
-    // the first of their profile): English was offered to a reader of French only
+    // the search starts in the language of the reader: English was offered to a reader of French only
     useEffect(() => {
         if (!token) return;
         ProfileApi.get(token)
             .then(answer => {
-                const languages = answer?.profile?.languages;
-                if (!languages?.length || languageChosen.current) return;
-                const language = likelyLanguage(languages);
+                const language = answer?.profile?.language;
+                if (!language || languageChosen.current) return;
                 setFormValue(current => current.language === language ? current : {...current, language, category: []});
             })
             .catch(() => {});

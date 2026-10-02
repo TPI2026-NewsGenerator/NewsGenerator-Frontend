@@ -19,7 +19,7 @@ vi.mock('@/features/search/api/searchApi.js', () => ({
 }));
 vi.mock('@/features/search/api/feedApi.js', () => ({FeedApi: {}}));
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    ProfileApi: {get: vi.fn(async () => ({profile: {languages: ['en']}}))},
+    ProfileApi: {get: vi.fn(async () => ({profile: {language: 'en'}}))},
 }));
 vi.mock('@/features/custom-search/api/customSearchApi.js', () => ({
     CustomSearchApi: {getUserCustomSearch: vi.fn(), postUserCustomSearch: vi.fn(), deleteUserCustomSearch: vi.fn()},
@@ -56,7 +56,7 @@ describe('SearchPage', () => {
 
     it('should start in the language of the reader, with its categories', async () => {
         CustomSearchApi.getUserCustomSearch.mockResolvedValue([]);
-        ProfileApi.get.mockResolvedValueOnce({profile: {languages: ['fr']}});
+        ProfileApi.get.mockResolvedValueOnce({profile: {language: 'fr'}});
         renderPage();
 
         await waitFor(() => expect(screen.getByLabelText('Display language')).toHaveValue('fr'));

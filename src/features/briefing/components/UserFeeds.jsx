@@ -17,7 +17,7 @@ import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 
 // categories: of 'language', the one of the site added. languages: [{value, label}], when given the
 // reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand.
-// onChanged: told when sources were added or removed (the languages the reader can choose follow them)
+// onChanged: told when sources were added or removed
 export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', languages, onLanguage, origin, onChanged}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');

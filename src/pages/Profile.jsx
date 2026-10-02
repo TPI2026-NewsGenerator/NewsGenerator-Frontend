@@ -12,7 +12,7 @@ import {useLocation} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {FaRegStar, FaStar} from "react-icons/fa";
 import {Button, IconButton} from "@/components/ui/button.jsx";
-import {CheckboxGroup, Label, Textarea} from "@/components/ui/field.jsx";
+import {CheckboxGroup, Help, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -69,7 +69,7 @@ export const ProfilePage = () => {
     const {hash} = useLocation();
     const [options, setOptions] = useState({topics: [], languages: []});
     const [data, setData] = useState(null);         // {profile, interests, sources}
-    const [form, setForm] = useState({text: '', topics: [], languages: ['en']});
+    const [form, setForm] = useState({text: '', topics: [], language: likelyLanguage(LANGUAGE_OPTIONS.map(option => option.value))});
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
@@ -88,7 +88,7 @@ export const ProfilePage = () => {
         }
         setData(answer);
         if (fillForm && answer.profile) {
-            setForm({text: answer.profile.text, topics: answer.profile.topics, languages: answer.profile.languages});
+            setForm({text: answer.profile.text, topics: answer.profile.topics, language: answer.profile.language});
         }
         return true;
     }, [expired]);
@@ -102,13 +102,9 @@ export const ProfilePage = () => {
         ProfileApi.get(token).then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
     }, [user, token, logout, apply]);
 
-    // the languages of the shared sources, and the ones of the sources of the reader
-    const readable = data?.languages ?? options.languages;
-    const fromSources = readable.filter(language => !options.languages.includes(language));
-
     // the categories of the shared sources, in the language of the site added or searched (by default
-    // the one of the browser when the profile reads it, else the first one read)
-    const language = ownLanguage ?? likelyLanguage(data?.profile?.languages);
+    // the one the reader reads in)
+    const language = ownLanguage ?? data?.profile?.language ?? form.language;
     useEffect(() => {
         SearchApi.getCategories(language)
             .then(answer => setOwnCategories(answer.categories ?? []))
@@ -217,12 +213,16 @@ export const ProfilePage = () => {
                         <p className="caption mt-2 max-w-[30ch] italic">“{PLACEHOLDER}”</p>
                     </aside>
 
-                    <CheckboxGroup className="col-span-12 md:col-span-8" legend="Languages you read"
-                                   options={readable.map(language => ({value: language, label: languageLabel(language)}))}
-                                   value={form.languages} onChange={languages => setForm({...form, languages})}
-                                   help={fromSources.length > 0
-                                       ? `${fromSources.map(languageLabel).join(', ')}: the language${fromSources.length > 1 ? 's' : ''} of sources you added. Your briefing only shows the news of the languages ticked.`
-                                       : 'Add a source in another language, and you can read it here too.'}/>
+                    <div className="col-span-12 md:col-span-5">
+                        <Label htmlFor="profile-language">Your language</Label>
+                        <Select id="profile-language" className="mt-2" aria-describedby="profile-language-help"
+                                options={(options.languages.length > 0 ? options.languages : LANGUAGE_OPTIONS.map(option => option.value))
+                                    .map(value => ({value, label: languageLabel(value)}))}
+                                value={form.language} onChange={event => setForm({...form, language: event.target.value})}/>
+                        <Help id="profile-language-help">
+                            Your briefing and your searches read the news of every language, and translate them into this one.
+                        </Help>
+                    </div>
 
                     {options.topics.length > 0 && (
                         <CheckboxGroup className="col-span-12 md:col-span-8" legend="Topics (optional)"
@@ -232,7 +232,7 @@ export const ProfilePage = () => {
 
                     <div className="col-span-12 md:col-span-8">
                         <Button variant="primary" onClick={save} loading={saving}
-                                disabled={form.text.trim().length < MIN_PROFILE_TEXT || form.languages.length === 0}>
+                                disabled={form.text.trim().length < MIN_PROFILE_TEXT || !form.language}>
                             {data?.profile ? 'Save my profile' : 'Create my profile'}
                         </Button>
                         {saving && <p className="caption mt-3 italic">The AI reads your profile, this takes a few seconds…</p>}

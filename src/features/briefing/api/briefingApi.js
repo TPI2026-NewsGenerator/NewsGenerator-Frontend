@@ -45,7 +45,7 @@ export const ProfileApi = {
         const response = await fetch(`${API_URL}/profile/options`);
         return await response.json();
     },
-    // {text, topics, languages}: the AI splits it into interests, the sources are found in background
+    // {text, topics, language}: the AI splits it into interests, the sources are found in background
     save: (profile, token) => send('/profile', token, {method: 'PUT', body: profile}),
     updateInterest: (id, changes, token) => send(`/profile/interests/${id}`, token, {method: 'PATCH', body: changes}),
     deleteInterest: (id, token) => send(`/profile/interests/${id}`, token, {method: 'DELETE'}),
