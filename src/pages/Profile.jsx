@@ -14,6 +14,7 @@ import {FaRegStar, FaStar} from "react-icons/fa";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {CheckboxGroup, Label, Textarea} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
+import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {SearchApi} from "@/features/search/api/searchApi.js";
@@ -286,38 +287,42 @@ export const ProfilePage = () => {
                         )}
                     </div>
                     {data.sources.length > 0 && (
-                        <ul className="mt-6 border-t border-rule">
-                            {data.sources.map(source => (
-                                <li key={source.id} className="grid-12 items-baseline gap-y-1 border-b border-rule py-4">
-                                    <p className="col-span-12 flex items-center gap-2 font-semibold [overflow-wrap:anywhere] md:col-span-3">
-                                        <IconButton label={source.trusted ? `Stop trusting ${source.site}` : `Trust ${source.site}`}
-                                                    pressed={Boolean(source.trusted)} disabled={busy}
-                                                    title={source.trusted
-                                                        ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
-                                                        : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                                    onClick={() => trust(source)}>
-                                            {source.trusted ? <FaStar/> : <FaRegStar/>}
-                                        </IconButton>
-                                        {source.site}
-                                    </p>
-                                    <div className="col-span-12 md:col-span-6">
-                                        <MetaLine>
-                                            <Meta>{source.category}</Meta>
-                                            {source.language && <Meta>{source.language}</Meta>}
-                                            <Meta tone={source.relevant > 0 ? 'ink' : undefined}
-                                                  title={`Its news of the last ${limits.relevanceDays} days on your interests`}>
-                                                {source.relevant > 0 ? `${source.relevant} news on your interests` : 'nothing on your interests lately'}
-                                            </Meta>
-                                            {refused.has(source.url) && (
-                                                <Meta tone="accent" title="Left out after your thumbs: no longer read for your briefing, see below">left out</Meta>
-                                            )}
-                                        </MetaLine>
-                                        {source.error && <p className="caption mt-1 !text-accent-ink">{source.error}</p>}
-                                    </div>
-                                    <p className="caption col-span-12 truncate md:col-span-3 md:text-right" title={feedAddress(source.url)}>{feedAddress(source.url)}</p>
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="mt-6">
+                            <ScrollFrame label={`The ${data.sources.length} sources found for you`}>
+                                <ul className="[&>li:last-child]:border-b-0">
+                                    {data.sources.map(source => (
+                                        <li key={source.id} className="grid-12 items-baseline gap-y-1 border-b border-rule py-4">
+                                            <p className="col-span-12 flex items-center gap-2 font-semibold [overflow-wrap:anywhere] md:col-span-3">
+                                                <IconButton label={source.trusted ? `Stop trusting ${source.site}` : `Trust ${source.site}`}
+                                                            pressed={Boolean(source.trusted)} disabled={busy}
+                                                            title={source.trusted
+                                                                ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
+                                                                : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
+                                                            onClick={() => trust(source)}>
+                                                    {source.trusted ? <FaStar/> : <FaRegStar/>}
+                                                </IconButton>
+                                                {source.site}
+                                            </p>
+                                            <div className="col-span-12 md:col-span-6">
+                                                <MetaLine>
+                                                    <Meta>{source.category}</Meta>
+                                                    {source.language && <Meta>{source.language}</Meta>}
+                                                    <Meta tone={source.relevant > 0 ? 'ink' : undefined}
+                                                          title={`Its news of the last ${limits.relevanceDays} days on your interests`}>
+                                                        {source.relevant > 0 ? `${source.relevant} news on your interests` : 'nothing on your interests lately'}
+                                                    </Meta>
+                                                    {refused.has(source.url) && (
+                                                        <Meta tone="accent" title="Left out after your thumbs: no longer read for your briefing, see below">left out</Meta>
+                                                    )}
+                                                </MetaLine>
+                                                {source.error && <p className="caption mt-1 !text-accent-ink">{source.error}</p>}
+                                            </div>
+                                            <p className="caption col-span-12 truncate md:col-span-3 md:text-right" title={feedAddress(source.url)}>{feedAddress(source.url)}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </ScrollFrame>
+                        </div>
                     )}
                 </Section>
             )}

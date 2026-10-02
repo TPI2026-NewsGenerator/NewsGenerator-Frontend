@@ -13,6 +13,7 @@ import {Meta, MetaLine, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 import {feedAddress} from "@/lib/utils.js";
 import {ImportSources} from "@/features/briefing/components/ImportSources.jsx";
+import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 
 // categories: of 'language', the one of the site added. languages: [{value, label}], when given the
 // reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand.
@@ -268,38 +269,40 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
             {listed.length === 0
                 ? <p className="caption">No source of your own yet. The feed of the site is found automatically.</p>
                 : (
-                    <ul className="border-t border-rule">
-                        {listed.map(feed => (
-                            <li key={feed.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule py-2.5">
-                                {/* any source, one found for the profile too: it is then never removed */}
-                                <IconButton label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
-                                            pressed={Boolean(feed.trusted)}
-                                            title={feed.trusted
-                                                ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
-                                                : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                            onClick={() => handleChange(feed, {trusted: !feed.trusted})}>
-                                    {feed.trusted ? <FaStar/> : <FaRegStar/>}
-                                </IconButton>
-                                {feed.origin !== 'profile' && (
-                                    <IconButton label={feed.shared ? `Stop sharing ${feed.site}` : `Share ${feed.site}`}
-                                                pressed={Boolean(feed.shared)}
-                                                title={feed.shared
-                                                    ? 'Shared: it can be recommended to the other readers who follow its subjects'
-                                                    : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
-                                                onClick={() => handleChange(feed, {shared: !feed.shared})}>
-                                        <FaShareAlt/>
+                    <ScrollFrame label={`Your ${listed.length} sources`}>
+                        <ul className="[&>li:last-child]:border-b-0">
+                            {listed.map(feed => (
+                                <li key={feed.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule py-2.5">
+                                    {/* any source, one found for the profile too: it is then never removed */}
+                                    <IconButton label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
+                                                pressed={Boolean(feed.trusted)}
+                                                title={feed.trusted
+                                                    ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
+                                                    : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
+                                                onClick={() => handleChange(feed, {trusted: !feed.trusted})}>
+                                        {feed.trusted ? <FaStar/> : <FaRegStar/>}
                                     </IconButton>
-                                )}
-                                <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{feed.site}</span>
-                                <Meta>{feed.category}</Meta>
-                                {feed.error && <Meta tone="accent" title={feed.error}>not working</Meta>}
-                                <span className="caption hidden max-w-[40%] truncate md:inline" title={feedAddress(feed.url)}>{feedAddress(feed.url)}</span>
-                                <IconButton label={`Remove ${feed.site}`} className="hover:text-accent-ink" onClick={() => handleDelete(feed)}>
-                                    <FaTrash/>
-                                </IconButton>
-                            </li>
-                        ))}
-                    </ul>
+                                    {feed.origin !== 'profile' && (
+                                        <IconButton label={feed.shared ? `Stop sharing ${feed.site}` : `Share ${feed.site}`}
+                                                    pressed={Boolean(feed.shared)}
+                                                    title={feed.shared
+                                                        ? 'Shared: it can be recommended to the other readers who follow its subjects'
+                                                        : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
+                                                    onClick={() => handleChange(feed, {shared: !feed.shared})}>
+                                            <FaShareAlt/>
+                                        </IconButton>
+                                    )}
+                                    <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{feed.site}</span>
+                                    <Meta>{feed.category}</Meta>
+                                    {feed.error && <Meta tone="accent" title={feed.error}>not working</Meta>}
+                                    <span className="caption hidden max-w-[40%] truncate md:inline" title={feedAddress(feed.url)}>{feedAddress(feed.url)}</span>
+                                    <IconButton label={`Remove ${feed.site}`} className="hover:text-accent-ink" onClick={() => handleDelete(feed)}>
+                                        <FaTrash/>
+                                    </IconButton>
+                                </li>
+                            ))}
+                        </ul>
+                    </ScrollFrame>
                 )}
         </div>
     );
