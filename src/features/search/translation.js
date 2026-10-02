@@ -7,7 +7,7 @@
 //               a few cards in one request, and shown marked as translated
 //
 
-import {createContext, useContext, useEffect, useRef, useState, useSyncExternalStore} from "react";
+import {createContext, useContext, useEffect, useRef, useSyncExternalStore} from "react";
 
 // what one request asks at most (the server refuses more), the cards first
 const MAX_NEWS = 30;
@@ -69,13 +69,11 @@ export const TranslationContext = createContext(null);
 const nothing = () => () => {};
 
 // The translation of a news written in another language than the one searched, asked when its element
-// (ref) comes near the screen: {ref, translation, original, toggle}. 'original' when the reader asked
-// to read it as written
+// (ref) comes near the screen: {ref, translation}. The card shows the title as written under it
 export const useTranslation = (url, language, {withDescription = true} = {}) => {
     const translator = useContext(TranslationContext);
     const needed = Boolean(translator && url && language && language !== translator.language);
     const ref = useRef(null);
-    const [original, setOriginal] = useState(false);
 
     useEffect(() => {
         if (!needed || !ref.current) return;
@@ -93,5 +91,5 @@ export const useTranslation = (url, language, {withDescription = true} = {}) => 
     }, [needed, translator, url, withDescription]);
 
     const translation = useSyncExternalStore(needed ? translator.subscribe : nothing, () => needed ? translator.get(url) ?? null : null);
-    return {ref, translation, original, toggle: () => setOriginal(!original)};
+    return {ref, translation};
 };

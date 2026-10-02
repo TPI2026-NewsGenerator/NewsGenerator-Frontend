@@ -126,3 +126,29 @@ describe('UserFeeds and sharing', () => {
             [{site: 'midi-olympique.fr', feed: 'https://midi-olympique.fr/rss', category: 'sport'}], 'en', ['rugby top 14']));
     });
 });
+
+describe('UserFeeds filter', () => {
+    const feeds = Array.from({length: 12}, (_, i) => ({id: i + 1, site: `media${i + 1}.com`, url: `https://media${i + 1}.com/rss`,
+        category: 'sport', origin: 'user', trusted: false, shared: false}));
+    feeds[3] = {...feeds[3], site: 'lequipe.fr', url: 'https://www.lequipe.fr/rss/actu_rss_Football.xml'};
+
+    it('should find a source of a long list by its name, whatever the case and the accents', async () => {
+        render(<UserFeeds categories={['sport']} api={{getUserFeeds: vi.fn().mockResolvedValue({feeds})}} origin="user"/>);
+        expect(await screen.findByText('lequipe.fr')).toBeInTheDocument();
+        expect(screen.getByText('12 sources')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText('Find one of your sources'), {target: {value: 'ÉQUIPE'}});
+        expect(screen.getByText('1 of 12')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Remove lequipe.fr'})).toBeInTheDocument();
+        expect(screen.queryByText('media1.com')).not.toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText('Find one of your sources'), {target: {value: 'nothing'}});
+        expect(screen.getByText(/No source of yours matches/)).toBeInTheDocument();
+    });
+
+    it('should show no filter for a short list', async () => {
+        render(<UserFeeds categories={['sport']} api={{getUserFeeds: vi.fn().mockResolvedValue({feeds: feeds.slice(0, 3)})}} origin="user"/>);
+        expect(await screen.findByText('media1.com')).toBeInTheDocument();
+        expect(screen.queryByLabelText('Find one of your sources')).not.toBeInTheDocument();
+    });
+});

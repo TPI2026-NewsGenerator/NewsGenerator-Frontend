@@ -7,7 +7,7 @@
 //               for their briefing and their searches
 //
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {useLocation} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {FaRegStar, FaStar} from "react-icons/fa";
@@ -23,7 +23,8 @@ import {UserFeeds} from "@/features/briefing/components/UserFeeds.jsx";
 import {LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER, languageLabel, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
-import {feedAddress} from "@/lib/utils.js";
+import {feedAddress, matchesQuery} from "@/lib/utils.js";
+import {ListFilter} from "@/components/ui/list-filter.jsx";
 
 const POLL_MS = 5000;
 const DISCOVERY = {
@@ -86,7 +87,9 @@ export const ProfilePage = () => {
             setError(answer.error);
             return false;
         }
-        setData(answer);
+        // the same answer as before keeps the page as it is: asked every 5 seconds while sources are
+        // looked for, it drew the whole page again each time, a hundred sources and more
+        setData(current => current !== null && JSON.stringify(current) === JSON.stringify(answer) ? current : answer);
         if (fillForm && answer.profile) {
             setForm({text: answer.profile.text, language: answer.profile.language});
         }
@@ -117,13 +120,30 @@ export const ProfilePage = () => {
         if (loaded && hash) document.getElementById(hash.slice(1))?.scrollIntoView({block: 'start'});
     }, [loaded, hash]);
 
-    // the sources are found in background: asked again until done
+    // the sources are found in background: asked again until done, one question at a time
     const discovering = data?.profile?.discovery?.status === 'running';
     useEffect(() => {
         if (!discovering) return undefined;
-        const timer = setTimeout(() => ProfileApi.get().then(answer => apply(answer)), POLL_MS);
-        return () => clearTimeout(timer);
-    }, [data, discovering, apply]);
+        let timer;
+        let stopped = false;
+        const poll = () => {
+            timer = setTimeout(() => ProfileApi.get()
+                .then(answer => !stopped && apply(answer))
+                .catch(() => {})
+                .finally(() => !stopped && poll()), POLL_MS);
+        };
+        poll();
+        return () => {
+            stopped = true;
+            clearTimeout(timer);
+        };
+    }, [discovering, apply]);
+    // the sources found, filtered by the words of the reader
+    const [sourceQuery, setSourceQuery] = useState('');
+    const shownSources = useMemo(() => (data?.sources ?? [])
+        .filter(source => matchesQuery(sourceQuery, source.site, feedAddress(source.url), source.category)), [data?.sources, sourceQuery]);
+    // stable, so the list of the sources added is not drawn again when the profile is asked again
+    const onOwnChanged = useCallback(() => ProfileApi.get().then(answer => apply(answer)).catch(() => {}), [apply]);
 
     const save = async () => {
         setError(null);
@@ -285,7 +305,12 @@ export const ProfilePage = () => {
                     }
                 >
                     <div className="space-y-6">
-                        {discovering && <Working>Looking for sources: this takes a few minutes…</Working>}
+                        {discovering && (
+                            <Working>
+                                Looking for sources: 5 to 15 minutes, as each medium named is read. You can leave
+                                the page, they are added when found.
+                            </Working>
+                        )}
                         {data.profile.discovery.status === 'failed' && (
                             <Notice type="error">{data.profile.discovery.error}</Notice>
                         )}
@@ -295,9 +320,11 @@ export const ProfilePage = () => {
                     </div>
                     {data.sources.length > 0 && (
                         <div className="mt-6">
+                            <ListFilter id="found-filter" label="Find a source found for you" value={sourceQuery} onChange={setSourceQuery}
+                                        shown={shownSources.length} total={data.sources.length}/>
                             <ScrollFrame label={`The ${data.sources.length} sources found for you`}>
                                 <ul className="[&>li:last-child]:border-b-0">
-                                    {data.sources.map(source => (
+                                    {shownSources.map(source => (
                                         <li key={source.id} className="grid-12 items-baseline gap-y-1 border-b border-rule py-4">
                                             <p className="col-span-12 flex items-center gap-2 font-semibold [overflow-wrap:anywhere] md:col-span-3">
                                                 <IconButton label={source.trusted ? `Stop trusting ${source.site}` : `Trust ${source.site}`}
@@ -338,7 +365,7 @@ export const ProfilePage = () => {
                 <Section id="own-sources" kicker="Added by you" title="Sources you added"
                          intro="Websites you add yourself are read with the others for your briefing and your searches, only for you, and never removed. Star the ones you trust: their stories come first in your briefing when they fit your interests. Share one and it can be suggested to the other readers who follow its subjects.">
                     <UserFeeds api={FeedApi} origin="user" reloadKey={ownVersion}
-                               onChanged={() => ProfileApi.get().then(answer => apply(answer)).catch(() => {})}
+                               onChanged={onOwnChanged}
                                categories={ownCategories} language={language}
                                languages={LANGUAGE_OPTIONS} onLanguage={setOwnLanguage}/>
                 </Section>

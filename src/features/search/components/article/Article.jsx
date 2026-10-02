@@ -76,8 +76,8 @@ export const Article = memo(({id, onSelect, news}) => {
     const otherSources = [...new Map((news?.sources ?? []).map(other => [other.source, other])).values()];
     const coverage = coverageOf(news);
     // a news in another language than the one searched, translated when the reader reaches it
-    const {ref, translation, original, toggle: toggleOriginal} = useTranslation(news?.url, news?.language);
-    const translated = Boolean(translation) && !original;
+    const {ref, translation} = useTranslation(news?.url, news?.language);
+    const translated = Boolean(translation?.title);
 
     const toggle = () => {
         const nextChecked = !isChecked;
@@ -116,14 +116,8 @@ export const Article = memo(({id, onSelect, news}) => {
                     {news.publishedAt && <Meta><time dateTime={news.publishedAt}>{articleTime(news.publishedAt)}</time></Meta>}
                     {news.topic && <Meta>{news.topic}</Meta>}
                     {coverage && <Meta tone={coverage.tone} title={coverage.title}>{coverage.label}</Meta>}
-                    {translation && (
-                        <Meta>
-                            <button type="button" onClick={toggleOriginal}
-                                    title={original ? 'Show the machine translation' : `Machine translation. As written: “${news.title}”`}
-                                    className="cursor-pointer tracking-[inherit] [font-variant-caps:inherit] underline decoration-rule underline-offset-4 hover:text-ink">
-                                {original ? `in ${languageLabel(translation.language)}, show the translation` : `translated from ${languageLabel(translation.language)}`}
-                            </button>
-                        </Meta>
+                    {translated && (
+                        <Meta title="Machine translation: it may contain errors">translated from {languageLabel(translation.language)}</Meta>
                     )}
                     {news.hedged && (
                         <Meta tone="accent" title={`The article says "${news.hedged}", so it has no confirmation of its own`}>
@@ -132,8 +126,12 @@ export const Article = memo(({id, onSelect, news}) => {
                     )}
                 </MetaLine>
                 <h3 className="mt-2 font-display text-[1.45rem] leading-[1.15] font-medium text-balance">
-                    {translated && translation.title ? translation.title : news.title}
+                    {translated ? translation.title : news.title}
                 </h3>
+                {/* a translated title shows the one as written under it, as the cards of the briefing */}
+                {translated && (
+                    <p lang={translation.language} className="caption mt-1.5 italic">“{news.title}”</p>
+                )}
                 {news.description && (
                     <p className="mt-3 max-w-[66ch] text-[1.0625rem] leading-relaxed text-ink/85">
                         {translated && translation.description ? translation.description : news.description}

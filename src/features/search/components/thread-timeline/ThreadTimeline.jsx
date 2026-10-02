@@ -47,15 +47,14 @@ const Fact = ({fact, lead, onSelect}) => {
                     {lead && <Meta tone="accent">this news</Meta>}
                     {!lead && !fact.found && <Meta title="Not in the results of your search, part of the same affair">also in the affair</Meta>}
                     {translation?.title && (
-                        <Meta title={`Machine translation. As written: “${fact.title}”`}>
-                            translated from {languageLabel(translation.language)}
-                        </Meta>
+                        <Meta title="Machine translation: it may contain errors">translated from {languageLabel(translation.language)}</Meta>
                     )}
                 </MetaLine>
                 <a href={fact.url} target="_blank" rel="noreferrer"
                    className={cn('mt-1 block max-w-[62ch] leading-snug hover:underline', lead ? 'font-medium' : '')}>
                     {translation?.title ?? fact.title}
                 </a>
+                {translation?.title && <p lang={translation.language} className="caption mt-0.5 italic">“{fact.title}”</p>}
             </div>
         </li>
     );

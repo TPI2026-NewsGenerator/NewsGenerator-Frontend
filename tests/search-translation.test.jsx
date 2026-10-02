@@ -8,7 +8,7 @@
 
 import '@testing-library/jest-dom';
 import { it, expect, describe, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { Article } from '@/features/search/components/article/Article.jsx';
 import { createTranslator, TranslationContext } from '@/features/search/translation.js';
 
@@ -66,7 +66,7 @@ describe('createTranslator', () => {
 });
 
 describe('Article in another language', () => {
-    it('should show the translation, marked, and the text as written on demand', async () => {
+    it('should show the translation, marked, with the title as written under it', async () => {
         const translate = vi.fn(async () => [{url: 'https://kicker.test/1', language: 'de',
             title: 'Penalty sifflé après la vidéo', description: 'Le VAR est intervenu à la 80e minute.'}]);
         render(
@@ -77,9 +77,8 @@ describe('Article in another language', () => {
 
         expect(await screen.findByText('Penalty sifflé après la vidéo')).toBeInTheDocument();
         expect(screen.getByText('Le VAR est intervenu à la 80e minute.')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', {name: /translated from German/}));
-        expect(screen.getByText('Elfmeter nach Videobeweis')).toBeInTheDocument();
-        expect(screen.getByRole('button', {name: /in German, show the translation/})).toBeInTheDocument();
+        expect(screen.getByText('translated from German')).toBeInTheDocument();
+        expect(screen.getByText('“Elfmeter nach Videobeweis”')).toBeInTheDocument();
     });
 
     it('should ask nothing for a card in the language searched', async () => {
