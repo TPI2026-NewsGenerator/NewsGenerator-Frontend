@@ -34,11 +34,11 @@ const pick = (container, lines) => {
 describe('ImportSources', () => {
     it('should tick the feeds ready only, and say why the others are not', async () => {
         const server = api();
-        const {container} = render(<ImportSources token="t" api={server} language="en" category="sport" needCategory={() => true}/>);
+        const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
         pick(container, Object.keys(checked));
 
         await screen.findByText('www.kicker.de');
-        expect(server.checkSites).toHaveBeenCalledWith(Object.keys(checked), 't', 'en');
+        expect(server.checkSites).toHaveBeenCalledWith(Object.keys(checked), 'en');
         expect(screen.getByRole('checkbox', {name: /www.kicker.de/})).toBeChecked();
         expect(screen.getByRole('checkbox', {name: /www.vi.nl/})).not.toBeChecked();
         expect(screen.getByRole('checkbox', {name: /www.irishfa.com/})).not.toBeChecked();
@@ -49,7 +49,7 @@ describe('ImportSources', () => {
     it('should add the ticked ones in the category chosen, and take them out of the list', async () => {
         const server = api();
         const onAdded = vi.fn();
-        const {container} = render(<ImportSources token="t" api={server} language="en" category="sport" needCategory={() => true} onAdded={onAdded}/>);
+        const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true} onAdded={onAdded}/>);
         pick(container, ['https://www.kicker.de', 'https://www.vi.nl']);
 
         fireEvent.click(await screen.findByRole('checkbox', {name: /www.vi.nl/}));
@@ -59,13 +59,13 @@ describe('ImportSources', () => {
         expect(server.importSources).toHaveBeenCalledWith([
             {site: 'https://www.kicker.de', feed: 'https://newsfeed.kicker.de/news/aktuell', category: 'sport'},
             {site: 'https://www.vi.nl', feed: 'http://rss-bridge/?site=vi.nl', category: 'sport'},
-        ], 't', 'en');
+        ], 'en');
         await waitFor(() => expect(screen.queryByText('www.kicker.de')).not.toBeInTheDocument());
     });
 
     it('should add nothing without a category', async () => {
         const server = api();
-        const {container} = render(<ImportSources token="t" api={server} language="en" category="" needCategory={() => false}/>);
+        const {container} = render(<ImportSources api={server} language="en" category="" needCategory={() => false}/>);
         pick(container, ['https://www.kicker.de']);
 
         fireEvent.click(await screen.findByRole('button', {name: 'Add 1 source'}));

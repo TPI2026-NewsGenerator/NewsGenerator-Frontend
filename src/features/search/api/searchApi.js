@@ -14,12 +14,11 @@ export const SearchApi = {
         const response = await fetch(`${API_URL}/news/categories?language=${encodeURIComponent(language)}`);
         return await response.json();
     },
-    getNews: async (query, token) => {
+    getNews: async (query) => {
         const response = await fetch(`${API_URL}/news`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(query),
         });
@@ -27,12 +26,11 @@ export const SearchApi = {
         return await response.json();
     },
     // full content of the selected news (urls from getNews, 10 max)
-    getNewsContent: async (urls, token) => {
+    getNewsContent: async (urls) => {
         const response = await fetch(`${API_URL}/news/content`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({urls}),
         });
@@ -42,12 +40,11 @@ export const SearchApi = {
     // the titles and descriptions of the cards reached ('news', 30 max) and the titles of the facts of
     // their affairs ('titles', 60 max), translated into the language searched when written in another:
     // {translations: [{url, language, title, description}]}
-    translateNews: async ({news, titles}, language, token) => {
+    translateNews: async ({news, titles}, language) => {
         const response = await fetch(`${API_URL}/news/translations`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({news, titles, language}),
         });
@@ -56,12 +53,11 @@ export const SearchApi = {
     },
     // key passages of the cards chosen (10 max), each with the urls of its articles, its lead first,
     // written in the language searched
-    getNewsSummary: async (stories, language, token) => {
+    getNewsSummary: async (stories, language) => {
         const response = await fetch(`${API_URL}/news/summary`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({stories, language}),
         });

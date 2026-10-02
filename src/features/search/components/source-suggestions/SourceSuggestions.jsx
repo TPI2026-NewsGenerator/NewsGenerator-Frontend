@@ -28,7 +28,7 @@ const publishedAgo = (at) => {
 };
 
 // given a new key at each search: a new search makes the previous answer obsolete
-export const SourceSuggestions = ({token, api, search, categories, onImported}) => {
+export const SourceSuggestions = ({api, search, categories, onImported}) => {
     const [news, setNews] = useState(null);         // null: not looked for yet
     const [sources, setSources] = useState([]);
     const [missing, setMissing] = useState(0);
@@ -41,7 +41,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
 
         const handleLook = async () => {
         setIsLooking(true);
-        const data = await api.suggestSources({keywords: search.keywords, timeframe: search.timeframe, language: search.language}, token);
+        const data = await api.suggestSources({keywords: search.keywords, timeframe: search.timeframe, language: search.language});
         setIsLooking(false);
 
         if (!data || data.error) {
@@ -67,7 +67,7 @@ export const SourceSuggestions = ({token, api, search, categories, onImported}) 
             .map(source => ({site: source.site, feed: source.feed, category}));
 
         setIsAdding(true);
-        const data = await api.importSources(chosen, token, search.language, search.keywords);
+        const data = await api.importSources(chosen, search.language, search.keywords);
         setIsAdding(false);
 
         if (!data || data.error) {

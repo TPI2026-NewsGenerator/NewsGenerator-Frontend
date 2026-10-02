@@ -65,7 +65,7 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
 };
 
 export const ProfilePage = () => {
-    const {token, user, logout, expired} = useAuth();
+    const {user, logout, expired} = useAuth();
     const {hash} = useLocation();
     const [options, setOptions] = useState({topics: [], languages: []});
     const [data, setData] = useState(null);         // {profile, interests, sources}
@@ -99,8 +99,8 @@ export const ProfilePage = () => {
             return;
         }
         ProfileApi.getOptions().then(setOptions).catch(err => setError(err.message));
-        ProfileApi.get(token).then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
-    }, [user, token, logout, apply]);
+        ProfileApi.get().then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
+    }, [user, logout, apply]);
 
     // the categories of the shared sources, in the language of the site added or searched (by default
     // the one the reader reads in)
@@ -121,15 +121,15 @@ export const ProfilePage = () => {
     const discovering = data?.profile?.discovery?.status === 'running';
     useEffect(() => {
         if (!discovering) return undefined;
-        const timer = setTimeout(() => ProfileApi.get(token).then(answer => apply(answer)), POLL_MS);
+        const timer = setTimeout(() => ProfileApi.get().then(answer => apply(answer)), POLL_MS);
         return () => clearTimeout(timer);
-    }, [data, discovering, token, apply]);
+    }, [data, discovering, apply]);
 
     const save = async () => {
         setError(null);
         setSaving(true);
         try {
-            if (apply(await ProfileApi.save(form, token))) {
+            if (apply(await ProfileApi.save(form))) {
                 toast.success('Profile saved, its sources are being found.');
             }
         } finally {
@@ -151,8 +151,8 @@ export const ProfilePage = () => {
     // a source found for the profile trusted or not: its stories come first in the briefing, and it
     // is never removed
     const trust = (source) => change(async () => {
-        const answer = await FeedApi.updateFeed(source.id, {trusted: !source.trusted}, token);
-        return answer?.error ? answer : ProfileApi.get(token);
+        const answer = await FeedApi.updateFeed(source.id, {trusted: !source.trusted});
+        return answer?.error ? answer : ProfileApi.get();
     });
 
     const discovery = DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
@@ -246,8 +246,8 @@ export const ProfilePage = () => {
                     <ol className="list-none border-t border-rule p-0">
                         {data.interests.map((interest, index) => (
                             <Interest key={`${interest.id}:${interest.text}:${interest.weight}`} interest={interest} number={index + 1} busy={busy}
-                                      onSave={changes => change(() => ProfileApi.updateInterest(interest.id, changes, token))}
-                                      onDelete={() => change(() => ProfileApi.deleteInterest(interest.id, token))}/>
+                                      onSave={changes => change(() => ProfileApi.updateInterest(interest.id, changes))}
+                                      onDelete={() => change(() => ProfileApi.deleteInterest(interest.id))}/>
                         ))}
                     </ol>
                 </Section>
@@ -272,7 +272,7 @@ export const ProfilePage = () => {
                         )}
                     </>}
                     aside={
-                        <Button disabled={discovering || busy} onClick={() => change(() => ProfileApi.rediscover(token))}>
+                        <Button disabled={discovering || busy} onClick={() => change(() => ProfileApi.rediscover())}>
                             Find more sources
                         </Button>
                     }
@@ -330,15 +330,15 @@ export const ProfilePage = () => {
             {data && (
                 <Section id="own-sources" kicker="Added by you" title="Sources you added"
                          intro="Websites you add yourself are read with the others for your briefing and your searches, only for you, and never removed. Star the ones you trust: their stories come first in your briefing when they fit your interests. Share one and it can be suggested to the other readers who follow its subjects.">
-                    <UserFeeds token={token} api={FeedApi} origin="user" reloadKey={ownVersion}
-                               onChanged={() => ProfileApi.get(token).then(answer => apply(answer)).catch(() => {})}
+                    <UserFeeds api={FeedApi} origin="user" reloadKey={ownVersion}
+                               onChanged={() => ProfileApi.get().then(answer => apply(answer)).catch(() => {})}
                                categories={ownCategories} language={language}
                                languages={LANGUAGE_OPTIONS} onLanguage={setOwnLanguage}/>
                 </Section>
             )}
 
             {data?.profile && (
-                <RecommendedSources token={token} api={FeedApi} expired={expired} onAdded={() => setOwnVersion(version => version + 1)}
+                <RecommendedSources api={FeedApi} expired={expired} onAdded={() => setOwnVersion(version => version + 1)}
                                     reloadKey={`${data.profile.discovery.status}:${data.interests.map(interest => interest.id).join(',')}`}/>
             )}
 
@@ -357,7 +357,7 @@ export const ProfilePage = () => {
                                     {source.liked > 0 && <Meta tone="ink">{source.liked} good for me</Meta>}
                                 </MetaLine>
                                 <div className="col-span-12 md:col-span-3 md:justify-self-end">
-                                    <Button size="sm" disabled={busy} onClick={() => change(() => ProfileApi.keepSource(source.url, token))}>
+                                    <Button size="sm" disabled={busy} onClick={() => change(() => ProfileApi.keepSource(source.url))}>
                                         Keep it
                                     </Button>
                                 </div>

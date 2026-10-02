@@ -50,9 +50,12 @@ To install dependencies:
 pnpm install
 ```
 
-- Create an `.env` file such as the `.env.example` example file in `root` folder and insert API url:
+- Create an `.env` file such as the `.env.example` example file in `root` folder. The page calls the
+  API on its own address, and Vite sends it on to the server of `API_TARGET` (`vite.config.js`), as
+  Caddy does once deployed: the session is a cookie of the site, the page never sees the token.
 ```
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL=/api
+API_TARGET=http://localhost:3001
 ```
 
 To start a development server:

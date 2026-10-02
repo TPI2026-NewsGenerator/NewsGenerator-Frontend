@@ -12,20 +12,8 @@ import {SignupPage} from "@/pages/Signup.jsx";
 import {BriefingPage} from "@/pages/Briefing.jsx";
 import {ProfilePage} from "@/pages/Profile.jsx";
 import {Toaster} from "@/components/ui/overlay.jsx";
-import {useEffect} from "react";
-import {jwtDecode} from "jwt-decode";
 
 function App() {
-    useEffect(() => {
-        const token = localStorage.getItem("JWT");
-        if (token) {
-            const {exp} = jwtDecode(token);
-            if (exp && Date.now() >= exp * 1000) {
-                localStorage.removeItem("JWT");
-            }
-        }
-    }, []);
-
     return (
         <>
             <Routes>

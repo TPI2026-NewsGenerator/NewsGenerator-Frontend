@@ -7,8 +7,9 @@
 
 import '@testing-library/jest-dom';
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter, Route, Routes} from "react-router-dom";
+import {WithSession} from "./session.jsx";
 
 vi.mock('@/features/login/api/loginApi.js', () => ({LoginApi: {register: vi.fn()}}));
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
@@ -18,12 +19,16 @@ vi.mock('@/features/briefing/api/briefingApi.js', () => ({
 const {LoginApi} = await import('@/features/login/api/loginApi.js');
 const {SignupPage} = await import('@/pages/Signup.jsx');
 
+// refresh: asks the session the answer of the signup set in its cookie
+const refresh = vi.fn(async () => ({id: 300, username: 'lecteur'}));
 const renderPage = () => render(
     <MemoryRouter initialEntries={['/register']}>
-        <Routes>
-            <Route path="/register" element={<SignupPage/>}/>
-            <Route path="/profile" element={<p>profile page</p>}/>
-        </Routes>
+        <WithSession refresh={refresh}>
+            <Routes>
+                <Route path="/register" element={<SignupPage/>}/>
+                <Route path="/profile" element={<p>profile page</p>}/>
+            </Routes>
+        </WithSession>
     </MemoryRouter>
 );
 
@@ -37,11 +42,10 @@ const fill = ({username = 'lecteur', email = 'lecteur@example.org', password = '
 describe('SignupPage', () => {
     afterEach(() => {
         vi.clearAllMocks();
-        localStorage.clear();
     });
 
     it('should create the account with the profile, sign in and open the profile', async () => {
-        LoginApi.register.mockResolvedValue({id_user: 300, token: 'token'});
+        LoginApi.register.mockResolvedValue({id_user: 300});
         renderPage();
         expect(await screen.findByRole('option', {name: 'French'})).toBeInTheDocument();
 
@@ -49,7 +53,7 @@ describe('SignupPage', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Create my account'}));
 
         expect(await screen.findByText('profile page')).toBeInTheDocument();
-        expect(localStorage.getItem('JWT')).toBe('token');
+        expect(refresh).toHaveBeenCalled();
         expect(LoginApi.register).toHaveBeenCalledWith(expect.objectContaining({
             username: 'lecteur', email: 'lecteur@example.org', text: 'The Premier League and its coaches', topics: [],
         }));
@@ -79,6 +83,6 @@ describe('SignupPage', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Create my account'}));
 
         expect(await screen.findByText('This username or this email is already used.')).toBeInTheDocument();
-        await waitFor(() => expect(localStorage.getItem('JWT')).toBeNull());
+        expect(refresh).not.toHaveBeenCalled();
     });
 });

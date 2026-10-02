@@ -7,7 +7,7 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
-import {jwtDecode} from "jwt-decode";
+import {useAuth} from "@/features/auth/useAuth.js";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {CheckboxGroup, FieldError, Help, Input, Label, Select} from "@/components/ui/field.jsx";
@@ -83,14 +83,7 @@ export const SearchPage = () => {
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [customSearchItems, setCustomSearchItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [token, setToken] = useState(localStorage.getItem("JWT"));
-    const [user, setUser] = useState(() => {
-        try {
-            return token ? jwtDecode(token) : null;
-        } catch {
-            return null;
-        }
-    });
+    const {user, logout} = useAuth();
     // form
     const [formError, setFormError] = useState({});
     const [formValue, setFormValue] = useState({
@@ -119,11 +112,8 @@ export const SearchPage = () => {
         if (formError[name]) setFormError({...formError, [name]: null});
     };
 
-    const removeAuthCredentials = () => {
-        localStorage.removeItem("JWT");
-        setToken(null);
-        setUser(null);
-    };
+    // the search page stays open signed out: it says to sign in at the next search
+    const removeAuthCredentials = () => logout(null);
 
     const handleSubmit = async (keyword = formValue.keyword) => {
         // check if registered
@@ -151,13 +141,13 @@ export const SearchPage = () => {
             timeframe: toTimeframe(formValue.timeframe, customRange),
         };
         try {
-            const allNews = await SearchApi.getNews(search, token);
+            const allNews = await SearchApi.getNews(search);
             setLastSearch(search);
             setSearchCount(count => count + 1);
 
             // print error message
             if (allNews?.error?.includes?.('Forbidden, invalid or expired')) {
-                toast.error('Token is invalid or has expired, please log in');
+                toast.error('Your session has expired, please log in');
                 removeAuthCredentials();
             } else if (allNews?.error) {
                 // the server words it for the reader (the search by meaning unavailable, a category unknown)
@@ -184,9 +174,9 @@ export const SearchPage = () => {
     // a search reads every language: the cards written in another than the one searched are translated
     // as the reader reaches them, each search its own translations
     const translator = useMemo(() => lastSearch
-        ? createTranslator(lastSearch.language, (asked) => SearchApi.translateNews(asked, lastSearch.language, token)
+        ? createTranslator(lastSearch.language, (asked) => SearchApi.translateNews(asked, lastSearch.language)
             .then(data => data?.translations ?? []))
-        : null, [lastSearch, token]);
+        : null, [lastSearch]);
 
     // key passages of the cards chosen, each with all its articles: the server reads up to five of
     // them, counts who wrote it themselves and the AI picks the key sentences of one, translated when needed
@@ -196,11 +186,11 @@ export const SearchPage = () => {
         const stories = urls.map(url => chosen.find(news => news.url === url)).filter(Boolean)
             .map(news => ({urls: [news.url, ...(news.sources ?? []).map(other => other.url)]}));
         setIsGenerating(true);
-        const data = await SearchApi.getNewsSummary(stories, lastSearch?.language ?? formValue.language, token).catch(() => null);
+        const data = await SearchApi.getNewsSummary(stories, lastSearch?.language ?? formValue.language).catch(() => null);
         setIsGenerating(false);
 
         if (data?.error?.includes?.('Forbidden, invalid or expired')) {
-            toast.error('Token is invalid or has expired, please log in');
+            toast.error('Your session has expired, please log in');
             removeAuthCredentials();
             return;
         } else if (!data || data.error) {
@@ -216,15 +206,15 @@ export const SearchPage = () => {
 
     // the search starts in the language of the reader: English was offered to a reader of French only
     useEffect(() => {
-        if (!token) return;
-        ProfileApi.get(token)
+        if (!user) return;
+        ProfileApi.get()
             .then(answer => {
                 const language = answer?.profile?.language;
                 if (!language || languageChosen.current) return;
                 setFormValue(current => current.language === language ? current : {...current, language, category: []});
             })
             .catch(() => {});
-    }, [token]);
+    }, [user]);
 
     // categories of feeds that can be searched, they belong to the language chosen. All of them are
     // ticked, unless some of this language already are (a saved search): with none, the search was
@@ -255,7 +245,7 @@ export const SearchPage = () => {
     const loadSavedSearches = useCallback(async () => {
         if (!user) return;
         try {
-            const data = await CustomSearchApi.getUserCustomSearch(token);
+            const data = await CustomSearchApi.getUserCustomSearch();
             if (data?.error) {
                 console.log("Error with Prisma database");
                 return;
@@ -264,7 +254,7 @@ export const SearchPage = () => {
         } catch (e) {
             console.error("Failed to fetch searches", e);
         }
-    }, [user, token]);
+    }, [user]);
 
     // the saved search the form was filled from, replaced when saved again unless asNew
     const loadedSearch = customSearchItems.find(item => item.id === formValue.id) ?? null;
@@ -298,7 +288,7 @@ export const SearchPage = () => {
                 language: formValue.language,
                 keyword: formValue.keyword,
                 category: formValue.category,
-            }, token);
+            });
             if (!saved || saved.error) throw new Error(saved?.error ?? 'nothing saved');
             setSaveSearchModal(false);
             // the form is now the one saved: saving it again replaces it
@@ -336,7 +326,7 @@ export const SearchPage = () => {
 
     const removeSavedSearch = async (item) => {
         try {
-            const data = await CustomSearchApi.deleteUserCustomSearch({id: item.id}, token);
+            const data = await CustomSearchApi.deleteUserCustomSearch({id: item.id});
 
             // an error answers a body too ({error}): the list is read again, as the server has it
             if (!data?.deleted) {
@@ -512,7 +502,7 @@ export const SearchPage = () => {
 
             <SummaryList summaries={summaries} open={showSummaries} onOpenChange={setShowSummaries}/>
             {lastSearch && (
-                <SourceSuggestions key={searchCount} token={token} api={FeedApi} search={lastSearch} categories={categoryOptions}/>
+                <SourceSuggestions key={searchCount} api={FeedApi} search={lastSearch} categories={categoryOptions}/>
             )}
             <TranslationContext.Provider value={translator}>
                 <FeedList newsList={newsList} onGenerate={handleGenerate} isGenerating={isGenerating}

@@ -7,9 +7,10 @@
 //
 
 import '@testing-library/jest-dom';
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from "react-router-dom";
+import {WithSession} from "./session.jsx";
 
 vi.mock('@/features/search/api/searchApi.js', () => ({
     SearchApi: {
@@ -32,17 +33,15 @@ const {toast} = await import('@/lib/toast.js');
 const {SearchPage} = await import('@/pages/Search.jsx');
 
 const FOOT = {id: 13, title: 'Foot', keyword: 'referee football soccer', language: 'en', timeframe: 'Weekly', category: ['sport']};
-// a token jwtDecode can read, the server is mocked
-const TOKEN = ['{"alg":"HS256"}', '{"id":4,"username":"reader"}'].map(part => btoa(part)).join('.') + '.signature';
+// the reader of the session, the server is mocked
+const READER = {id: 4, username: 'reader'};
 
-const renderPage = () => render(<MemoryRouter><SearchPage/></MemoryRouter>);
+const renderPage = () => render(<MemoryRouter><WithSession user={READER}><SearchPage/></WithSession></MemoryRouter>);
 const ticked = () => screen.getAllByRole('checkbox').filter(box => box.checked).map(box => box.closest('label').textContent.trim());
 
 describe('SearchPage', () => {
-    beforeEach(() => localStorage.setItem('JWT', TOKEN));
     afterEach(() => {
         vi.clearAllMocks();
-        localStorage.clear();
     });
 
     it('should tick every category of the language, again when the language changes', async () => {
@@ -87,7 +86,7 @@ describe('SearchPage', () => {
         fireEvent.click(within(dialog).getByRole('button', {name: 'Save as a new search'}));
 
         expect(await screen.findByRole('button', {name: 'Foot 2'})).toBeInTheDocument();
-        expect(CustomSearchApi.postUserCustomSearch).toHaveBeenCalledWith(expect.objectContaining({id: null, title: 'Foot 2'}), TOKEN);
+        expect(CustomSearchApi.postUserCustomSearch).toHaveBeenCalledWith(expect.objectContaining({id: null, title: 'Foot 2'}));
     });
 
     it('should delete a saved search only when the server did', async () => {
@@ -118,6 +117,6 @@ describe('SearchPage', () => {
 
         expect(await screen.findByRole('button', {name: 'Referees'})).toBeInTheDocument();
         expect(screen.queryByRole('button', {name: 'Foot'})).not.toBeInTheDocument();
-        expect(CustomSearchApi.postUserCustomSearch).toHaveBeenCalledWith(expect.objectContaining({id: 13, title: 'Referees'}), TOKEN);
+        expect(CustomSearchApi.postUserCustomSearch).toHaveBeenCalledWith(expect.objectContaining({id: 13, title: 'Referees'}));
     });
 });

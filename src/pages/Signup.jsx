@@ -11,6 +11,7 @@ import {Link, useNavigate} from "react-router-dom";
 import {LoginApi} from "@/features/login/api/loginApi.js";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {AuthShell} from "@/features/login/components/AuthShell.jsx";
+import {useAuth} from "@/features/auth/useAuth.js";
 import {LANGUAGES, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {Button} from "@/components/ui/button.jsx";
 import {CheckboxGroup, FieldError, Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
@@ -30,6 +31,7 @@ export const SignupPage = () => {
     const [error, setError] = useState(null);
     const [sending, setSending] = useState(false);
     const navigate = useNavigate();
+    const {refresh} = useAuth();
 
     useEffect(() => {
         ProfileApi.getOptions()
@@ -73,8 +75,8 @@ export const SignupPage = () => {
                 topics: form.topics,
             });
 
-            if (answer.token) {
-                localStorage.setItem("JWT", answer.token);
+            if (answer.id_user) {
+                await refresh();
                 toast.success('Account created. The sources of your briefing are being found: a few minutes.');
                 navigate('/profile');
             } else {

@@ -29,21 +29,21 @@ const STEPS = {
 const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});
 
 export const BriefingPage = () => {
-    const {token, user, logout, expired} = useAuth();
+    const {user, logout, expired} = useAuth();
     const [profile, setProfile] = useState(undefined);      // undefined: not loaded yet
     const [briefing, setBriefing] = useState(undefined);
     const [error, setError] = useState(null);
 
     const load = useCallback(async () => {
         try {
-            const data = await BriefingApi.getLatest(token);
+            const data = await BriefingApi.getLatest();
             if (expired(data)) return;
             if (data.error) throw new Error(data.error);
             setBriefing(data.briefing);
         } catch (err) {
             setError(err.message);
         }
-    }, [token, expired]);
+    }, [expired]);
 
     // the profile says whether a briefing can be written at all
     useEffect(() => {
@@ -51,14 +51,14 @@ export const BriefingPage = () => {
             logout();
             return;
         }
-        ProfileApi.get(token)
+        ProfileApi.get()
             .then(data => {
                 if (expired(data)) return;
                 setProfile(data.profile ?? null);
             })
             .catch(err => setError(err.message));
         load();
-    }, [user, token, logout, expired, load]);
+    }, [user, logout, expired, load]);
 
     // asked again while it is written
     useEffect(() => {
@@ -69,7 +69,7 @@ export const BriefingPage = () => {
 
     const start = async () => {
         setError(null);
-        const data = await BriefingApi.start(token);
+        const data = await BriefingApi.start();
         if (expired(data)) return;
         if (data.error) setError(data.error);
         else setBriefing(data.briefing);
@@ -84,7 +84,7 @@ export const BriefingPage = () => {
         const before = briefing.items.find(item => item.storyId === storyId)?.vote ?? null;
         setVote(value);
         try {
-            await BriefingApi.vote(briefing.id, storyId, value, token);
+            await BriefingApi.vote(briefing.id, storyId, value);
         } catch (err) {
             setVote(before);
             setError(`The thumb was not saved: ${err.message}`);

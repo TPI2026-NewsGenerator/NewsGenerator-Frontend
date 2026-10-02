@@ -13,6 +13,7 @@ import {FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 import {AuthShell} from "@/features/login/components/AuthShell.jsx";
+import {useAuth} from "@/features/auth/useAuth.js";
 
 const REQUIRED = 'This field is required';
 
@@ -23,6 +24,7 @@ export const LoginPage = () => {
     const [error, setError] = useState(null);
     const [sending, setSending] = useState(false);
     const navigate = useNavigate();
+    const {refresh} = useAuth();
 
     const change = (name) => (event) => {
         setFormValue({...formValue, [name]: event.target.value});
@@ -57,8 +59,8 @@ export const LoginPage = () => {
             }
 
             // if successfully retrieved user data
-            if (user.token) {
-                localStorage.setItem("JWT", user.token);
+            // the session is in a cookie set by the answer
+            if (user.id_user && await refresh()) {
                 navigate('/');
             }
         } catch (err) {

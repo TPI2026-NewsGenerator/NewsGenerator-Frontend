@@ -9,13 +9,14 @@ import '@testing-library/jest-dom';
 import { it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {MemoryRouter} from "react-router-dom";
+import {WithSession} from "./session.jsx";
 import {LoginPage} from "@/pages/Login.jsx";
 
 
 it('display the username input', () => {
     render(
         <MemoryRouter>
-            <LoginPage />
+            <WithSession><LoginPage /></WithSession>
         </MemoryRouter>
     );
 
@@ -27,7 +28,7 @@ it('display the username input', () => {
 it('display the password input', () => {
     render(
         <MemoryRouter>
-            <LoginPage />
+            <WithSession><LoginPage /></WithSession>
         </MemoryRouter>
     );
 
@@ -39,7 +40,7 @@ it('display the password input', () => {
 it('display the login button', () => {
     render(
         <MemoryRouter>
-            <LoginPage />
+            <WithSession><LoginPage /></WithSession>
         </MemoryRouter>
     );
 

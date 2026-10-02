@@ -8,36 +8,33 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const CustomSearchApi = {
-    // the user is identified by the token, no userId is sent
-    getUserCustomSearch: async (token) => {
+    // the user is identified by the session, no userId is sent
+    getUserCustomSearch: async () => {
         const response = await fetch(`${API_URL}/customsearch`, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
         });
 
         return await response.json();
     },
-    postUserCustomSearch: async (query, token) => {
+    postUserCustomSearch: async (query) => {
         const response = await fetch(`${API_URL}/customsearch`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(query),
         });
 
         return await response.json();
     },
-    deleteUserCustomSearch: async (query, token) => {
+    deleteUserCustomSearch: async (query) => {
         const response = await fetch(`${API_URL}/customsearch`, {
             method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(query),
         });

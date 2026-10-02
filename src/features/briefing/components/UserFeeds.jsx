@@ -18,7 +18,7 @@ import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 // categories: of 'language', the one of the site added. languages: [{value, label}], when given the
 // reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand.
 // onChanged: told when sources were added or removed
-export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', languages, onLanguage, origin, onChanged}) => {
+export const UserFeeds = ({categories, api, reloadKey, language = 'en', languages, onLanguage, origin, onChanged}) => {
     const [feeds, setFeeds] = useState([]);
     const [site, setSite] = useState('');
     const [category, setCategory] = useState('');
@@ -34,12 +34,11 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
     const lastSearch = useRef(0);       // a search started meanwhile replaces the answers of this one
 
     useEffect(() => {
-        if (!token) return;
 
-        api.getUserFeeds(token)
+        api.getUserFeeds()
             .then(data => setFeeds(data.feeds ?? []))
             .catch(e => console.error("Failed to fetch sources", e));
-    }, [token, api, reloadKey]);
+    }, [api, reloadKey]);
 
     const needCategory = () => {
         if (category) return true;
@@ -55,7 +54,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
         if (!needCategory()) return;
 
         setIsAdding(true);
-        const data = await api.addUserFeed({site: site.trim(), category, language}, token);
+        const data = await api.addUserFeed({site: site.trim(), category, language});
         setIsAdding(false);
 
         if (!data || data.error) {
@@ -88,7 +87,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
             const seen = new Set(first.flatMap(source => [source.site, source.feed]));
             return [...first, ...then.filter(source => !seen.has(source.site) && !seen.has(source.feed))];
         };
-        const ask = (from) => api.searchSources(words, token, language, from).catch(() => null);
+        const ask = (from) => api.searchSources(words, language, from).catch(() => null);
 
         const web = ask('web').then(data => {
             if (search !== lastSearch.current) return;
@@ -119,7 +118,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
         setIsAdding(true);
         // the media found on the web are read on their section about these words, when they have one
         const fromWeb = found.some(source => source.via === 'web' && selected.includes(source.feed));
-        const data = await api.importSources(chosen, token, language, fromWeb ? [searched] : null);
+        const data = await api.importSources(chosen, language, fromWeb ? [searched] : null);
         setIsAdding(false);
 
         if (!data || data.error) {
@@ -144,7 +143,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
     // trusted: among the stories close to the profile, the ones it tells come first
     // shared: it can be recommended to the other readers whose interests it publishes on
     const handleChange = async (feed, changes) => {
-        const data = await api.updateFeed(feed.id, changes, token);
+        const data = await api.updateFeed(feed.id, changes);
 
         if (!data || data.error) {
             toast.error(data?.error ?? "This source could not be changed.");
@@ -155,7 +154,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
     };
 
     const handleDelete = async (feed) => {
-        const data = await api.deleteUserFeed(feed.id, token);
+        const data = await api.deleteUserFeed(feed.id);
 
         if (!data || data.error) {
             toast.error(data?.error ?? "This source could not be removed.");
@@ -260,7 +259,7 @@ export const UserFeeds = ({token, categories, api, reloadKey, language = 'en', l
                 </div>
             )}
 
-            <ImportSources token={token} api={api} language={language} category={category} needCategory={needCategory}
+            <ImportSources api={api} language={language} category={category} needCategory={needCategory}
                            onAdded={added => {
                                setFeeds(current => [...added, ...current]);
                                onChanged?.();

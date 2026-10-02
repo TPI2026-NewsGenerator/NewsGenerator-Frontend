@@ -14,14 +14,14 @@ import {toast} from "@/lib/toast.js";
 
 // api: FeedApi. reloadKey: asked again when it changes (a discovery done, the interests changed).
 // onAdded: told when sources were added, they join the ones added by hand
-export const RecommendedSources = ({token, api, expired, reloadKey, onAdded}) => {
+export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
     const [sources, setSources] = useState(null);
     const [adding, setAdding] = useState(null);         // the ids being added
     const [error, setError] = useState(null);
 
     useEffect(() => {
         let current = true;
-        api.getRecommended(token)
+        api.getRecommended()
             .then(answer => {
                 if (!current || expired(answer)) return;
                 if (answer.error) setError(answer.error);
@@ -31,12 +31,12 @@ export const RecommendedSources = ({token, api, expired, reloadKey, onAdded}) =>
         return () => {
             current = false;
         };
-    }, [token, api, expired, reloadKey]);
+    }, [api, expired, reloadKey]);
 
     const add = async (ids) => {
         setAdding(ids);
         try {
-            const answer = await api.addRecommended(ids, token);
+            const answer = await api.addRecommended(ids);
             if (expired(answer)) return;
             if (answer.error) {
                 toast.error(answer.error);

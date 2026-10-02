@@ -28,7 +28,7 @@ const STATUS = {
 };
 
 // category: the one the sources go to, chosen above. needCategory: says when it is missing
-export const ImportSources = ({token, api, language, category, needCategory, onAdded}) => {
+export const ImportSources = ({api, language, category, needCategory, onAdded}) => {
     const [fileName, setFileName] = useState('');
     const [total, setTotal] = useState(0);
     const [results, setResults] = useState([]);
@@ -68,7 +68,7 @@ export const ImportSources = ({token, api, language, category, needCategory, onA
         setIsChecking(true);
 
         for (let start = 0; start < read.addresses.length; start += CHECKED_AT_ONCE) {
-            const data = await api.checkSites(read.addresses.slice(start, start + CHECKED_AT_ONCE), token, language).catch(() => null);
+            const data = await api.checkSites(read.addresses.slice(start, start + CHECKED_AT_ONCE), language).catch(() => null);
             if (current !== run.current) return;
             if (!data || data.error) {
                 toast.error(data?.error ?? 'The sites could not be checked.');
@@ -98,7 +98,7 @@ export const ImportSources = ({token, api, language, category, needCategory, onA
         const answered = [];        // sent and answered: added, or refused with a reason
         for (let start = 0; start < chosen.length; start += ADDED_AT_ONCE) {
             const part = chosen.slice(start, start + ADDED_AT_ONCE);
-            const data = await api.importSources(part, token, language).catch(() => null);
+            const data = await api.importSources(part, language).catch(() => null);
             if (!data || data.error) {
                 errors.push({site: `${chosen.length - start} sources`, error: data?.error ?? 'They could not be added.'});
                 break;
