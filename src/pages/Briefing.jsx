@@ -2,7 +2,8 @@
 //  Author: Fabian Rostello
 //  Date: 24.09.2026
 //  File: Briefing.jsx
-//  Description: The daily briefing: the stories of the last hours chosen for the profile of the user
+//  Description: The daily briefing: the stories of the last hours chosen for the profile of the user,
+//               of the last 24 hours, 2 days or 7 days as they choose
 //
 
 import {useCallback, useEffect, useState} from "react";
@@ -11,20 +12,22 @@ import {PageShell, Opening} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
+import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
+import {DEFAULT_HOURS, spanOf} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 
 const POLL_MS = 3000;
 
-// what the server is doing while it writes the briefing
-const STEPS = {
+// what the server is doing while it writes the briefing of the last 'span'
+const steps = (span) => ({
     starting: 'Starting…',
-    ranking: 'Looking for the stories of the last 48 hours closest to your interests…',
+    ranking: `Looking for the stories of the last ${span} closest to your interests…`,
     choosing: 'The AI chooses the stories that fit your profile…',
     checking: 'The AI checks which articles tell the same news…',
     reading: 'Reading the articles of each story…',
     summarizing: 'Choosing the key passages of each story…',
-};
+});
 
 const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});
 
@@ -33,6 +36,9 @@ export const BriefingPage = () => {
     const [profile, setProfile] = useState(undefined);      // undefined: not loaded yet
     const [briefing, setBriefing] = useState(undefined);
     const [error, setError] = useState(null);
+    // the hours of news of the next briefing: the ones of the last until the reader chooses
+    const [chosen, setChosen] = useState(null);
+    const hours = chosen ?? briefing?.hours ?? DEFAULT_HOURS;
 
     const load = useCallback(async () => {
         try {
@@ -69,7 +75,7 @@ export const BriefingPage = () => {
 
     const start = async () => {
         setError(null);
-        const data = await BriefingApi.start();
+        const data = await BriefingApi.start(hours);
         if (expired(data)) return;
         if (data.error) setError(data.error);
         else setBriefing(data.briefing);
@@ -100,16 +106,19 @@ export const BriefingPage = () => {
             <Opening
                 kicker="The briefing"
                 title="Your briefing"
-                standfirst="The stories of the last 48 hours closest to your interests, chosen by the AI. A story already shown can come back in the next edition: pass it."
+                standfirst="The stories of the last 24 hours, 2 days or 7 days closest to your interests, chosen by the AI. A story already shown can come back in the next edition: pass it."
                 aside={profile && (
                     <div className="space-y-4">
                         {ready && (
                             <div>
                                 <p className="kicker">This edition</p>
                                 <p className="folio mt-1 !text-ink">Written {written(briefing.finishedAt ?? briefing.createdAt)}</p>
-                                {count > 0 && <p className="folio mt-0.5">{count} {count === 1 ? 'story' : 'stories'}</p>}
+                                <p className="folio mt-0.5">
+                                    The news of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)}{count > 0 && `, ${count} ${count === 1 ? 'story' : 'stories'}`}
+                                </p>
                             </div>
                         )}
+                        <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
                         <Button variant="primary" onClick={start} loading={running} disabled={running}>
                             New briefing
                         </Button>
@@ -131,7 +140,7 @@ export const BriefingPage = () => {
 
                         {briefing === undefined && !error && <Working>Opening your briefing…</Working>}
 
-                        {running && <Working>{STEPS[briefing.step] ?? 'Working…'}</Working>}
+                        {running && <Working>{steps(spanOf(briefing.hours ?? DEFAULT_HOURS))[briefing.step] ?? 'Working…'}</Working>}
 
                         {briefing?.status === 'failed' && (
                             <Notice type="error">The last briefing could not be written: {briefing.error}</Notice>
@@ -139,7 +148,7 @@ export const BriefingPage = () => {
 
                         {ready && count === 0 && (
                             <Notice title="Nothing today">
-                                No story of the last hours really fits your profile. A short briefing is better than an off-topic one:
+                                No story of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} really fits your profile. A short briefing is better than an off-topic one:
                                 try again later, or <Link className="link" to="/profile">widen your profile</Link>.
                             </Notice>
                         )}

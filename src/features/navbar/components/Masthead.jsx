@@ -58,7 +58,7 @@ export const Masthead = ({user, onSignOut}) => {
             <div className="page">
                 <div className="flex items-center justify-between gap-6 border-b border-rule py-2">
                     <p className="folio">{today()}</p>
-                    <p className="folio hidden sm:block">The news of the last 48 hours, chosen for one reader</p>
+                    <p className="folio hidden sm:block">The news of the last days, chosen for one reader</p>
                 </div>
                 <div className="flex items-end justify-between gap-6 pt-5 pb-4">
                     <Link to="/briefing" className="min-w-0 font-display text-[clamp(1.4rem,7.5vw,2rem)] leading-none font-medium tracking-[-0.015em] text-ink no-underline md:text-[2.6rem]">

@@ -22,8 +22,9 @@ const send = async (path, {method = 'GET', body} = {}) => {
 export const BriefingApi = {
     // the last briefing, {briefing: null} before the first one
     getLatest: () => send('/briefing'),
-    // a new briefing, written in background: getLatest until its status is 'ready' or 'failed'
-    start: () => send('/briefing', {method: 'POST'}),
+    // a new briefing of the news of the last hours (24, 48 or 168), written in background: getLatest
+    // until its status is 'ready' or 'failed'
+    start: (hours) => send('/briefing', {method: 'POST', body: {hours}}),
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {
