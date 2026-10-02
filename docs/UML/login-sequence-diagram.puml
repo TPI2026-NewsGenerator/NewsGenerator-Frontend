@@ -1,5 +1,5 @@
 @startuml
-title Connection de l'utilisateur (Frontend)
+title Connexion de l'utilisateur (Frontend)
 autonumber
 
 actor "Utilisateur" as User
@@ -10,13 +10,14 @@ database "Base de données" as DB
 User -> UI : Saisie nom utilisateur + mot de passe
 User -> UI : Clique sur "Login"
 
-UI -> BE : POST /login (user_cred)
+UI -> BE : POST /api/login (user_cred)
 BE -> DB : authUser(user_cred)
 DB --> BE : user_data
-BE --> UI : JWT
+BE --> UI : {id_user} + cookie "session" (HttpOnly)
+note right : le jeton reste dans le cookie,\nillisible pour la page
 
-UI --> UI : enregistre JWT dans localStorage
-UI --> User : redirige /fetch
-
+UI -> BE : GET /api/session
+BE --> UI : {id, username, email, role}
+UI --> User : redirige /briefing
 
 @enduml

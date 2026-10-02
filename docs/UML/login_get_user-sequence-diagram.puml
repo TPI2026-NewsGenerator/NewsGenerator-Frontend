@@ -1,15 +1,20 @@
 @startuml
-title Récupération profil utilisateur (Frontend)
+title Récupération de l'utilisateur connecté (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI" as UI
+participant "UI (AuthProvider)" as UI
 participant "Backend" as BE
-database "Base de données" as DB
 
-User -> UI : Clique sur l'icone "Profile"
-UI -> BE : GET /login (user_cred)
-
-UI --> UI : supprime JWT du localStorage
+User -> UI : Ouvre l'application
+UI -> BE : GET /api/session (cookie "session" envoyé par le navigateur)
+alt session valide
+    BE --> UI : {id, username, email, role}
+    note right : renouvelée si elle date de plus d'un jour
+    UI --> User : affiche la page demandée
+else pas de session ou session expirée
+    BE --> UI : 403
+    UI --> User : redirige /login
+end
 
 @enduml

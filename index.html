@@ -2,9 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./src/assets/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>newsgenerator</title>
+    <title>NewsGenerator</title>
+    <meta name="description" content="The news of the last 48 hours, chosen for one reader." />
+
+    <!-- the icons: bolder for the tab (16 to 48 px), finer for the home screen of a phone -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#17150F" />
+
+    <!-- what a shared link shows (WhatsApp, iMessage, Slack...): their robots read this page
+         without the password of the site, never its API (server/deploy/Caddyfile) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="NewsGenerator" />
+    <meta property="og:title" content="NewsGenerator" />
+    <meta property="og:description" content="The news of the last 48 hours, chosen for one reader." />
+    <meta property="og:url" content="https://news.fabianrostello.com/" />
+    <meta property="og:image" content="https://news.fabianrostello.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="NewsGenerator: the news of the last 48 hours, chosen for one reader" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>
