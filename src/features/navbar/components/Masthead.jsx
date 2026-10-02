@@ -3,7 +3,7 @@
 //  Date: 28.09.2026
 //  File: Masthead.jsx
 //  Description: The head of every page, like the masthead of a paper: the title, the date, three
-//               sections and who reads
+//               sections, who reads and their settings
 //
 
 import {useEffect, useState} from "react";
@@ -39,6 +39,7 @@ export const Masthead = ({user, onSignOut}) => {
         ? (
             <>
                 <span className="folio">Read by <span className="text-ink">{user.username}</span></span>
+                <NavLink to="/settings" onClick={() => setMenu(false)} className={sectionClass}>Settings</NavLink>
                 <button type="button" onClick={() => { setMenu(false); onSignOut?.(); }}
                         className="cursor-pointer text-[0.9375rem] font-semibold tracking-[0.08em] text-ink-mute [font-variant-caps:all-small-caps] hover:text-accent-ink">
                     Sign out
