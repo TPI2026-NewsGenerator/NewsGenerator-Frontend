@@ -6,17 +6,19 @@
 //
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {CheckboxGroup, FieldError, Help, Input, Label, Select} from "@/components/ui/field.jsx";
+import {Notice} from "@/components/ui/text.jsx";
 import {Dialog} from "@/components/ui/overlay.jsx";
 import {FeedList} from "@/features/search/components/feed-list/FeedList.jsx";
 import {SummaryList} from "@/features/search/components/summary-list/SummaryList.jsx";
 import {SourceSuggestions} from "@/features/search/components/source-suggestions/SourceSuggestions.jsx";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {createTranslator, TranslationContext} from "@/features/search/translation.js";
+import {forgetSearch, keepSearch, keptSearch} from "@/features/search/keptSearch.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {CustomSearchApi} from "@/features/custom-search/api/customSearchApi.js";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -54,6 +56,16 @@ const toTimeframe = (timeframe, range) => {
 // "2026-09-28T10:30" of a datetime-local field, in the time of the user
 const localInput = (date) => date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
 
+// "today at 14:32" or "yesterday at 21:05", when the news of a search kept were found (a day at most)
+const searchedWhen = (at) => {
+    const date = new Date(at);
+    const day = date.toDateString() === new Date().toDateString() ? 'today' : 'yesterday';
+    return `${day} at ${date.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}`;
+};
+
+const EMPTY_FORM = {id: null, title: '', keyword: '', category: [], timeframe: 'd', language: 'en'};
+const ANY_MODE = {mode: null, checked: true, web: false};
+
 // examples of exact words, set beside the search field
 const KEYWORD_EXAMPLES = [
     ['"red card"', 'this exact phrase'],
@@ -75,36 +87,35 @@ const check = (form) => ({
 
 export const SearchPage = () => {
     const navigate = useNavigate();
-    const [newsList, setNewsList] = useState([]);
+    const {user, logout} = useAuth();
+    // the last search of the reader, kept a day in their browser: left and opened again, the page was empty
+    const [kept] = useState(() => user ? keptSearch(user.id) : null);
+    const [newsList, setNewsList] = useState(kept?.news ?? []);
     // key passages of the selected news
-    const [summaries, setSummaries] = useState([]);
+    const [summaries, setSummaries] = useState(kept?.summaries ?? []);
     const [showSummaries, setShowSummaries] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [customSearchItems, setCustomSearchItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const {user, logout} = useAuth();
     // form
     const [formError, setFormError] = useState({});
-    const [formValue, setFormValue] = useState({
-        id: null,
-        title: '',
-        keyword: '',
-        category: [],
-        timeframe: 'd',
-        language: 'en',
-    });
+    const [formValue, setFormValue] = useState(kept?.form ?? EMPTY_FORM);
     // true once the reader chose a language or loaded a saved search: theirs is never replaced
-    const languageChosen = useRef(false);
-    const [customRange, setCustomRange] = useState(null);
+    const languageChosen = useRef(Boolean(kept));
+    const [customRange, setCustomRange] = useState(() => kept?.range?.map(date => date ? new Date(date) : null) ?? null);
     // the search that gave the results, used to look for the media missing from the sources
-    const [lastSearch, setLastSearch] = useState(null);
+    const [lastSearch, setLastSearch] = useState(kept?.search ?? null);
     const [searchCount, setSearchCount] = useState(0);
     // set when a search asking for every word found almost nothing: how many a wider one would find
-    const [wider, setWider] = useState(null);
+    const [wider, setWider] = useState(kept?.wider ?? null);
     // how the last search was made: a sentence by its meaning ('meaning'), or exact words ('words'),
     // and whether the AI could check the news found by meaning
-    const [searchMode, setSearchMode] = useState({mode: null, checked: true, web: false});
+    const [searchMode, setSearchMode] = useState(kept?.mode ?? ANY_MODE);
+    // the form of the search that gave the results, and when: what is kept with them
+    const [searched, setSearched] = useState(kept ? {form: kept.form, range: kept.range ?? null, at: kept.at} : null);
+    // the results shown are the ones kept, not of a search just made: said, with a way to search again
+    const [restored, setRestored] = useState(Boolean(kept?.news?.length));
     const [saveSearchModal, setSaveSearchModal] = useState(false);
 
     const setField = (name, value) => {
@@ -144,6 +155,8 @@ export const SearchPage = () => {
             const allNews = await SearchApi.getNews(search);
             setLastSearch(search);
             setSearchCount(count => count + 1);
+            setSearched({form: {...formValue, keyword}, range: customRange, at: Date.now()});
+            setRestored(false);
 
             // print error message
             if (allNews?.error?.includes?.('Forbidden, invalid or expired')) {
@@ -172,11 +185,36 @@ export const SearchPage = () => {
     };
 
     // a search reads every language: the cards written in another than the one searched are translated
-    // as the reader reaches them, each search its own translations
+    // as the reader reaches them, each search its own translations (the ones of a search kept, kept too)
     const translator = useMemo(() => lastSearch
         ? createTranslator(lastSearch.language, (asked) => SearchApi.translateNews(asked, lastSearch.language)
-            .then(data => data?.translations ?? []))
-        : null, [lastSearch]);
+            .then(data => data?.translations ?? []), lastSearch === kept?.search ? kept.translations ?? [] : [])
+        : null, [lastSearch, kept]);
+
+    // the search kept with its news, their key passages and their translations as they come; a search
+    // that found nothing replaces the one kept, which would be shown again otherwise
+    useEffect(() => {
+        if (!user || !searched || !lastSearch) return undefined;
+        if (!Array.isArray(newsList) || newsList.length === 0) {
+            forgetSearch();
+            return undefined;
+        }
+        const keep = () => keepSearch(user.id, {
+            form: searched.form, range: searched.range, at: searched.at, news: newsList, search: lastSearch,
+            wider, mode: searchMode, summaries, translations: translator?.known() ?? [],
+        });
+        keep();
+        if (!translator) return undefined;
+        let timer;
+        const unsubscribe = translator.subscribe(() => {
+            clearTimeout(timer);
+            timer = setTimeout(keep, 1000);
+        });
+        return () => {
+            clearTimeout(timer);
+            unsubscribe();
+        };
+    }, [user, searched, lastSearch, newsList, wider, searchMode, summaries, translator]);
 
     // key passages of the cards chosen, each with all its articles: the server reads up to five of
     // them, counts who wrote it themselves and the AI picks the key sentences of one, translated when needed
@@ -437,14 +475,6 @@ export const SearchPage = () => {
                                        value={formValue.category} onChange={category => setField('category', category)}
                                        invalid={Boolean(formError.category)} error={formError.category}/>
 
-                        <div>
-                            <p className="kicker !text-ink">My sources</p>
-                            <Help>
-                                The websites you add are searched with the others, only for you, and read for your briefing too.
-                                {' '}<Link to="/profile#own-sources" className="underline underline-offset-2 hover:text-ink">Add or manage them in your profile</Link>
-                            </Help>
-                        </div>
-
                         <div className="flex flex-wrap gap-3 border-t border-rule pt-6">
                             <Button variant="primary" type="submit" name="fetchNews" loading={isLoading}>Search</Button>
                             <Button name="save" onClick={() => setSaveSearchModal(true)}>Save search</Button>
@@ -501,6 +531,14 @@ export const SearchPage = () => {
             </Dialog>
 
             <SummaryList summaries={summaries} open={showSummaries} onOpenChange={setShowSummaries}/>
+            {restored && searched && newsList?.length > 0 && (
+                <div className="page mt-12">
+                    <Notice onClose={() => setRestored(false)}>
+                        Your search of {searchedWhen(searched.at)}, kept for a day: the news published since are not in it.{' '}
+                        <Button variant="link" size="sm" loading={isLoading} onClick={() => handleSubmit()}>Search again</Button>
+                    </Notice>
+                </div>
+            )}
             {lastSearch && (
                 <SourceSuggestions key={searchCount} api={FeedApi} search={lastSearch} categories={categoryOptions}/>
             )}

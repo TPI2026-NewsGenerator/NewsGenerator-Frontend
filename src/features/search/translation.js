@@ -19,14 +19,16 @@ const AHEAD = '600px';
 
 // The translations of one search: request(url, withDescription) asks one, get(url) answers it
 // (undefined while asked, null when there is none), subscribe(listener) for the cards waiting for it.
-// translate({news, titles}) is the request to the server, answering [{url, language, title, description}]
-export const createTranslator = (language, translate) => {
-    const results = new Map();
+// translate({news, titles}) is the request to the server, answering [{url, language, title, description}].
+// known: [[url, translation | null]] the translations of this search already had (see keptSearch.js),
+// answered without asking; known() gives them back
+export const createTranslator = (language, translate, known = []) => {
+    const results = new Map(known);
     const listeners = new Set();
     const waiting = {news: new Set(), titles: new Set()};
     // each news asked, true when its description was asked too: the fact of a card in its affair asks
     // the title of the card first, the card must still ask its description
-    const asked = new Map();
+    const asked = new Map(known.map(([url, translation]) => [url, translation === null || Boolean(translation.description)]));
     let timer = null;
 
     const notify = () => listeners.forEach(listener => listener());
@@ -56,6 +58,7 @@ export const createTranslator = (language, translate) => {
             if (!timer) timer = setTimeout(send, WAIT_MS);
         },
         get: (url) => results.get(url),
+        known: () => [...results],
         subscribe: (listener) => {
             listeners.add(listener);
             return () => listeners.delete(listener);

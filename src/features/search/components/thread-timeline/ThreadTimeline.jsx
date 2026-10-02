@@ -43,7 +43,7 @@ const Fact = ({fact, lead, onSelect}) => {
                 <MetaLine>
                     <Meta tone="ink"><time dateTime={fact.publishedAt}>{dateOf(fact)}</time></Meta>
                     <Meta>{fact.source}</Meta>
-                    <Meta>{media === 1 ? 'this source only' : `${media} media`}</Meta>
+                    <Meta>{media === 1 ? 'Only one medium' : `Told by ${media} media`}</Meta>
                     {lead && <Meta tone="accent">this news</Meta>}
                     {!lead && !fact.found && <Meta title="Not in the results of your search, part of the same affair">also in the affair</Meta>}
                     {translation?.title && (

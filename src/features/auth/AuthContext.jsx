@@ -8,6 +8,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import {AuthContext} from "./sessionContext.js";
+import {forgetSearch} from "@/features/search/keptSearch.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -37,6 +38,7 @@ export const AuthProvider = ({children}) => {
     // the cookie removed by the server, or already refused by it
     const forget = useCallback(async () => {
         setUser(null);
+        forgetSearch();
         await fetch(`${API_URL}/session`, {method: 'DELETE'}).catch(() => null);
     }, []);
 

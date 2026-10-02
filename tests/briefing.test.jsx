@@ -9,7 +9,7 @@ import '@testing-library/jest-dom';
 import {describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
-import {corroborationLabel} from '@/features/briefing/corroboration.js';
+import {coverageLabel} from '@/features/briefing/corroboration.js';
 
 const article = (n) => ({title: `Article ${n}`, url: `https://media${n}.fr/story`, source: `media${n}.fr`, publishedAt: '2026-09-24T10:00:00.000Z'});
 
@@ -27,19 +27,19 @@ const item = (changes = {}) => ({
     ...changes,
 });
 
-describe('corroborationLabel', () => {
+describe('coverageLabel of the texts read', () => {
     it('should never count ten copies of one wire as ten confirmations', () => {
-        expect(corroborationLabel({media: 10, read: 5, independent: 1, agencies: ['AFP']}))
-            .toEqual({color: 'orange', text: 'Told by 10 media, one single text republished · wire: AFP'});
+        expect(coverageLabel({media: 10, read: 5, independent: 1, agencies: ['AFP']}).text)
+            .toBe('Told by 10 media, one single text republished · wire: AFP');
     });
 
     it('should say how many texts were written apart among the ones read', () => {
-        expect(corroborationLabel({media: 4, read: 3, independent: 3}).text).toBe('Told by 4 media, 3 texts written independently of 3 read');
+        expect(coverageLabel({media: 4, read: 3, independent: 3}).text).toBe('Told by 4 media, 3 texts written independently of 3 read');
     });
 
     it('should not claim anything when too few texts could be read', () => {
-        expect(corroborationLabel({media: 4, read: 1, independent: 1}).color).toBe('blue');
-        expect(corroborationLabel({media: 1, read: 1, independent: 1}).text).toBe('Only one medium');
+        expect(coverageLabel({media: 4, read: 1, independent: 1}).text).toBe('Told by 4 media, too few texts could be read to compare them');
+        expect(coverageLabel({media: 1, read: 1, independent: 1}).text).toBe('Only one medium');
     });
 });
 
@@ -53,17 +53,30 @@ describe('BriefingCard', () => {
         expect(screen.getAllByRole('link')).toHaveLength(3);
     });
 
+    it('should send to read the article of the passages, and name the others as covering it', () => {
+        render(<BriefingCard item={item({lead: article(2)})}/>);
+        expect(screen.getByRole('link', {name: /Read the article at media2.fr/})).toHaveAttribute('href', 'https://media2.fr/story');
+        expect(screen.getByText(/as the article of media2.fr published them/)).toBeInTheDocument();
+        expect(screen.getByText(/Also covered by/)).toHaveTextContent('Also covered by media1.fr, media3.fr');
+    });
+
+    it('should send to its first article a card of a briefing made before the article of the passages was given', () => {
+        render(<BriefingCard item={item()}/>);
+        expect(screen.getByRole('link', {name: /Read the article at media1.fr/})).toBeInTheDocument();
+    });
+
     it('should say when no article could be read, and when the article itself has no confirmation', () => {
         render(<BriefingCard item={item({summary: null, hedged: 'selon nos informations'})}/>);
         expect(screen.getByText(/could be read/)).toBeInTheDocument();
         expect(screen.getByText(/selon nos informations/)).toBeInTheDocument();
     });
 
-    it('should show the first articles of a big story, and all of them on demand', () => {
-        render(<BriefingCard item={item({articles: [1, 2, 3, 4, 5, 6].map(article)})}/>);
-        expect(screen.getAllByRole('link')).toHaveLength(4);
-        fireEvent.click(screen.getByRole('button', {name: 'Show the 6 articles'}));
-        expect(screen.getAllByRole('link')).toHaveLength(6);
+    it('should name the first media of a big story, and all of them on demand', () => {
+        render(<BriefingCard item={item({articles: Array.from({length: 12}, (_, i) => article(i + 1))})}/>);
+        // the article to read and 8 others
+        expect(screen.getAllByRole('link')).toHaveLength(9);
+        fireEvent.click(screen.getByRole('button', {name: 'and 3 more'}));
+        expect(screen.getAllByRole('link')).toHaveLength(12);
     });
 });
 

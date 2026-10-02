@@ -33,17 +33,17 @@ const show = (news) => render(<Article id={news.url} onSelect={() => true} news=
 describe('what the card claims', () => {
     it('says so plainly when no other medium carries it', () => {
         show(card({media: 1, wordings: 1}));
-        expect(screen.getByText('this source only')).toBeInTheDocument();
+        expect(screen.getByText('Only one medium')).toBeInTheDocument();
     });
 
     it('counts the media and the wordings of a small group', () => {
         show(card({media: 3, wordings: 3, others: 2}));
-        expect(screen.getByText('3 media, 3 wordings')).toBeInTheDocument();
+        expect(screen.getByText('Told by 3 media, 3 own headlines')).toBeInTheDocument();
     });
 
     it('calls one text republished by three papers one wording', () => {
         show(card({media: 3, wordings: 1, others: 2}));
-        expect(screen.getByText('3 media, same wording')).toBeInTheDocument();
+        expect(screen.getByText('Told by 3 media, one single text republished')).toBeInTheDocument();
     });
 });
 
@@ -51,31 +51,31 @@ describe('a group too big to be one news', () => {
     it('stops implying one news from ten articles up', () => {
         show(card({media: 6, wordings: 6, others: 9}));
 
-        expect(screen.getByText('6 media on this story')).toBeInTheDocument();
-        expect(screen.queryByText('6 media, 6 wordings')).not.toBeInTheDocument();
+        expect(screen.getByText('Told by 6 media: a running story')).toBeInTheDocument();
+        expect(screen.queryByText('Told by 6 media, 6 own headlines')).not.toBeInTheDocument();
     });
 
     it('still counts the wordings just under the limit', () => {
         show(card({media: 4, wordings: 4, others: 8}));
-        expect(screen.getByText('4 media, 4 wordings')).toBeInTheDocument();
+        expect(screen.getByText('Told by 4 media, 4 own headlines')).toBeInTheDocument();
     });
 
     // eight papers on the diesel export ban is one news, and the card must say so plainly
     it('a real story told by eight papers keeps its precise count', () => {
         show(card({media: 4, wordings: 4, others: 7}));
-        expect(screen.getByText('4 media, 4 wordings')).toBeInTheDocument();
+        expect(screen.getByText('Told by 4 media, 4 own headlines')).toBeInTheDocument();
     });
 
     it('a wire republished many times stays a wire, whatever the size', () => {
         // identical texts are one report however many papers ran it, which is worth saying
         show(card({media: 9, wordings: 1, others: 14}));
-        expect(screen.getByText('9 media, same wording')).toBeInTheDocument();
+        expect(screen.getByText('Told by 9 media, one single text republished')).toBeInTheDocument();
     });
 
     it('warns in the tag title that the count is media on a story, not confirmations', () => {
         show(card({media: 6, wordings: 6, others: 9}));
 
-        expect(screen.getByText('6 media on this story').closest('[title]'))
+        expect(screen.getByText('Told by 6 media: a running story').closest('[title]'))
             .toHaveAttribute('title', expect.stringContaining('running story'));
     });
 });

@@ -6,11 +6,12 @@
 //               many of them wrote it themselves
 //
 
-import {Fragment, useState} from "react";
+import {Fragment} from "react";
 import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-icons/fa";
-import {Button, IconButton} from "@/components/ui/button.jsx";
+import {IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
-import {corroborationLabel} from "@/features/briefing/corroboration.js";
+import {coverageLabel} from "@/features/briefing/corroboration.js";
+import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
 
@@ -21,8 +22,6 @@ const SOURCING = {
     anonymous: {label: 'unnamed sources', title: 'The article relies on sources it does not name'},
     none: {label: 'no source given', title: 'The article credits nobody for what it reports'},
 };
-
-const SHOWN_ARTICLES = 4;
 
 const paragraphsOf = (text) => text ? text.split(/\n\s*\n/) : [];
 
@@ -49,11 +48,12 @@ const Margin = ({kicker, tone, children}) => (
 // learn from it; without onVote no thumb is shown. number: its place in the briefing. lede: the first
 // story of the page, whose passages open with the drop cap. item.summary: the key sentences of the
 // article as published, a paragraph per passage; item.translation: their machine translation.
-// item.titleTranslation: the title in the language of the reader, when written in another (item.language)
+// item.titleTranslation: the title in the language of the reader, when written in another (item.language).
+// item.lead: the article of the title and the passages, absent from the briefings made before it was
+// sent: their first article then
 export const BriefingCard = ({item, onVote, number, lede = false}) => {
-    const [allArticles, setAllArticles] = useState(false);
-    const corroboration = corroborationLabel(item.corroboration);
-    const articles = allArticles ? item.articles : item.articles.slice(0, SHOWN_ARTICLES);
+    const coverage = coverageLabel(item.corroboration);
+    const lead = item.lead ?? item.articles[0];
     const paragraphs = paragraphsOf(item.summary);
     const translation = paragraphsOf(item.translation);
 
@@ -86,7 +86,9 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                     <div className="mt-6">
                         <p className="kicker">In the article's words</p>
                         <div className="body-text mt-3"><Passages paragraphs={paragraphs} lede={lede}/></div>
-                        <p className="caption mt-3">Sentences chosen by the AI, shown as the article published them.</p>
+                        <p className="caption mt-3">
+                            Sentences chosen by the AI, shown as the article {lead && <>of {lead.source} </>}published them.
+                        </p>
                     </div>
                 ) : (
                     <div className="mt-6">
@@ -102,36 +104,12 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                     </div>
                 )}
 
-                <div className="mt-8">
-                    <p className="kicker">Read it at</p>
-                    <ul className="mt-2 border-t border-rule">
-                        {articles.map(article => (
-                            <li key={article.url} className="border-b border-rule">
-                                <a href={article.url} target="_blank" rel="noreferrer"
-                                   className="group flex items-baseline gap-3 py-2.5 no-underline">
-                                    <span className="shrink-0 font-semibold">
-                                        {article.source}
-                                        {article.trusted && (
-                                            <span className="ml-1 text-accent-ink" title="A source you trust" aria-label="a source you trust">★</span>
-                                        )}
-                                    </span>
-                                    <span className="min-w-0 flex-1 text-ink-mute [overflow-wrap:anywhere] group-hover:text-ink">{article.title}</span>
-                                    <span aria-hidden className="text-ink-mute group-hover:text-accent-ink">↗</span>
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                    {item.articles.length > SHOWN_ARTICLES && (
-                        <Button variant="link" size="sm" className="mt-3" onClick={() => setAllArticles(!allArticles)}>
-                            {allArticles ? 'Show less' : `Show the ${item.articles.length} articles`}
-                        </Button>
-                    )}
-                </div>
+                {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-8"/>}
             </div>
 
             <aside className="col-span-12 mt-8 space-y-5 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-1 md:border-t-0 md:border-l md:pt-0 md:pl-5">
                 <Margin kicker="Who tells it">
-                    <span title={item.corroboration.mediaNames?.join(', ')}>{corroboration.text}</span>
+                    <span title={item.corroboration.mediaNames?.join(', ') || coverage?.title}>{coverage?.text}</span>
                 </Margin>
                 {item.sourcing && (
                     <Margin kicker="Its sources">
