@@ -14,7 +14,7 @@ import {AuthShell} from "@/features/login/components/AuthShell.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {LANGUAGES, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {Button} from "@/components/ui/button.jsx";
-import {CheckboxGroup, FieldError, Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
+import {FieldError, Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
 
@@ -24,8 +24,8 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 10;
 
 export const SignupPage = () => {
-    const [options, setOptions] = useState({topics: [], languages: []});
-    const [form, setForm] = useState({username: '', email: '', password: '', text: '', language: '', topics: []});
+    const [options, setOptions] = useState({languages: []});
+    const [form, setForm] = useState({username: '', email: '', password: '', text: '', language: ''});
     const [formError, setFormError] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
@@ -72,7 +72,6 @@ export const SignupPage = () => {
                 password: form.password,
                 text: form.text.trim(),
                 language: form.language,
-                topics: form.topics,
             });
 
             if (answer.id_user) {
@@ -162,11 +161,6 @@ export const SignupPage = () => {
                             </Help>
                             <FieldError id="language-error">{formError.language}</FieldError>
                         </div>
-                        {options.topics.length > 0 && (
-                            <CheckboxGroup legend="Topics (optional)"
-                                           options={options.topics.map(topic => ({value: topic, label: topic}))}
-                                           value={form.topics} onChange={topics => set('topics', topics)}/>
-                        )}
                     </fieldset>
 
                     {error && <Notice type="error">{error}</Notice>}

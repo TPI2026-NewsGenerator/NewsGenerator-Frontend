@@ -13,7 +13,7 @@ import {WithSession} from "./session.jsx";
 
 vi.mock('@/features/login/api/loginApi.js', () => ({LoginApi: {register: vi.fn()}}));
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    ProfileApi: {getOptions: vi.fn().mockResolvedValue({languages: ['en', 'fr'], topics: ['sport']})},
+    ProfileApi: {getOptions: vi.fn().mockResolvedValue({languages: ['en', 'fr']})},
 }));
 
 const {LoginApi} = await import('@/features/login/api/loginApi.js');
@@ -55,7 +55,7 @@ describe('SignupPage', () => {
         expect(await screen.findByText('profile page')).toBeInTheDocument();
         expect(refresh).toHaveBeenCalled();
         expect(LoginApi.register).toHaveBeenCalledWith(expect.objectContaining({
-            username: 'lecteur', email: 'lecteur@example.org', text: 'The Premier League and its coaches', topics: [],
+            username: 'lecteur', email: 'lecteur@example.org', text: 'The Premier League and its coaches',
         }));
         expect(LoginApi.register.mock.calls[0][0].language).toBe('en');      // the browser's
     });

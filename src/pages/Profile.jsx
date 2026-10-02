@@ -12,7 +12,7 @@ import {useLocation} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {FaRegStar, FaStar} from "react-icons/fa";
 import {Button, IconButton} from "@/components/ui/button.jsx";
-import {CheckboxGroup, Help, Label, Select, Textarea} from "@/components/ui/field.jsx";
+import {Help, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -67,9 +67,9 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
 export const ProfilePage = () => {
     const {user, logout, expired} = useAuth();
     const {hash} = useLocation();
-    const [options, setOptions] = useState({topics: [], languages: []});
+    const [options, setOptions] = useState({languages: []});
     const [data, setData] = useState(null);         // {profile, interests, sources}
-    const [form, setForm] = useState({text: '', topics: [], language: likelyLanguage(LANGUAGE_OPTIONS.map(option => option.value))});
+    const [form, setForm] = useState({text: '', language: likelyLanguage(LANGUAGE_OPTIONS.map(option => option.value))});
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
@@ -88,7 +88,7 @@ export const ProfilePage = () => {
         }
         setData(answer);
         if (fillForm && answer.profile) {
-            setForm({text: answer.profile.text, topics: answer.profile.topics, language: answer.profile.language});
+            setForm({text: answer.profile.text, language: answer.profile.language});
         }
         return true;
     }, [expired]);
@@ -223,12 +223,6 @@ export const ProfilePage = () => {
                             Your briefing and your searches read the news of every language, and translate them into this one.
                         </Help>
                     </div>
-
-                    {options.topics.length > 0 && (
-                        <CheckboxGroup className="col-span-12 md:col-span-8" legend="Topics (optional)"
-                                       options={options.topics.map(topic => ({value: topic, label: topic}))}
-                                       value={form.topics} onChange={topics => setForm({...form, topics})}/>
-                    )}
 
                     <div className="col-span-12 md:col-span-8">
                         <Button variant="primary" onClick={save} loading={saving}

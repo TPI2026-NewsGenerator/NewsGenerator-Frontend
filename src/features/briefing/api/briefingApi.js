@@ -38,12 +38,12 @@ export const BriefingApi = {
 export const ProfileApi = {
     // {profile, interests, sources}, profile null before the user wrote one
     get: () => send('/profile'),
-    // the topics and languages a profile can choose
+    // the languages a profile can choose
     getOptions: async () => {
         const response = await fetch(`${API_URL}/profile/options`);
         return await response.json();
     },
-    // {text, topics, language}: the AI splits it into interests, the sources are found in background
+    // {text, language}: the AI splits it into interests, the sources are found in background
     save: (profile) => send('/profile', {method: 'PUT', body: profile}),
     updateInterest: (id, changes) => send(`/profile/interests/${id}`, {method: 'PATCH', body: changes}),
     deleteInterest: (id) => send(`/profile/interests/${id}`, {method: 'DELETE'}),
