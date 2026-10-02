@@ -109,5 +109,14 @@ describe('BriefingCard passages', () => {
     it('should show no translation for an article in the language of the reader', () => {
         render(<BriefingCard item={item()}/>);
         expect(screen.queryByText('Machine translation')).toBeNull();
+        expect(screen.queryByText(/Translated from/)).toBeNull();
+    });
+
+    it('should show a translated title with the title as written under it, without a click', () => {
+        render(<BriefingCard item={item({title: 'Thierno Barry goal decision upheld', language: 'en',
+            titleTranslation: 'La décision sur le but de Thierno Barry maintenue'})}/>);
+        expect(screen.getByRole('heading', {name: 'La décision sur le but de Thierno Barry maintenue'})).toBeInTheDocument();
+        expect(screen.getByText('Translated from English')).toBeInTheDocument();
+        expect(screen.getByText('“Thierno Barry goal decision upheld”')).toBeInTheDocument();
     });
 });

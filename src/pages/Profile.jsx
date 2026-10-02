@@ -244,6 +244,19 @@ export const ProfilePage = () => {
                                       onDelete={() => change(() => ProfileApi.deleteInterest(interest.id))}/>
                         ))}
                     </ol>
+                    {/* what the reader does not want is no interest (its vector would bring those news):
+                        the briefing reads it in their words and leaves it out */}
+                    {data.profile?.refused?.length > 0 && (
+                        <div className="mt-8">
+                            <p className="kicker">Left out</p>
+                            <ul className="mt-2 list-none p-0">
+                                {data.profile.refused.map(refused => (
+                                    <li key={refused} className="body-text">{refused}</li>
+                                ))}
+                            </ul>
+                            <p className="caption mt-2">What you said you don't want: never an interest, your briefing leaves it out.</p>
+                        </div>
+                    )}
                 </Section>
             )}
 
