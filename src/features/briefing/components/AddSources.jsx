@@ -1,27 +1,22 @@
 //
 //  Author: Fabian Rostello
 //  Date: 22.09.2026
-//  File: UserFeeds.jsx
-//  Description: Sources added by the user, read for their briefing and their searches, only for them
+//  File: AddSources.jsx
+//  Description: The ways the reader adds sources of their own, read for their briefing and their
+//               searches, only for them: a website, a search of a site, a feed or a subject, a file.
+//               The sources added are listed with the others (see SourceList)
 //
 
-import {memo, useEffect, useRef, useState} from "react";
-import {FaRegStar, FaShareAlt, FaStar, FaTrash} from "react-icons/fa";
-import {Button, IconButton} from "@/components/ui/button.jsx";
+import {useRef, useState} from "react";
+import {Button} from "@/components/ui/button.jsx";
 import {Checkbox, Help, Input, Label, Select} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
-import {feedAddress, matchesQuery} from "@/lib/utils.js";
-import {ListFilter} from "@/components/ui/list-filter.jsx";
 import {ImportSources} from "@/features/briefing/components/ImportSources.jsx";
-import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 
 // categories: of 'language', the one of the site added. languages: [{value, label}], when given the
-// reader picks it here and onLanguage is told. origin: 'user' lists only the sources added by hand.
-// onChanged: told when sources were added or removed. Memoized: the profile page asks the profile again
-// every few seconds while sources are found, a hundred sources of the reader are not drawn again each time
-export const UserFeeds = memo(({categories, api, reloadKey, language = 'en', languages, onLanguage, origin, onChanged}) => {
-    const [feeds, setFeeds] = useState([]);
+// reader picks it here and onLanguage is told. onAdded(feeds): the sources just added
+export const AddSources = ({categories, api, language = 'en', languages, onLanguage, onAdded}) => {
     const [site, setSite] = useState('');
     const [category, setCategory] = useState('');
     const [isAdding, setIsAdding] = useState(false);
@@ -34,14 +29,6 @@ export const UserFeeds = memo(({categories, api, reloadKey, language = 'en', lan
     const [isSearching, setIsSearching] = useState(false);
     const [isSearchingWeb, setIsSearchingWeb] = useState(false);
     const lastSearch = useRef(0);       // a search started meanwhile replaces the answers of this one
-    const [filter, setFilter] = useState('');   // the sources of the reader, filtered by these words
-
-    useEffect(() => {
-
-        api.getUserFeeds()
-            .then(data => setFeeds(data.feeds ?? []))
-            .catch(e => console.error("Failed to fetch sources", e));
-    }, [api, reloadKey]);
 
     const needCategory = () => {
         if (category) return true;
@@ -65,8 +52,7 @@ export const UserFeeds = memo(({categories, api, reloadKey, language = 'en', lan
             return;
         }
 
-        setFeeds([data.feed, ...feeds]);
-        onChanged?.();
+        onAdded?.([data.feed]);
         setSite('');
         toast.success(`${data.feed.site} added, e.g. "${data.sample?.[0]}"`);
     };
@@ -132,44 +118,15 @@ export const UserFeeds = memo(({categories, api, reloadKey, language = 'en', lan
         const done = (data.feeds ?? []).map(feed => feed.url);
         if (done.length > 0) {
             toast.success(`${done.length} source${done.length > 1 ? 's' : ''} added.`);
+            onAdded?.(data.feeds);
         }
         for (let failed of data.errors ?? []) {
             toast.error(`${failed.site}: ${failed.error}`);
         }
 
-        setFeeds([...(data.feeds ?? []), ...feeds]);
-        if (done.length > 0) onChanged?.();
         setFound(found.filter(source => !done.includes(source.feed)));
         setSelected(selected.filter(feed => !done.includes(feed)));
     };
-
-    // trusted: among the stories close to the profile, the ones it tells come first
-    // shared: it can be recommended to the other readers whose interests it publishes on
-    const handleChange = async (feed, changes) => {
-        const data = await api.updateFeed(feed.id, changes);
-
-        if (!data || data.error) {
-            toast.error(data?.error ?? "This source could not be changed.");
-            return;
-        }
-
-        setFeeds(feeds.map(other => other.id === feed.id ? {...other, trusted: data.trusted, shared: data.shared} : other));
-    };
-
-    const handleDelete = async (feed) => {
-        const data = await api.deleteUserFeed(feed.id);
-
-        if (!data || data.error) {
-            toast.error(data?.error ?? "This source could not be removed.");
-            return;
-        }
-
-        setFeeds(feeds.filter(other => other.id !== feed.id));
-        onChanged?.();
-    };
-
-    const listed = origin ? feeds.filter(feed => (feed.origin ?? 'user') === origin) : feeds;
-    const shown = listed.filter(feed => matchesQuery(filter, feed.site, feedAddress(feed.url), feed.category));
 
     const onEnter = (action) => (event) => {
         if (event.key === 'Enter') {
@@ -263,56 +220,7 @@ export const UserFeeds = memo(({categories, api, reloadKey, language = 'en', lan
                 </div>
             )}
 
-            <ImportSources api={api} language={language} category={category} needCategory={needCategory}
-                           onAdded={added => {
-                               setFeeds(current => [...added, ...current]);
-                               onChanged?.();
-                           }}/>
-
-            {listed.length === 0
-                ? <p className="caption">No source of your own yet. The feed of the site is found automatically.</p>
-                : (
-                    <div>
-                        <ListFilter id="own-filter" label="Find one of your sources" value={filter} onChange={setFilter}
-                                    shown={shown.length} total={listed.length}/>
-                        {shown.length === 0 && <p className="caption">No source of yours matches “{filter.trim()}”.</p>}
-                        <ScrollFrame label={`Your ${listed.length} sources`}>
-                            <ul className="[&>li:last-child]:border-b-0">
-                                {shown.map(feed => (
-                                    <li key={feed.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule py-2.5">
-                                        {/* any source, one found for the profile too: it is then never removed */}
-                                        <IconButton label={feed.trusted ? `Stop trusting ${feed.site}` : `Trust ${feed.site}`}
-                                                    pressed={Boolean(feed.trusted)}
-                                                    title={feed.trusted
-                                                        ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
-                                                        : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                                    onClick={() => handleChange(feed, {trusted: !feed.trusted})}>
-                                            {feed.trusted ? <FaStar/> : <FaRegStar/>}
-                                        </IconButton>
-                                        {feed.origin !== 'profile' && (
-                                            <IconButton label={feed.shared ? `Stop sharing ${feed.site}` : `Share ${feed.site}`}
-                                                        pressed={Boolean(feed.shared)}
-                                                        title={feed.shared
-                                                            ? 'Shared: it can be recommended to the other readers who follow its subjects'
-                                                            : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
-                                                        onClick={() => handleChange(feed, {shared: !feed.shared})}>
-                                                <FaShareAlt/>
-                                            </IconButton>
-                                        )}
-                                        <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{feed.site}</span>
-                                        <Meta>{feed.category}</Meta>
-                                        {feed.error && <Meta tone="accent" title={feed.error}>not working</Meta>}
-                                        <span className="caption hidden max-w-[40%] truncate md:inline" title={feedAddress(feed.url)}>{feedAddress(feed.url)}</span>
-                                        <IconButton label={`Remove ${feed.site}`} className="hover:text-accent-ink" onClick={() => handleDelete(feed)}>
-                                            <FaTrash/>
-                                        </IconButton>
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollFrame>
-                    </div>
-                )}
+            <ImportSources api={api} language={language} category={category} needCategory={needCategory} onAdded={onAdded}/>
         </div>
     );
-});
-UserFeeds.displayName = 'UserFeeds';
+};

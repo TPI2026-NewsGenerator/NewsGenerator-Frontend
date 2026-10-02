@@ -7,6 +7,7 @@
 //
 
 import {useState} from "react";
+import {Link} from "react-router-dom";
 import {Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Checkbox, Label, Select} from "@/components/ui/field.jsx";
@@ -169,7 +170,9 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
                             <Button variant="primary" onClick={handleAdd} loading={isAdding} disabled={selected.length === 0}>
                                 Add {selected.length} source{selected.length > 1 ? 's' : ''}
                             </Button>
-                            <p className="caption">They stay private to your searches.</p>
+                            <p className="caption">
+                                Only for you, they join <Link to="/profile#sources" className="underline underline-offset-2 hover:text-ink">your sources</Link>.
+                            </p>
                         </div>
                     </div>
                 </div>

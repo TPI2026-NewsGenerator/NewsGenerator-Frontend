@@ -3,28 +3,25 @@
 //  Date: 24.09.2026
 //  File: Profile.jsx
 //  Description: The profile of the user: what they want to read in their own words, the interests
-//               the AI read in it, the sources found for them and the ones they add, all read
-//               for their briefing and their searches
+//               the AI read in it, and their sources: one list of the ones found for them and the
+//               ones they added, all read for their briefing and their searches, then the ways to add some
 //
 
-import {useCallback, useEffect, useMemo, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {useLocation} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
-import {FaRegStar, FaStar} from "react-icons/fa";
-import {Button, IconButton} from "@/components/ui/button.jsx";
+import {Button} from "@/components/ui/button.jsx";
 import {Help, Label, Select, Textarea} from "@/components/ui/field.jsx";
-import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
-import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
+import {Meta, Notice, Working} from "@/components/ui/text.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {RecommendedSources} from "@/features/briefing/components/RecommendedSources.jsx";
-import {UserFeeds} from "@/features/briefing/components/UserFeeds.jsx";
+import {AddSources} from "@/features/briefing/components/AddSources.jsx";
+import {SourceList} from "@/features/briefing/components/SourceList.jsx";
 import {LANGUAGE_OPTIONS, MIN_PROFILE_TEXT, PLACEHOLDER, languageLabel, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
-import {feedAddress, matchesQuery} from "@/lib/utils.js";
-import {ListFilter} from "@/components/ui/list-filter.jsx";
 
 const POLL_MS = 5000;
 const DISCOVERY = {
@@ -74,8 +71,9 @@ export const ProfilePage = () => {
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
-    // the sources added by hand: the language of the next one and its categories, and a count
-    // bumped when one is added from the recommendations, to list it
+    // the sources added by hand, the language of the next one and its categories, and a count
+    // bumped when some are added from the recommendations, to read them again
+    const [own, setOwn] = useState([]);
     const [ownLanguage, setOwnLanguage] = useState(null);
     const [ownCategories, setOwnCategories] = useState([]);
     const [ownVersion, setOwnVersion] = useState(0);
@@ -138,12 +136,38 @@ export const ProfilePage = () => {
             clearTimeout(timer);
         };
     }, [discovering, apply]);
-    // the sources found, filtered by the words of the reader
-    const [sourceQuery, setSourceQuery] = useState('');
-    const shownSources = useMemo(() => (data?.sources ?? [])
-        .filter(source => matchesQuery(sourceQuery, source.site, feedAddress(source.url), source.category)), [data?.sources, sourceQuery]);
-    // stable, so the list of the sources added is not drawn again when the profile is asked again
+    // the sources added by hand ('profile' ones come with the profile, with how many news are on it)
+    useEffect(() => {
+        if (!user) return;
+        FeedApi.getUserFeeds()
+            .then(answer => setOwn((answer.feeds ?? []).filter(feed => (feed.origin ?? 'user') === 'user')))
+            .catch(err => console.error("Failed to fetch sources", err));
+    }, [user, ownVersion]);
+
+    // the changes of the sources, stable: the list is not drawn again when the profile is asked again
     const onOwnChanged = useCallback(() => ProfileApi.get().then(answer => apply(answer)).catch(() => {}), [apply]);
+    const onAdded = useCallback((feeds) => {
+        if (feeds.length === 0) return;
+        setOwn(current => [...feeds, ...current]);
+        onOwnChanged();
+    }, [onOwnChanged]);
+    const changeOwn = useCallback(async (feed, changes) => {
+        const answer = await FeedApi.updateFeed(feed.id, changes);
+        if (!answer || answer.error) {
+            toast.error(answer?.error ?? "This source could not be changed.");
+            return;
+        }
+        setOwn(current => current.map(other => other.id === feed.id ? {...other, trusted: answer.trusted, shared: answer.shared} : other));
+    }, []);
+    const removeOwn = useCallback(async (feed) => {
+        const answer = await FeedApi.deleteUserFeed(feed.id);
+        if (!answer || answer.error) {
+            toast.error(answer?.error ?? "This source could not be removed.");
+            return;
+        }
+        setOwn(current => current.filter(other => other.id !== feed.id));
+        onOwnChanged();
+    }, [onOwnChanged]);
 
     const save = async () => {
         setError(null);
@@ -158,7 +182,7 @@ export const ProfilePage = () => {
     };
 
     // a change of an interest, then the profile as the server answers it
-    const change = async (call) => {
+    const change = useCallback(async (call) => {
         setError(null);
         setBusy(true);
         try {
@@ -166,19 +190,22 @@ export const ProfilePage = () => {
         } finally {
             setBusy(false);
         }
-    };
+    }, [apply]);
 
-    // a source found for the profile trusted or not: its stories come first in the briefing, and it
-    // is never removed
-    const trust = (source) => change(async () => {
-        const answer = await FeedApi.updateFeed(source.id, {trusted: !source.trusted});
-        return answer?.error ? answer : ProfileApi.get();
-    });
+    // a source trusted or not: its stories come first in the briefing, and it is never removed. One
+    // found for the profile is answered with the profile, one added by hand on its own
+    const trust = useCallback((source) => source.origin === 'user'
+        ? changeOwn(source, {trusted: !source.trusted})
+        : change(async () => {
+            const answer = await FeedApi.updateFeed(source.id, {trusted: !source.trusted});
+            return answer?.error ? answer : ProfileApi.get();
+        }), [change, changeOwn]);
+    const share = useCallback((source) => changeOwn(source, {shared: !source.shared}), [changeOwn]);
+    // a source the thumbs left out brought back for good
+    const keep = useCallback((source) => change(() => ProfileApi.keepSource(source.url)), [change]);
 
     const discovery = DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
     const limits = data?.limits ?? {profileFeeds: 60, relevanceDays: 14};
-    // the sources the thumbs left out: still listed with the others, marked
-    const refused = new Set((data?.refusedSources ?? []).map(source => source.url));
 
     return (
         <PageShell user={user} onSignOut={logout}>
@@ -193,8 +220,8 @@ export const ProfilePage = () => {
                             <p className="folio mt-1 !text-ink">{data.interests.length}</p>
                         </div>
                         <div>
-                            <p className="kicker">Sources found</p>
-                            <p className="folio mt-1 !text-ink">{data.sources.length} of {limits.profileFeeds} at most</p>
+                            <p className="kicker">Sources</p>
+                            <p className="folio mt-1 !text-ink">{data.sources.length} found, {own.length} added</p>
                         </div>
                         <div>
                             <p className="kicker">Search for sources</p>
@@ -280,16 +307,18 @@ export const ProfilePage = () => {
                 </Section>
             )}
 
-            {data?.profile && (
+            {data && (
                 <Section
+                    id="sources"
                     kicker="Your sources"
-                    title="Sources found for you"
+                    title="Your sources"
                     intro={<>
                         <p>
-                            The media that publish on your interests, and in each of them the section about them,
-                            read with the shared sources, only for you. Each search adds new ones to these, up
-                            to {limits.profileFeeds}; a source with no news on your interests
-                            in {limits.relevanceDays} days is removed.
+                            Every source read for your briefing and your searches, with the shared ones, only for you.
+                            The ones <em>found for you</em> publish on your interests: each search adds new ones, up
+                            to {limits.profileFeeds}, and one with no news on your interests in {limits.relevanceDays} days
+                            is removed. The ones <em>added by you</em> are never removed. Star the ones you trust: their
+                            stories come first in your briefing when they fit your interests.
                         </p>
                         {data.googleSearches > 0 && (
                             <p className="mt-3">
@@ -298,106 +327,45 @@ export const ProfilePage = () => {
                             </p>
                         )}
                     </>}
-                    aside={
+                    aside={data.profile && (
                         <Button disabled={discovering || busy} onClick={() => change(() => ProfileApi.rediscover())}>
                             Find more sources
                         </Button>
-                    }
+                    )}
                 >
-                    <div className="space-y-6">
-                        {discovering && (
-                            <Working>
-                                Looking for sources: 5 to 15 minutes, as each medium named is read. You can leave
-                                the page, they are added when found.
-                            </Working>
-                        )}
-                        {data.profile.discovery.status === 'failed' && (
-                            <Notice type="error">{data.profile.discovery.error}</Notice>
-                        )}
-                        {!discovering && data.sources.length === 0 && data.profile.discovery.status === 'done' && (
-                            <Notice>No source beyond the shared ones was found for your interests.</Notice>
-                        )}
-                    </div>
-                    {data.sources.length > 0 && (
-                        <div className="mt-6">
-                            <ListFilter id="found-filter" label="Find a source found for you" value={sourceQuery} onChange={setSourceQuery}
-                                        shown={shownSources.length} total={data.sources.length}/>
-                            <ScrollFrame label={`The ${data.sources.length} sources found for you`}>
-                                <ul className="[&>li:last-child]:border-b-0">
-                                    {shownSources.map(source => (
-                                        <li key={source.id} className="grid-12 items-baseline gap-y-1 border-b border-rule py-4">
-                                            <p className="col-span-12 flex items-center gap-2 font-semibold [overflow-wrap:anywhere] md:col-span-3">
-                                                <IconButton label={source.trusted ? `Stop trusting ${source.site}` : `Trust ${source.site}`}
-                                                            pressed={Boolean(source.trusted)} disabled={busy}
-                                                            title={source.trusted
-                                                                ? 'Trusted: its stories come first in your briefing when they fit your interests, and it is never removed'
-                                                                : 'Trust this source: its stories will come first in your briefing when they fit your interests'}
-                                                            onClick={() => trust(source)}>
-                                                    {source.trusted ? <FaStar/> : <FaRegStar/>}
-                                                </IconButton>
-                                                {source.site}
-                                            </p>
-                                            <div className="col-span-12 md:col-span-6">
-                                                <MetaLine>
-                                                    <Meta>{source.category}</Meta>
-                                                    {source.language && <Meta>{source.language}</Meta>}
-                                                    <Meta tone={source.relevant > 0 ? 'ink' : undefined}
-                                                          title={`Its news of the last ${limits.relevanceDays} days on your interests`}>
-                                                        {source.relevant > 0 ? `${source.relevant} news on your interests` : 'nothing on your interests lately'}
-                                                    </Meta>
-                                                    {refused.has(source.url) && (
-                                                        <Meta tone="accent" title="Left out after your thumbs: no longer read for your briefing, see below">left out</Meta>
-                                                    )}
-                                                </MetaLine>
-                                                {source.error && <p className="caption mt-1 !text-accent-ink">{source.error}</p>}
-                                            </div>
-                                            <p className="caption col-span-12 truncate md:col-span-3 md:text-right" title={feedAddress(source.url)}>{feedAddress(source.url)}</p>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </ScrollFrame>
+                    {data.profile && (
+                        <div className="mb-6 space-y-6 empty:hidden">
+                            {discovering && (
+                                <Working>
+                                    Looking for sources: 5 to 15 minutes, as each medium named is read. You can leave
+                                    the page, they are added when found.
+                                </Working>
+                            )}
+                            {data.profile.discovery.status === 'failed' && (
+                                <Notice type="error">{data.profile.discovery.error}</Notice>
+                            )}
+                            {!discovering && data.sources.length === 0 && data.profile.discovery.status === 'done' && (
+                                <Notice>No source beyond the shared ones was found for your interests.</Notice>
+                            )}
                         </div>
                     )}
+                    <SourceList found={data.sources} own={own} refused={data.refusedSources} limits={limits} busy={busy}
+                                onTrust={trust} onShare={share} onRemove={removeOwn} onKeep={keep}/>
                 </Section>
             )}
 
             {data && (
-                <Section id="own-sources" kicker="Added by you" title="Sources you added"
-                         intro="Websites you add yourself are read with the others for your briefing and your searches, only for you, and never removed. Star the ones you trust: their stories come first in your briefing when they fit your interests. Share one and it can be suggested to the other readers who follow its subjects.">
-                    <UserFeeds api={FeedApi} origin="user" reloadKey={ownVersion}
-                               onChanged={onOwnChanged}
-                               categories={ownCategories} language={language}
-                               languages={LANGUAGE_OPTIONS} onLanguage={setOwnLanguage}/>
-                </Section>
-            )}
-
-            {data?.profile && (
-                <RecommendedSources api={FeedApi} expired={expired} onAdded={() => setOwnVersion(version => version + 1)}
-                                    reloadKey={`${data.profile.discovery.status}:${data.interests.map(interest => interest.id).join(',')}`}/>
-            )}
-
-            {data?.refusedSources?.length > 0 && (
-                <Section kicker="Left out" title="Sources left out after your thumbs"
-                         intro="These sources found for you brought stories you said were not for you, again and again: they are no longer read for your briefing, and not found again. Keep one to bring it back for good.">
-                    <ul className="border-t border-rule">
-                        {data.refusedSources.map(source => (
-                            <li key={source.url} className="grid-12 items-baseline gap-y-2 border-b border-rule py-4">
-                                <div className="col-span-12 md:col-span-3">
-                                    <p className="font-semibold">{source.site}</p>
-                                    <p className="caption truncate" title={feedAddress(source.url)}>{feedAddress(source.url)}</p>
-                                </div>
-                                <MetaLine className="col-span-12 md:col-span-6">
-                                    <Meta tone="accent">{source.refused} not for me</Meta>
-                                    {source.liked > 0 && <Meta tone="ink">{source.liked} good for me</Meta>}
-                                </MetaLine>
-                                <div className="col-span-12 md:col-span-3 md:justify-self-end">
-                                    <Button size="sm" disabled={busy} onClick={() => change(() => ProfileApi.keepSource(source.url))}>
-                                        Keep it
-                                    </Button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                <Section id="add-sources" kicker="Add sources" title="Add sources"
+                         intro="A website, a search of the directory and the web, a file of yours, or a source other readers read on your interests: the ones you add join your sources, above. Share one you added and it can be suggested to the other readers who follow its subjects.">
+                    <div className="space-y-12">
+                        <AddSources api={FeedApi} onAdded={onAdded}
+                                    categories={ownCategories} language={language}
+                                    languages={LANGUAGE_OPTIONS} onLanguage={setOwnLanguage}/>
+                        {data.profile && (
+                            <RecommendedSources api={FeedApi} expired={expired} onAdded={() => setOwnVersion(version => version + 1)}
+                                                reloadKey={`${data.profile.discovery.status}:${data.interests.map(interest => interest.id).join(',')}`}/>
+                        )}
+                    </div>
                 </Section>
             )}
         </PageShell>

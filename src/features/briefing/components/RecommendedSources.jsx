@@ -7,7 +7,6 @@
 //
 
 import {useEffect, useState} from "react";
-import {Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
@@ -44,7 +43,7 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
             }
             const done = new Set((answer.feeds ?? []).map(feed => feed.url));
             if (done.size > 0) {
-                toast.success(`${done.size} source${done.size > 1 ? 's' : ''} added: you find them with the ones you added, above.`);
+                toast.success(`${done.size} source${done.size > 1 ? 's' : ''} added: they join your sources, above.`);
                 onAdded?.();
             }
             for (const failed of answer.errors ?? []) {
@@ -59,26 +58,27 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
         }
     };
 
-    if (error) return <div className="page mt-20"><Notice type="error">{error}</Notice></div>;
-    if (sources === null) return <div className="page mt-20"><Working>Looking for sources you could add…</Working></div>;
+    if (error) return <Notice type="error">{error}</Notice>;
+    if (sources === null) return <Working>Looking for sources other readers read on your interests…</Working>;
     if (sources.length === 0) return null;
 
+    // one of the ways to add sources, under the others (see AddSources)
     return (
-        <Section
-            kicker="From other readers"
-            title="Sources you could add"
-            intro={<>
-                Found for the profiles of other readers, or shared by them, they published on your interests this week.
-                A source another reader added by hand is never shown here unless they chose to share it.
-            </>}
-            aside={
+        <div className="border-t border-rule pt-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-[60ch]">
+                    <p className="kicker !text-ink">Read by other readers on your interests</p>
+                    <p className="caption mt-2">
+                        Found for the profiles of other readers, or shared by them, they published on your interests this week.
+                        A source another reader added by hand is never shown here unless they chose to share it.
+                    </p>
+                </div>
                 <Button variant="primary" size="sm" loading={adding?.length > 1} disabled={adding !== null}
                         onClick={() => add(sources.map(source => source.id))}>
                     Add all {sources.length}
                 </Button>
-            }
-        >
-            <ul className="border-t border-rule">
+            </div>
+            <ul className="mt-4 border-t border-rule">
                 {sources.map(source => (
                     <li key={source.id} className="grid-12 items-baseline gap-y-2 border-b border-rule py-5">
                         <div className="col-span-12 md:col-span-3">
@@ -104,6 +104,6 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
                     </li>
                 ))}
             </ul>
-        </Section>
+        </div>
     );
 };
