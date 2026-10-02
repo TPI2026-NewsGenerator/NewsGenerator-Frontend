@@ -80,6 +80,22 @@ describe('BriefingCard', () => {
     });
 });
 
+describe('BriefingCard explanations', () => {
+    it('should say what its sources mean on a tap of the "i", where nothing is hovered', async () => {
+        render(<BriefingCard item={item()}/>);
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'What “named sources” means'}));
+        expect(await screen.findByRole('tooltip')).toHaveTextContent(/names who it quotes: a person, a club, an institution/);
+    });
+
+    it('should name the media telling it in the explanation of who tells it', async () => {
+        render(<BriefingCard item={item()}/>);
+        fireEvent.click(screen.getByRole('button', {name: /What “Told by 3 media/}));
+        expect(await screen.findByRole('tooltip')).toHaveTextContent('Media: a.fr, b.fr, c.fr.');
+    });
+});
+
 describe('BriefingCard thumbs', () => {
     it('should give a thumb, and take it back with a second click', () => {
         const onVote = vi.fn();

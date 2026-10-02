@@ -12,16 +12,18 @@ import {IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {coverageLabel} from "@/features/briefing/corroboration.js";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
+import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
 
 // Who the article credits for what it reports, read by the AI while it summarizes. It describes the
-// article, never whether the news is true.
+// article, never whether the news is true: said under each one, in the "i" next to it
 const SOURCING = {
-    named: {label: 'named sources', title: 'The article names who it credits: a person, an institution, an official statement'},
-    anonymous: {label: 'unnamed sources', title: 'The article relies on sources it does not name'},
-    none: {label: 'no source given', title: 'The article credits nobody for what it reports'},
+    named: {label: 'named sources', means: 'The article names who it quotes: a person, a club, an institution, an official statement.'},
+    anonymous: {label: 'unnamed sources', means: 'The article relies on sources it does not name, such as “sources close to the club”.'},
+    none: {label: 'no source given', means: 'The article credits nobody for what it reports: often a match report or a guide, with nobody to quote.'},
 };
+const SOURCING_NOTE = 'Read by the AI in the article quoted. It says nothing on whether the news is true.';
 
 const paragraphsOf = (text) => text ? text.split(/\n\s*\n/) : [];
 
@@ -108,17 +110,27 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
             </div>
 
             <aside className="col-span-12 mt-8 space-y-5 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-1 md:border-t-0 md:border-l md:pt-0 md:pl-5">
-                <Margin kicker="Who tells it">
-                    <span title={item.corroboration.mediaNames?.join(', ') || coverage?.title}>{coverage?.text}</span>
-                </Margin>
-                {item.sourcing && (
+                {coverage && (
+                    <Margin kicker="Who tells it">
+                        {coverage.text}
+                        <InfoTip label={coverage.text}>
+                            {coverage.title}.
+                            {item.corroboration.mediaNames?.length > 1 && <> Media: {item.corroboration.mediaNames.join(', ')}.</>}
+                        </InfoTip>
+                    </Margin>
+                )}
+                {SOURCING[item.sourcing] && (
                     <Margin kicker="Its sources">
-                        <span title={SOURCING[item.sourcing]?.title}>{SOURCING[item.sourcing]?.label ?? item.sourcing}</span>
+                        {SOURCING[item.sourcing].label}
+                        <InfoTip label={SOURCING[item.sourcing].label}>
+                            {SOURCING[item.sourcing].means} <span className="text-ink-mute">{SOURCING_NOTE}</span>
+                        </InfoTip>
                     </Margin>
                 )}
                 {item.hedged && (
                     <Margin kicker="Not confirmed" tone="accent">
-                        <span title="The article says itself that this is not confirmed">unconfirmed: “{item.hedged}”</span>
+                        unconfirmed: “{item.hedged}”
+                        <InfoTip label="unconfirmed">The article says itself, in these words, that this is not confirmed yet.</InfoTip>
                     </Margin>
                 )}
                 {onVote && (
