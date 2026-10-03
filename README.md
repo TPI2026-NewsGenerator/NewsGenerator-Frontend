@@ -22,7 +22,13 @@ media carry, only those where each medium wrote its own wording, only the ones a
 or only the articles that used one of the hedging words — and the list of words offered is built
 from the results themselves, so it shows which papers reached for them.
 
-The search runs in English, French, Spanish, German or Italian, and never mixes two of them.
+The reader chooses one language to read in (English, French, Spanish, German or Italian): the search
+and the briefing read the news of every language, and the titles and key passages written in another
+one are translated into it, the original title shown under its translation.
+
+The briefing page writes, on demand, up to ten stories of the last 24 hours, 2 days or 7 days closest to
+the profile of the reader, each with its key passages as published, the media that told it, the
+affair it belongs to and a thumb to vote; a small "i" explains each label of a card.
 
 ## Tech Stack
 
