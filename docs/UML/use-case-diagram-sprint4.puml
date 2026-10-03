@@ -1,12 +1,18 @@
 ' Use cases as they stand at sprint 4. use-case-diagram.puml is the planned scope and is left
-' untouched: this file says what a member can actually do today.
+' untouched: this file says what a member can actually do today (3.10.2026).
 '
 ' Differences with the planned scope:
 '   - "Enregistrement automatique dernier filtre" is gone. The feature was dropped and its two
-'     tables (filters, users_has_last_filters) are no longer created by any script.
-'   - "Modification sources personnalisées" is implemented, and split in three: adding a site by
-'     hand, importing the media a search was missing, and searching a directory of feeds.
-'   - "Enregistrement", "Abonnement newsletter" and the admin features are not implemented.
+'     tables (filters, users_has_last_filters) are no longer created by any script. The last
+'     search is kept a day in the browser instead.
+'   - "Modification sources personnalisées" is implemented, and split: adding a site, a feed or a
+'     subject by hand, importing a file of sites, the media a search was missing, the sources
+'     recommended for the profile.
+'   - "Enregistrement" is implemented: the account is created with its profile.
+'   - The briefing and the profile are new: the AI reads interests in what the reader writes, and
+'     chooses the stories of the briefing among the closest to them.
+'   - "Résumer les nouvelles" became the key passages: the article's own sentences, chosen by the AI.
+'   - "Abonnement newsletter" and the admin features are not implemented.
 
 @startuml
 title Diagramme Use Case - NewsGenerator Sprint 4
@@ -18,14 +24,34 @@ actor "Membre" as m #LightBlue
 rectangle "NewsGenerator System" {
     package "Features Invité" {
         usecase "Connexion" as login
+        usecase "Créer un compte avec son profil" as register #LightBlue
+    }
+
+    package "Compte" {
+        usecase "Déconnexion" as logout
+        usecase "Changer son nom d'utilisateur" as changeName #LightBlue
+        usecase "Changer son mot de passe" as changePassword #LightBlue
+    }
+
+    package "Briefing" {
+        usecase "Écrire un briefing" as briefing #LightBlue
+        usecase "Choisir la période\n(24 h, 2 jours, 7 jours)" as period #LightBlue
+        usecase "Voter pour une histoire" as vote #LightBlue
+    }
+
+    package "Profil" {
+        usecase "Décrire ce qu'on veut lire" as profile #LightBlue
+        usecase "Voir les intérêts lus par l'IA" as interests #LightBlue
+        usecase "Choisir sa langue de lecture" as chooseLanguage #LightBlue
     }
 
     package "Rechercher" {
         usecase "Rechercher des nouvelles" as searchNews
-        usecase "Choisir la langue de recherche" as chooseLanguage #LightBlue
         usecase "Élargir la recherche quand elle trouve peu" as widen #LightBlue
         usecase "Voir la reprise d'une nouvelle\n(médias et formulations)" as corroboration #LightBlue
-        usecase "Résumer les nouvelles sélectionnées (IA)" as summarize
+        usecase "Voir les faits d'une affaire" as thread #LightBlue
+        usecase "Lire les passages clés\ndes nouvelles choisies (IA)" as passages
+        usecase "Lire les traductions" as translate #LightBlue
     }
 
     package "Recherches personnalisées" {
@@ -35,33 +61,50 @@ rectangle "NewsGenerator System" {
     }
 
     package "Sources" {
-        usecase "Ajouter une source depuis un site" as addSource
+        usecase "Voir toutes ses sources" as listSources #LightBlue
+        usecase "Ajouter un site, un flux\nou un sujet" as addSource
+        usecase "Importer un fichier de sites" as importFile #LightBlue
+        usecase "Ajouter une source recommandée" as recommended #LightBlue
         usecase "Voir les médias manquants à sa recherche" as seeMissing #LightBlue
         usecase "Lire les nouvelles des médias manquants" as readMissing #LightBlue
         usecase "Importer les sources suggérées" as importSources #LightBlue
-        usecase "Chercher une source par sujet" as searchDirectory #LightBlue
         usecase "Supprimer une de ses sources" as deleteSource
     }
 }
 
 'invité
 g --> login
+g --> register
 
 'membre
 m --|> g
+m --> logout
+m --> changeName
+m --> changePassword
+m --> briefing
+m --> vote
+m --> profile
 m --> searchNews
-m --> summarize
+m --> passages
 m --> saveSearch
 m --> listSearches
 m --> deleteSearch
+m --> listSources
 m --> addSource
+m --> importFile
+m --> recommended
 m --> seeMissing
-m --> importSources
-m --> searchDirectory
 m --> deleteSource
 
+register ..> profile : <<include>>
+briefing ..> period : <<include>>
+briefing ..> translate : <<extend>>
+profile ..> interests : <<include>>
+profile ..> chooseLanguage : <<include>>
 searchNews ..> chooseLanguage : <<include>>
 searchNews ..> corroboration : <<include>>
+searchNews ..> translate : <<extend>>
+searchNews ..> thread : <<extend>>
 searchNews ..> widen : <<extend>>
 seeMissing ..> readMissing : <<extend>>
 seeMissing ..> importSources : <<extend>>
@@ -69,6 +112,11 @@ seeMissing ..> importSources : <<extend>>
 note bottom of corroboration
     Décrit ce qui a été mesuré,
     jamais si la nouvelle est vraie.
+end note
+
+note bottom of passages
+    Les phrases de l'article,
+    l'IA ne fait que les choisir.
 end note
 
 @enduml
