@@ -29,6 +29,10 @@ const TRUST_TITLE = {
     off: 'Trust this source: its stories will come first in your briefing when they fit your interests',
 };
 
+// a source giving more news a day than the server can follow for one source (see FLOOD_NEWS_PER_DAY
+// of server/services/utils/feed-limits.js): its news are prepared after the others
+const FLOOD_TITLE = 'This source gives far more news a day than the others (500 or more): its news are prepared for the briefings and the search after those of every other source, they may come later. Remove it if you do not need all of it';
+
 const isShown = (show) => (row) => show === 'all'
     || (show === 'leftOut' ? Boolean(row.leftOut) : row.origin === show);
 
@@ -105,6 +109,11 @@ export const SourceList = memo(({found, own, refused, limits, busy, onTrust, onS
                                     </Meta>
                                 )}
                                 {row.error && <Meta tone="accent" title={row.error}>not working</Meta>}
+                                {row.flood && (
+                                    <Meta tone="accent" title={FLOOD_TITLE}>
+                                        {row.newsPerDay.toLocaleString('en-GB')} news a day: prepared last
+                                    </Meta>
+                                )}
                             </MetaLine>
                             <span className="caption hidden max-w-[30%] truncate md:inline" title={feedAddress(row.url)}>{feedAddress(row.url)}</span>
                             {row.leftOut && (

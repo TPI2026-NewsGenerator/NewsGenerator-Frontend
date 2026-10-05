@@ -82,6 +82,15 @@ describe('SourceList', () => {
         expect(told.onKeep).toHaveBeenCalledWith(expect.objectContaining({url: 'https://goal.com/rss'}));
     });
 
+    it('should say which sources give far more news than the others, and only those', () => {
+        render(<SourceList found={[found(1, 'si.com', {newsPerDay: 740, flood: true})]}
+                           own={[own(7, 'agenzianova.com', {newsPerDay: 7440, flood: true}), own(8, 'arbitre.fr', {newsPerDay: 12, flood: false})]}
+                           refused={[]} limits={limits} {...handlers()}/>);
+        expect(screen.getByText('7,440 news a day: prepared last')).toBeInTheDocument();
+        expect(screen.getByText('740 news a day: prepared last')).toBeInTheDocument();
+        expect(screen.queryByText(/12 news a day/)).not.toBeInTheDocument();
+    });
+
     it('should find a source of a long list by its name, whatever the case and the accents', () => {
         const many = Array.from({length: 12}, (_, i) => own(i + 1, `media${String(i + 1).padStart(2, '0')}.com`));
         many[3] = {...many[3], site: 'lequipe.fr', url: 'https://www.lequipe.fr/rss/actu_rss_Football.xml'};

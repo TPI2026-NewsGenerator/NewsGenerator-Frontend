@@ -5,8 +5,9 @@
 //  Description: The sources of the reader as the one list of the profile page (see SourceList)
 //
 
-// the sources as one list, by name: found [{id, site, url, category, language, trusted, error, relevant}]
-// of the profile, own [{id, site, url, category, trusted, shared, error}] added by hand, refused
+// the sources as one list, by name: found [{id, site, url, category, language, trusted, error, relevant,
+// newsPerDay, flood}] of the profile, own [{id, site, url, category, trusted, shared, error, newsPerDay,
+// flood}] added by hand, refused
 // [{url, site, refused, liked}] left out by the thumbs, marked when they are among the others
 export const sourceRows = (found = [], own = [], refused = []) => {
     const leftOut = new Map(refused.map(source => [source.url, source]));
