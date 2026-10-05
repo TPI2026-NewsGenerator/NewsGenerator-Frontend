@@ -3,7 +3,7 @@
 //  Date: 24.09.2026
 //  File: BriefingCard.jsx
 //  Description: One story of the briefing: why it was chosen, its summary, who tells it and how
-//               many of them wrote it themselves
+//               many of them wrote it themselves, and who denies it
 //
 
 import {Fragment} from "react";
@@ -38,6 +38,35 @@ const Passages = ({paragraphs, lede, className}) => paragraphs.map((paragraph, i
 
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
+// Someone named who denies the news, in the words of one of its articles, a machine translation under
+// it when written in another language than the reader's (see server/services/utils/contested.js).
+// Nobody is said to be right: the reader is told who denies, and where it is written
+const CONTESTED_NOTE = 'One of its articles reports that someone named denies this news. The sentence is the article’s own, found by the AI; it does not say who is right.';
+const Contested = ({denials}) => (
+    <div className="mt-6 border-l-2 border-accent-ink pl-5">
+        <p className="kicker !text-accent-ink">
+            Contested
+            <InfoTip label="Contested">{CONTESTED_NOTE}</InfoTip>
+        </p>
+        <ul className="mt-3 space-y-4">
+            {denials.map(denial => (
+                <li key={denial.url + denial.sentence}>
+                    <p className="body-text"><span className="font-semibold">{denial.by} denies:</span>{' '}
+                        <span lang={denial.language ?? undefined}>“{denial.sentence}”</span>
+                    </p>
+                    {denial.translation && (
+                        <p className="caption mt-1 italic">Machine translation: “{denial.translation}”</p>
+                    )}
+                    <p className="caption mt-1">
+                        — <a href={denial.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">{denial.source}</a>
+                        {denial.publishedAt && <>, <time dateTime={denial.publishedAt}>{when(denial.publishedAt)}</time></>}
+                    </p>
+                </li>
+            ))}
+        </ul>
+    </div>
+);
+
 // a note of the outer column: its kicker and what it says
 const Margin = ({kicker, tone, children}) => (
     <div>
@@ -52,7 +81,7 @@ const Margin = ({kicker, tone, children}) => (
 // article as published, a paragraph per passage; item.translation: their machine translation.
 // item.titleTranslation: the title in the language of the reader, when written in another (item.language).
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
-// sent: their first article then
+// sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones
 export const BriefingCard = ({item, onVote, number, lede = false}) => {
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
@@ -105,6 +134,8 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                         <p className="caption mt-3">Translated by the AI, it may contain errors: the original above is the reference.</p>
                     </div>
                 )}
+
+                {item.contested?.length > 0 && <Contested denials={item.contested}/>}
 
                 {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-8"/>}
             </div>

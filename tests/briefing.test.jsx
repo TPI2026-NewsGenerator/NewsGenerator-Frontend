@@ -149,3 +149,23 @@ describe('BriefingCard passages', () => {
         expect(screen.getByText('“Thierno Barry goal decision upheld”')).toBeInTheDocument();
     });
 });
+
+describe('BriefingCard contested', () => {
+    const denial = {by: 'Manchester City', sentence: 'Manchester City denies any wrongdoing.', language: 'en', translation: null,
+        source: 'bbc.com', url: 'https://bbc.com/city', publishedAt: '2026-09-24T09:00:00.000Z'};
+
+    it('should quote who denies the news and where, with a machine translation marked as such', () => {
+        render(<BriefingCard item={item({contested: [{...denial, translation: 'Manchester City nie toute faute.'}]})}/>);
+        expect(screen.getByText('Contested')).toBeInTheDocument();
+        expect(screen.getByText('Manchester City denies:')).toBeInTheDocument();
+        expect(screen.getByText('“Manchester City denies any wrongdoing.”')).toBeInTheDocument();
+        expect(screen.getByText('Machine translation: “Manchester City nie toute faute.”')).toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'bbc.com'})).toHaveAttribute('href', 'https://bbc.com/city');
+    });
+
+    it('should say nothing on a card nobody denies, or of a briefing made before', () => {
+        render(<BriefingCard item={item({contested: []})}/>);
+        render(<BriefingCard item={item()}/>);
+        expect(screen.queryByText('Contested')).toBeNull();
+    });
+});
