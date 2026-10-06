@@ -30,6 +30,8 @@ const DISCOVERY = {
     done: {label: 'done'},
     failed: {label: 'failed', tone: 'accent'},
 };
+// the sources of Google News are added, the press is still looked for (see DiscoveryService)
+const PRESS = {label: 'first sources added, looking in the press…'};
 
 // one interest read by the AI, which the user can correct
 const Interest = ({interest, number, onSave, onDelete, busy}) => {
@@ -204,7 +206,8 @@ export const ProfilePage = () => {
     // a source the thumbs left out brought back for good
     const keep = useCallback((source) => change(() => ProfileApi.keepSource(source.url)), [change]);
 
-    const discovery = DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
+    const phase = data?.profile?.discovery?.phase;
+    const discovery = discovering && phase === 'press' ? PRESS : DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
     const limits = data?.limits ?? {profileFeeds: 60, relevanceDays: 14};
 
     return (
@@ -335,10 +338,16 @@ export const ProfilePage = () => {
                 >
                     {data.profile && (
                         <div className="mb-6 space-y-6 empty:hidden">
-                            {discovering && (
+                            {discovering && phase !== 'press' && (
                                 <Working>
-                                    Looking for sources: 5 to 15 minutes, as each medium named is read. You can leave
-                                    the page, they are added when found.
+                                    Looking for sources in Google News: the first ones in a few minutes, as each medium
+                                    named is read. You can leave the page or search meanwhile, they are added when found.
+                                </Working>
+                            )}
+                            {discovering && phase === 'press' && (
+                                <Working>
+                                    The sources of Google News are added and read for your next briefing. Still looking
+                                    in the press, which answers slowly: a few more minutes. No need to wait here.
                                 </Working>
                             )}
                             {data.profile.discovery.status === 'failed' && (
