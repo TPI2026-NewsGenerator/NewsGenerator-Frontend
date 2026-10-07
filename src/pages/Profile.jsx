@@ -204,7 +204,12 @@ export const ProfilePage = () => {
         }), [change, changeOwn]);
     const share = useCallback((source) => changeOwn(source, {shared: !source.shared}), [changeOwn]);
     // a source the thumbs left out brought back for good
-    const keep = useCallback((source) => change(() => ProfileApi.keepSource(source.url)), [change]);
+    const keep = useCallback((source) => change(() => ProfileApi.keepSource(source.leftOut.key)), [change]);
+    // a source found for the profile removed, then not found again; or brought back
+    const remove = useCallback((source) => source.origin === 'user'
+        ? removeOwn(source)
+        : change(() => ProfileApi.removeSource(source.id)), [change, removeOwn]);
+    const restore = useCallback((source) => change(() => ProfileApi.restoreSource(source.removedKey)), [change]);
 
     const phase = data?.profile?.discovery?.phase;
     const discovery = discovering && phase === 'press' ? PRESS : DISCOVERY[data?.profile?.discovery?.status ?? 'idle'];
@@ -320,7 +325,8 @@ export const ProfilePage = () => {
                             Every source read for your briefing and your searches, with the shared ones, only for you.
                             The ones <em>found for you</em> publish on your interests: each search adds new ones, up
                             to {limits.profileFeeds}, and one with no news on your interests in {limits.relevanceDays} days
-                            is removed. The ones <em>added by you</em> are never removed. Star the ones you trust: their
+                            is removed; remove one yourself and it is never found again.
+                            The ones <em>added by you</em> are never removed. Star the ones you trust: their
                             stories come first in your briefing when they fit your interests.
                         </p>
                         {data.googleSearches > 0 && (
@@ -358,8 +364,9 @@ export const ProfilePage = () => {
                             )}
                         </div>
                     )}
-                    <SourceList found={data.sources} own={own} refused={data.refusedSources} limits={limits} busy={busy}
-                                onTrust={trust} onShare={share} onRemove={removeOwn} onKeep={keep}/>
+                    <SourceList found={data.sources} own={own} refused={data.refusedSources} removed={data.removedSources}
+                                limits={limits} busy={busy}
+                                onTrust={trust} onShare={share} onRemove={remove} onKeep={keep} onRestore={restore}/>
                 </Section>
             )}
 

@@ -11,9 +11,9 @@ import {twMerge} from "tailwind-merge";
 
 export const cn = (...inputs) => twMerge(clsx(inputs));
 
-// A site without a feed is read from its web page through our RSS-Bridge: its address is ours,
-// meaningless for the reader, so it is said in words instead
-export const feedAddress = (url) => /[?&]action=display\b/.test(url ?? '') ? 'read from its web page' : url;
+// A site without a feed is read from its web page through our RSS-Bridge: its address is ours, so the
+// server sends none (url null) for the sources of the reader, and it is said in words instead
+export const feedAddress = (url) => url === null || /[?&]action=display\b/.test(url ?? '') ? 'read from its web page' : url;
 
 const folded = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 

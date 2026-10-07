@@ -13,14 +13,15 @@ import {sourceRows} from '@/features/briefing/sourceRows.js';
 import {AddSources} from '@/features/briefing/components/AddSources.jsx';
 
 const limits = {profileFeeds: 60, relevanceDays: 14};
-const found = (id, site, more = {}) => ({id, site, url: `https://${site}/rss`, category: 'sport', language: 'en', trusted: false, relevant: 3, ...more});
-const own = (id, site, more = {}) => ({id, site, url: `https://${site}/feed`, category: 'sport', origin: 'user', trusted: false, shared: false, ...more});
-const handlers = () => ({onTrust: vi.fn(), onShare: vi.fn(), onRemove: vi.fn(), onKeep: vi.fn()});
+// the key is opaque for the client (a hash of the address on the server): any string unique per feed
+const found = (id, site, more = {}) => ({id, key: `k-${site}-rss`, site, url: `https://${site}/rss`, category: 'sport', language: 'en', trusted: false, relevant: 3, ...more});
+const own = (id, site, more = {}) => ({id, key: `k-${site}-feed`, site, url: `https://${site}/feed`, category: 'sport', origin: 'user', trusted: false, shared: false, ...more});
+const handlers = () => ({onTrust: vi.fn(), onShare: vi.fn(), onRemove: vi.fn(), onKeep: vi.fn(), onRestore: vi.fn()});
 
 describe('sourceRows', () => {
     it('should list the sources found and added by name, marking the ones left out', () => {
         const rows = sourceRows([found(1, 'goal.com')], [own(7, 'arbitre.fr')],
-            [{url: 'https://goal.com/rss', site: 'goal.com', refused: 4, liked: 0}]);
+            [{key: 'k-goal.com-rss', url: 'https://goal.com/rss', site: 'goal.com', refused: 4, liked: 0}]);
         expect(rows.map(row => [row.site, row.origin, Boolean(row.leftOut)])).toEqual([
             ['arbitre.fr', 'user', false],
             ['goal.com', 'profile', true],
@@ -28,9 +29,17 @@ describe('sourceRows', () => {
     });
 
     it('should keep a source left out that is no longer among the others', () => {
-        const rows = sourceRows([], [], [{url: 'https://old.com/rss', site: 'old.com', refused: 5, liked: 1}]);
+        const rows = sourceRows([], [], [{key: 'k-old', url: 'https://old.com/rss', site: 'old.com', refused: 5, liked: 1}]);
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({site: 'old.com', origin: 'profile', leftOut: {refused: 5}});
+    });
+
+    it('should match a source read through the bridge, sent without its address, by its key', () => {
+        const page = found(1, 'lematin.ch', {key: 'k-bridge-1', url: null});
+        const rows = sourceRows([page, found(2, 'rts.ch', {key: 'k-bridge-2', url: null})], [],
+            [{key: 'k-bridge-1', url: null, site: 'lematin.ch', refused: 3, liked: 0}]);
+        expect(rows.map(row => [row.site, Boolean(row.leftOut)])).toEqual([['lematin.ch', true], ['rts.ch', false]]);
+        expect(rows.every(row => row.url === null)).toBe(true);
     });
 });
 
@@ -54,32 +63,71 @@ describe('SourceList', () => {
         expect(screen.queryByText('arbitre.fr')).not.toBeInTheDocument();
     });
 
-    it('should share and remove only a source added by hand, and trust any', () => {
+    it('should share only a source added by hand, and trust and remove any', () => {
         const told = handlers();
         render(<SourceList found={[found(1, 'goal.com')]} own={[own(7, 'arbitre.fr')]} refused={[]} limits={limits} {...told}/>);
 
         expect(screen.queryByRole('button', {name: 'Share goal.com'})).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', {name: 'Remove goal.com'})).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', {name: 'Share arbitre.fr'}));
         fireEvent.click(screen.getByRole('button', {name: 'Remove arbitre.fr'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Remove goal.com'}));
         fireEvent.click(screen.getByRole('button', {name: 'Trust goal.com'}));
         expect(told.onShare).toHaveBeenCalledWith(expect.objectContaining({id: 7}));
-        expect(told.onRemove).toHaveBeenCalledWith(expect.objectContaining({id: 7}));
+        expect(told.onRemove).toHaveBeenCalledWith(expect.objectContaining({id: 7, origin: 'user'}));
+        expect(told.onRemove).toHaveBeenCalledWith(expect.objectContaining({id: 1, origin: 'profile'}));
         expect(told.onTrust).toHaveBeenCalledWith(expect.objectContaining({id: 1, origin: 'profile'}));
+    });
+
+    it('should list a source found and removed among the ones left out, and bring it back', () => {
+        const told = handlers();
+        render(<SourceList found={[found(1, 'goal.com')]} own={[]} refused={[]} limits={limits} {...told}
+                           removed={[{key: 'a1b2', site: 'amnesty.org', url: 'https://amnesty.org/rss', category: 'world', language: 'en'}]}/>);
+
+        // not among the ones found for the reader any more
+        expect(screen.getByRole('radio', {name: /Found for you 1/})).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('radio', {name: /Left out 1/}));
+        expect(screen.getByText('removed by you')).toBeInTheDocument();
+        expect(screen.queryByText('goal.com')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: 'Remove amnesty.org'})).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Bring it back'}));
+        expect(told.onRestore).toHaveBeenCalledWith(expect.objectContaining({removedKey: 'a1b2'}));
+    });
+
+    it('should show all the sources again once the last one left out is brought back', () => {
+        const removed = [{key: 'a1b2', site: 'amnesty.org', url: 'https://amnesty.org/rss', category: 'world', language: 'en'}];
+        const {rerender} = render(<SourceList found={[found(1, 'goal.com')]} own={[]} refused={[]} removed={removed}
+                                              limits={limits} {...handlers()}/>);
+        fireEvent.click(screen.getByRole('radio', {name: /Left out 1/}));
+
+        rerender(<SourceList found={[found(1, 'goal.com'), found(2, 'amnesty.org')]} own={[]} refused={[]} removed={[]}
+                             limits={limits} {...handlers()}/>);
+        expect(screen.getByRole('radio', {name: /All 2/})).toHaveAttribute('data-state', 'on');
+        expect(screen.getByText('amnesty.org')).toBeInTheDocument();
     });
 
     it('should mark a source left out by the thumbs, and keep it', () => {
         const told = handlers();
         render(<SourceList found={[found(1, 'goal.com'), found(2, 'tribuna.com')]} own={[]} limits={limits} {...told}
-                           refused={[{url: 'https://goal.com/rss', site: 'goal.com', refused: 4, liked: 0}]}/>);
+                           refused={[{key: 'k-goal.com-rss', url: 'https://goal.com/rss', site: 'goal.com', refused: 4, liked: 0}]}/>);
 
         fireEvent.click(screen.getByRole('radio', {name: /Left out 1/}));
         expect(screen.getByText('left out: 4 not for me')).toBeInTheDocument();
         expect(screen.queryByText('tribuna.com')).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', {name: 'Keep it'}));
-        expect(told.onKeep).toHaveBeenCalledWith(expect.objectContaining({url: 'https://goal.com/rss'}));
+        expect(told.onKeep).toHaveBeenCalledWith(expect.objectContaining({leftOut: expect.objectContaining({key: 'k-goal.com-rss'})}));
+    });
+
+    it('should say a source read through the bridge is read from its web page, and keep it by its key', () => {
+        const told = handlers();
+        render(<SourceList found={[found(1, 'lematin.ch', {key: 'k-bridge', url: null})]} own={[]} limits={limits} {...told}
+                           refused={[{key: 'k-bridge', url: null, site: 'lematin.ch', refused: 3, liked: 0}]}/>);
+
+        expect(screen.getByText('read from its web page')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Keep it'}));
+        expect(told.onKeep).toHaveBeenCalledWith(expect.objectContaining({url: null, leftOut: expect.objectContaining({key: 'k-bridge'})}));
     });
 
     it('should say which sources give far more news than the others, and only those', () => {
@@ -133,7 +181,7 @@ describe('AddSources', () => {
 
     it('should show the directory first, complete it with the web, and read a web medium on the words searched', async () => {
         let answerWeb;
-        const named = {site: 'rugbyrama.fr', name: 'Rugbyrama Top 14', feed: 'https://rugbyrama.fr/top14.xml', readers: 900, via: 'directory'};
+        const named = {site: 'rugbyrama.fr', name: 'Rugbyrama Top 14', key: 'k-top14', feed: 'https://rugbyrama.fr/top14.xml', readers: 900, via: 'directory'};
         const api = {
             searchSources: vi.fn((query, language, from) => from === 'web'
                 ? new Promise(resolve => { answerWeb = resolve; })
@@ -149,8 +197,8 @@ describe('AddSources', () => {
 
         // the same medium found on the web is listed once
         answerWeb({sources: [
-            {...named, name: 'Rugbyrama', feed: 'https://rugbyrama.fr/rss', news: 12, via: 'web'},
-            {site: 'midi-olympique.fr', name: 'Midi Olympique', feed: 'https://midi-olympique.fr/rss', news: 8, sample: 'Un titre', via: 'web'},
+            {...named, name: 'Rugbyrama', key: 'k-rugbyrama', feed: 'https://rugbyrama.fr/rss', news: 12, via: 'web'},
+            {site: 'midi-olympique.fr', name: 'Midi Olympique', key: 'k-midi', feed: 'https://midi-olympique.fr/rss', news: 8, sample: 'Un titre', via: 'web'},
         ]});
         expect(await screen.findByText('Midi Olympique')).toBeInTheDocument();
         expect(screen.queryByText('Rugbyrama')).not.toBeInTheDocument();
@@ -161,5 +209,38 @@ describe('AddSources', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Add 1 source'}));
         await waitFor(() => expect(api.importSources).toHaveBeenCalledWith(
             [{site: 'midi-olympique.fr', feed: 'https://midi-olympique.fr/rss', category: 'sport'}], 'en', ['rugby top 14']));
+    });
+
+    it('should add a site read from its page, offered without its address, and take it out of the list', async () => {
+        const onAdded = vi.fn();
+        const sources = [
+            {site: 'lematin.ch', name: 'Le Matin', key: 'k-bridge', feed: null, via: 'directory'},
+            {site: 'rts.ch', name: 'RTS', key: 'k-rts', feed: 'https://rts.ch/rss', via: 'directory'},
+        ];
+        const api = {
+            searchSources: vi.fn().mockResolvedValue({sources}),
+            importSources: vi.fn().mockResolvedValue({
+                // read from its web page: sent with its key, never the address on the bridge
+                feeds: [{id: 3, key: 'k-bridge', url: null, site: 'lematin.ch', category: 'world'}],
+                errors: [{site: 'rts.ch', error: 'This feed has no news.'}],
+            }),
+        };
+        render(<AddSources categories={['world']} api={api} onAdded={onAdded}/>);
+
+        fireEvent.change(screen.getByLabelText('Or search a site, a feed or a subject'), {target: {value: 'suisse'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Search'}));
+        fireEvent.click(await screen.findByText('Le Matin'));
+        fireEvent.click(screen.getByText('RTS'));
+        fireEvent.change(screen.getByLabelText('Category'), {target: {value: 'world'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Add 2 sources'}));
+
+        await waitFor(() => expect(onAdded).toHaveBeenCalled());
+        expect(api.importSources).toHaveBeenCalledWith([
+            {site: 'lematin.ch', feed: null, category: 'world'},
+            {site: 'rts.ch', feed: 'https://rts.ch/rss', category: 'world'},
+        ], 'en', null);
+        await waitFor(() => expect(screen.queryByText('Le Matin')).not.toBeInTheDocument());
+        // the one that failed stays, to be added again
+        expect(screen.getByText('RTS')).toBeInTheDocument();
     });
 });

@@ -73,8 +73,8 @@ export const AddSources = ({categories, api, language = 'en', languages, onLangu
 
         // a medium both of them name is listed once, as the directory names it
         const merge = (first, then) => {
-            const seen = new Set(first.flatMap(source => [source.site, source.feed]));
-            return [...first, ...then.filter(source => !seen.has(source.site) && !seen.has(source.feed))];
+            const seen = new Set(first.flatMap(source => [source.site, source.key]));
+            return [...first, ...then.filter(source => !seen.has(source.site) && !seen.has(source.key))];
         };
         const ask = (from) => api.searchSources(words, language, from).catch(() => null);
 
@@ -101,12 +101,12 @@ export const AddSources = ({categories, api, language = 'en', languages, onLangu
         if (!needCategory()) return;
 
         const chosen = found
-            .filter(source => selected.includes(source.feed))
+            .filter(source => selected.includes(source.key))
             .map(source => ({site: source.site, feed: source.feed, category}));
 
         setIsAdding(true);
         // the media found on the web are read on their section about these words, when they have one
-        const fromWeb = found.some(source => source.via === 'web' && selected.includes(source.feed));
+        const fromWeb = found.some(source => source.via === 'web' && selected.includes(source.key));
         const data = await api.importSources(chosen, language, fromWeb ? [searched] : null);
         setIsAdding(false);
 
@@ -115,17 +115,21 @@ export const AddSources = ({categories, api, language = 'en', languages, onLangu
             return;
         }
 
-        const done = (data.feeds ?? []).map(feed => feed.url);
-        if (done.length > 0) {
-            toast.success(`${done.length} source${done.length > 1 ? 's' : ''} added.`);
+        // the ones added are the ones chosen with no error: a site read from its page has no address
+        // here, and the server builds its feed again (importSources)
+        const failed = new Set((data.errors ?? []).map(error => error.site));
+        const done = found.filter(source => selected.includes(source.key) && !failed.has(source.site)).map(source => source.key);
+        const added = data.feeds?.length ?? 0;
+        if (added > 0) {
+            toast.success(`${added} source${added > 1 ? 's' : ''} added.`);
             onAdded?.(data.feeds);
         }
         for (let failed of data.errors ?? []) {
             toast.error(`${failed.site}: ${failed.error}`);
         }
 
-        setFound(found.filter(source => !done.includes(source.feed)));
-        setSelected(selected.filter(feed => !done.includes(feed)));
+        setFound(found.filter(source => !done.includes(source.key)));
+        setSelected(selected.filter(key => !done.includes(key)));
     };
 
     const onEnter = (action) => (event) => {
@@ -197,10 +201,10 @@ export const AddSources = ({categories, api, language = 'en', languages, onLangu
                     </p>
                     <div className="mt-3 flex flex-col">
                         {found.map(source => (
-                            <Checkbox key={source.feed} checked={selected.includes(source.feed)}
+                            <Checkbox key={source.key} checked={selected.includes(source.key)}
                                       onChange={event => setSelected(event.target.checked
-                                          ? [...selected, source.feed]
-                                          : selected.filter(feed => feed !== source.feed))}>
+                                          ? [...selected, source.key]
+                                          : selected.filter(key => key !== source.key))}>
                                 <span className="font-semibold">{source.name}</span>{' '}
                                 <MetaLine className="inline-flex">
                                     {source.via === 'web'

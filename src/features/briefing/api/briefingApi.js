@@ -49,6 +49,10 @@ export const ProfileApi = {
     updateInterest: (id, changes) => send(`/profile/interests/${id}`, {method: 'PATCH', body: changes}),
     deleteInterest: (id) => send(`/profile/interests/${id}`, {method: 'DELETE'}),
     rediscover: () => send('/profile/discover', {method: 'POST'}),
-    // a source the thumbs left out, kept: it comes back for good. Answers the profile
-    keepSource: (url) => send('/profile/kept-sources', {method: 'POST', body: {url}}),
+    // a source the thumbs left out, kept by its key: it comes back for good. Answers the profile
+    keepSource: (key) => send('/profile/kept-sources', {method: 'POST', body: {key}}),
+    // a source found for the profile removed: it is not found again. Answers the profile
+    removeSource: (id) => send(`/profile/sources/${id}`, {method: 'DELETE'}),
+    // a source removed brought back, by its key. Answers the profile
+    restoreSource: (key) => send('/profile/removed-sources/restore', {method: 'POST', body: {key}}),
 };

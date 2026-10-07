@@ -33,17 +33,22 @@ const TRUST_TITLE = {
 // of server/services/utils/feed-limits.js): its news are prepared after the others
 const FLOOD_TITLE = 'This source gives far more news a day than the others (500 or more): its news are prepared for the briefings and the search after those of every other source, they may come later. Remove it if you do not need all of it';
 
+// a source found for the profile and removed by the reader is left out, not found for them
 const isShown = (show) => (row) => show === 'all'
-    || (show === 'leftOut' ? Boolean(row.leftOut) : row.origin === show);
+    || (show === 'leftOut' ? Boolean(row.leftOut) || Boolean(row.removed) : row.origin === show && !row.removed);
 
-// limits: {relevanceDays}. busy: a change in progress. onTrust, onShare, onRemove, onKeep(row): the
-// changes of a source, told to the page. Memoized: the page asks the profile again every few seconds
+const REMOVE_FOUND_TITLE = 'Remove it: it is no longer read for your briefing and never found for you again. You can bring it back from “Left out”';
+
+// limits: {relevanceDays}. busy: a change in progress. onTrust, onShare, onRemove, onKeep, onRestore(row):
+// the changes of a source, told to the page. Memoized: the page asks the profile again every few seconds
 // while sources are found, three hundred sources are not drawn again each time
-export const SourceList = memo(({found, own, refused, limits, busy, onTrust, onShare, onRemove, onKeep}) => {
-    const [show, setShow] = useState('all');
+export const SourceList = memo(({found, own, refused, removed, limits, busy, onTrust, onShare, onRemove, onKeep, onRestore}) => {
+    const [chosen, setShow] = useState('all');
     const [query, setQuery] = useState('');
-    const rows = useMemo(() => sourceRows(found, own, refused), [found, own, refused]);
+    const rows = useMemo(() => sourceRows(found, own, refused, removed), [found, own, refused, removed]);
     const counts = useMemo(() => Object.fromEntries(SHOWS.map(({value}) => [value, rows.filter(isShown(value)).length])), [rows]);
+    // the last source left out kept or brought back: its choice is no longer offered, all are shown
+    const show = chosen === 'leftOut' && counts.leftOut === 0 ? 'all' : chosen;
     const listed = rows.filter(isShown(show));
     const shown = listed.filter(row => matchesQuery(query, row.site, feedAddress(row.url), row.category));
 
@@ -94,7 +99,9 @@ export const SourceList = memo(({found, own, refused, limits, busy, onTrust, onS
                             )}
                             <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{row.site}</span>
                             <MetaLine>
-                                <Meta tone={row.origin === 'user' ? 'ink' : undefined}>{row.origin === 'user' ? 'added by you' : 'found for you'}</Meta>
+                                {row.removed
+                                    ? <Meta tone="accent" title="You removed it: it is not read for your briefing, and not found for you again">removed by you</Meta>
+                                    : <Meta tone={row.origin === 'user' ? 'ink' : undefined}>{row.origin === 'user' ? 'added by you' : 'found for you'}</Meta>}
                                 {row.category && <Meta>{row.category}</Meta>}
                                 {row.language && <Meta>{row.language}</Meta>}
                                 {row.origin === 'profile' && row.relevant !== undefined && (
@@ -122,8 +129,17 @@ export const SourceList = memo(({found, own, refused, limits, busy, onTrust, onS
                                     Keep it
                                 </Button>
                             )}
-                            {row.origin === 'user' && (
-                                <IconButton label={`Remove ${row.site}`} className="hover:text-accent-ink" disabled={busy} onClick={() => onRemove(row)}>
+                            {row.removed && (
+                                <Button size="sm" disabled={busy} onClick={() => onRestore(row)}
+                                        title="Bring it back among the sources found for you">
+                                    Bring it back
+                                </Button>
+                            )}
+                            {/* a source found for the profile only when it is listed: one the thumbs left out stays kept or not */}
+                            {row.id !== undefined && (
+                                <IconButton label={`Remove ${row.site}`} className="hover:text-accent-ink" disabled={busy}
+                                            title={row.origin === 'profile' ? REMOVE_FOUND_TITLE : undefined}
+                                            onClick={() => onRemove(row)}>
                                     <FaTrash/>
                                 </IconButton>
                             )}

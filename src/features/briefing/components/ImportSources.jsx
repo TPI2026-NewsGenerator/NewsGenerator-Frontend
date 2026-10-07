@@ -75,7 +75,7 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
                 break;
             }
             setResults(previous => [...previous, ...data.sites]);
-            setSelected(previous => [...previous, ...data.sites.filter(site => STATUS[site.status]?.ticked).map(site => site.feed)]);
+            setSelected(previous => [...previous, ...data.sites.filter(site => STATUS[site.status]?.ticked).map(site => site.key)]);
         }
         setIsChecking(false);
     };
@@ -89,8 +89,8 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         if (!needCategory()) return;
 
         const chosen = results
-            .filter(result => STATUS[result.status] && selected.includes(result.feed))
-            .map(result => ({site: result.site, feed: result.feed, category}));
+            .filter(result => STATUS[result.status] && selected.includes(result.key))
+            .map(result => ({site: result.site, key: result.key, feed: result.feed, category}));
 
         setIsAdding(true);
         const added = [];
@@ -98,7 +98,8 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         const answered = [];        // sent and answered: added, or refused with a reason
         for (let start = 0; start < chosen.length; start += ADDED_AT_ONCE) {
             const part = chosen.slice(start, start + ADDED_AT_ONCE);
-            const data = await api.importSources(part, language).catch(() => null);
+            // the key is for this list only, the server finds the feed of a site read from its page again
+            const data = await api.importSources(part.map(({site, feed, category}) => ({site, feed, category})), language).catch(() => null);
             if (!data || data.error) {
                 errors.push({site: `${chosen.length - start} sources`, error: data?.error ?? 'They could not be added.'});
                 break;
@@ -113,12 +114,12 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
             toast.success(`${added.length} source${added.length > 1 ? 's' : ''} added.`);
             onAdded?.(added);
         }
-        // the ones added leave the list (a site read from its page gets an address of its own there),
-        // the refused ones stay, with why
+        // the ones added leave the list (a site read from its page has no address here, the server
+        // builds its feed again), the refused ones stay, with why
         const refused = new Set(errors.map(error => error.site));
-        const done = new Set(answered.filter(source => !refused.has(source.site)).map(source => source.feed));
-        setResults(results.filter(result => !done.has(result.feed)));
-        setSelected(selected.filter(feed => !done.has(feed)));
+        const done = new Set(answered.filter(source => !refused.has(source.site)).map(source => source.key));
+        setResults(results.filter(result => !done.has(result.key)));
+        setSelected(selected.filter(key => !done.has(key)));
         setFailed(errors);
     };
 
@@ -126,7 +127,7 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
     const ready = choosable.filter(result => result.status === 'ready');
     const added = results.filter(result => result.status === 'added');
     const none = results.filter(result => result.status === 'none');
-    const toggle = (feed, on) => setSelected(on ? [...selected, feed] : selected.filter(other => other !== feed));
+    const toggle = (key, on) => setSelected(on ? [...selected, key] : selected.filter(other => other !== key));
 
     return (
         <div className="border-t border-rule pt-4">
@@ -157,13 +158,13 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
                     {choosable.length > 0 && (
                         <>
                             <div className="mt-2 flex gap-2">
-                                <Button size="sm" variant="link" onClick={() => setSelected(choosable.map(result => result.feed))}>Tick all</Button>
+                                <Button size="sm" variant="link" onClick={() => setSelected(choosable.map(result => result.key))}>Tick all</Button>
                                 <Button size="sm" variant="link" onClick={() => setSelected([])}>Tick none</Button>
                             </div>
                             <div className="mt-2 flex max-h-[28rem] flex-col overflow-y-auto">
                                 {choosable.map(result => (
-                                    <Checkbox key={result.feed} checked={selected.includes(result.feed)}
-                                              onChange={event => toggle(result.feed, event.target.checked)}>
+                                    <Checkbox key={result.key} checked={selected.includes(result.key)}
+                                              onChange={event => toggle(result.key, event.target.checked)}>
                                         <span className="font-semibold [overflow-wrap:anywhere]">{result.name}</span>{' '}
                                         <MetaLine className="inline-flex">
                                             <Meta tone={result.status === 'ready' ? 'ink' : 'accent'} title={STATUS[result.status].title}>

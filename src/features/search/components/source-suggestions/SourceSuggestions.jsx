@@ -54,7 +54,7 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
         setSources(data.sources ?? []);
         setMissing(data.missing ?? 0);
         setTried(data.tried ?? 0);
-        setSelected((data.sources ?? []).map(source => source.feed));
+        setSelected((data.sources ?? []).map(source => source.key));
     };
 
     const handleAdd = async () => {
@@ -64,7 +64,7 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
         }
 
         const chosen = sources
-            .filter(source => selected.includes(source.feed))
+            .filter(source => selected.includes(source.key))
             .map(source => ({site: source.site, feed: source.feed, category}));
 
         setIsAdding(true);
@@ -84,10 +84,13 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
             toast.error(`${failed.site}: ${failed.error}`);
         }
 
-        // the added ones leave the list and the selection, the others stay so they can still be added
-        const done = (data.feeds ?? []).map(feed => feed.url);
-        setSources(sources.filter(source => !done.includes(source.feed)));
-        setSelected(selected.filter(feed => !done.includes(feed)));
+        // the added ones leave the list and the selection, the others stay so they can still be added: the
+        // chosen ones with no error, as a site read from its page has no address here (the server builds
+        // its feed again, see importSources)
+        const failed = new Set((data.errors ?? []).map(error => error.site));
+        const done = sources.filter(source => selected.includes(source.key) && !failed.has(source.site)).map(source => source.key);
+        setSources(sources.filter(source => !done.includes(source.key)));
+        setSelected(selected.filter(key => !done.includes(key)));
         setMissing(Math.max(0, missing - added));
         onImported?.();
     };
@@ -149,10 +152,10 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
                         </p>
                         <div className="mt-4 flex flex-col border-t border-rule pt-3">
                             {sources.map(source => (
-                                <Checkbox key={source.feed} checked={selected.includes(source.feed)} className="py-2"
+                                <Checkbox key={source.key} checked={selected.includes(source.key)} className="py-2"
                                           onChange={event => setSelected(event.target.checked
-                                              ? [...selected, source.feed]
-                                              : selected.filter(feed => feed !== source.feed))}>
+                                              ? [...selected, source.key]
+                                              : selected.filter(key => key !== source.key))}>
                                     <span className="font-semibold">{source.name}</span>{' '}
                                     <Meta>{source.news} news</Meta>
                                     <span className="caption block [overflow-wrap:anywhere]">{feedAddress(source.feed)}</span>

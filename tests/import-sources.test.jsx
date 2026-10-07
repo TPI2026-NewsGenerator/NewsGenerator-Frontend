@@ -11,10 +11,11 @@ import {describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {ImportSources} from '@/features/briefing/components/ImportSources.jsx';
 
+// a site read from its page comes with no address (the one of the bridge of the server), only its key
 const checked = {
-    'https://www.kicker.de': {status: 'ready', name: 'www.kicker.de', feed: 'https://newsfeed.kicker.de/news/aktuell', language: 'de', recent: 300, items: 50, sample: 'Bayern gewinnt'},
-    'https://www.vi.nl': {status: 'bridge', name: 'www.vi.nl', feed: 'http://rss-bridge/?site=vi.nl', language: 'nl', recent: 10, items: 10, sample: null},
-    'https://www.irishfa.com': {status: 'flood', name: 'www.irishfa.com', feed: 'https://www.irishfa.com/rss', language: 'en', recent: 900, items: 5882, sample: null},
+    'https://www.kicker.de': {status: 'ready', name: 'www.kicker.de', key: 'k-kicker', feed: 'https://newsfeed.kicker.de/news/aktuell', language: 'de', recent: 300, items: 50, sample: 'Bayern gewinnt'},
+    'https://www.vi.nl': {status: 'bridge', name: 'www.vi.nl', key: 'k-vi', feed: null, language: 'nl', recent: 10, items: 10, sample: null},
+    'https://www.irishfa.com': {status: 'flood', name: 'www.irishfa.com', key: 'k-irishfa', feed: 'https://www.irishfa.com/rss', language: 'en', recent: 900, items: 5882, sample: null},
     'https://www.uefa.com': {status: 'none', reason: 'No feed found'},
 };
 
@@ -58,9 +59,10 @@ describe('ImportSources', () => {
         await waitFor(() => expect(onAdded).toHaveBeenCalled());
         expect(server.importSources).toHaveBeenCalledWith([
             {site: 'https://www.kicker.de', feed: 'https://newsfeed.kicker.de/news/aktuell', category: 'sport'},
-            {site: 'https://www.vi.nl', feed: 'http://rss-bridge/?site=vi.nl', category: 'sport'},
+            {site: 'https://www.vi.nl', feed: null, category: 'sport'},
         ], 'en');
         await waitFor(() => expect(screen.queryByText('www.kicker.de')).not.toBeInTheDocument());
+        expect(screen.queryByText('www.vi.nl')).not.toBeInTheDocument();
     });
 
     it('should add nothing without a category', async () => {
