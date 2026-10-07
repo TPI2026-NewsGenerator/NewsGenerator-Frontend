@@ -15,7 +15,11 @@ import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {DEFAULT_HOURS, spanOf} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
+import {BriefingSize, keepSize, keptSize} from "@/features/briefing/components/BriefingSize.jsx";
+import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
+import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
+import {toast} from "@/lib/toast.js";
 
 const POLL_MS = 3000;
 
@@ -39,6 +43,13 @@ export const BriefingPage = () => {
     // the hours of news of the next briefing: the ones of the last until the reader chooses
     const [chosen, setChosen] = useState(null);
     const hours = chosen ?? briefing?.hours ?? DEFAULT_HOURS;
+    // the cards of the next briefing, the last choice of the reader
+    const [size, setSize] = useState(keptSize);
+    // the server can send a briefing by e-mail
+    const [mail, setMail] = useState(false);
+    const [sending, setSending] = useState(false);
+    // the profile read: its briefing is shown, asked again when another one is chosen
+    const active = useActiveProfile();
 
     const load = useCallback(async () => {
         try {
@@ -46,6 +57,7 @@ export const BriefingPage = () => {
             if (expired(data)) return;
             if (data.error) throw new Error(data.error);
             setBriefing(data.briefing);
+            setMail(Boolean(data.mail));
         } catch (err) {
             setError(err.message);
         }
@@ -57,6 +69,9 @@ export const BriefingPage = () => {
             logout();
             return;
         }
+        setBriefing(undefined);
+        setProfile(undefined);
+        setChosen(null);
         ProfileApi.get()
             .then(data => {
                 if (expired(data)) return;
@@ -64,7 +79,7 @@ export const BriefingPage = () => {
             })
             .catch(err => setError(err.message));
         load();
-    }, [user, logout, expired, load]);
+    }, [user, logout, expired, load, active]);
 
     // asked again while it is written
     useEffect(() => {
@@ -75,10 +90,27 @@ export const BriefingPage = () => {
 
     const start = async () => {
         setError(null);
-        const data = await BriefingApi.start(hours);
+        const data = await BriefingApi.start(hours, size);
         if (expired(data)) return;
         if (data.error) setError(data.error);
         else setBriefing(data.briefing);
+    };
+
+    const chooseSize = (value) => {
+        setSize(value);
+        keepSize(value);
+    };
+
+    const email = async () => {
+        setSending(true);
+        try {
+            await BriefingApi.email(briefing.id);
+            toast.success('Sent to the address of your account.');
+        } catch (err) {
+            toast.error(`Not sent: ${err.message}`);
+        } finally {
+            setSending(false);
+        }
     };
 
     // shown at once, taken back if the server refuses it
@@ -119,9 +151,17 @@ export const BriefingPage = () => {
                             </div>
                         )}
                         <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
-                        <Button variant="primary" onClick={start} loading={running} disabled={running}>
-                            New briefing
-                        </Button>
+                        <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
+                        <div className="flex flex-wrap gap-2">
+                            <Button variant="primary" onClick={start} loading={running} disabled={running}>
+                                New briefing
+                            </Button>
+                            {mail && ready && (
+                                <Button onClick={email} loading={sending} disabled={sending} title="Sends this briefing to the address of your account">
+                                    Send it to me
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 )}
             />
@@ -164,6 +204,20 @@ export const BriefingPage = () => {
                             </li>
                         ))}
                     </ol>
+                )}
+
+                {ready && briefing.watched?.length > 0 && (
+                    <div className="grid-12">
+                        <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
+                            <p className="kicker">Always shown</p>
+                            <h2 id="watched-head" className="section-head mt-2">The names and terms you follow</h2>
+                            <p className="caption mt-2 mb-6">
+                                Every news of your sources of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one,
+                                not chosen by the AI. <Link className="link" to="/profile#terms">Change them</Link>.
+                            </p>
+                            <WatchedNews watched={briefing.watched}/>
+                        </section>
+                    </div>
                 )}
             </div>
         </PageShell>

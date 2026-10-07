@@ -5,6 +5,8 @@
 //  Description: Feeds added by the user, private to them
 //
 
+import {withProfile} from "@/features/profiles/activeProfile.js";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 // the session goes in its cookie (see features/auth/AuthContext.jsx): the browser sends it itself
@@ -12,14 +14,14 @@ const HEADERS = {'Content-Type': 'application/json'};
 
 export const FeedApi = {
     getUserFeeds: async () => {
-        const response = await fetch(`${API_URL}/feeds`, {method: 'GET', headers: HEADERS});
+        const response = await fetch(`${API_URL}/feeds`, {method: 'GET', headers: withProfile(HEADERS)});
         return await response.json();
     },
     // site: the address of a website ("fortune.com"), the server finds its feed
     addUserFeed: async ({site, category, language}) => {
         const response = await fetch(`${API_URL}/feeds`, {
             method: 'POST',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify({site, category, language}),
         });
         return await response.json();
@@ -28,7 +30,7 @@ export const FeedApi = {
     suggestSources: async ({keywords, timeframe, language}) => {
         const response = await fetch(`${API_URL}/feeds/suggestions`, {
             method: 'POST',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify({keywords, timeframe, language}),
         });
         return await response.json();
@@ -38,7 +40,7 @@ export const FeedApi = {
     searchSources: async (query, language = 'en', from = 'directory') => {
         const response = await fetch(`${API_URL}/feeds/search`, {
             method: 'POST',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify({query, language, from}),
         });
         return await response.json();
@@ -48,7 +50,7 @@ export const FeedApi = {
     checkSites: async (sites, language = 'en') => {
         const response = await fetch(`${API_URL}/feeds/check`, {
             method: 'POST',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify({sites, language}),
         });
         return await response.json();
@@ -59,13 +61,13 @@ export const FeedApi = {
     importSources: async (sources, language = 'en', subject = null) => {
         const response = await fetch(`${API_URL}/feeds/import`, {
             method: 'POST',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify({sources, language, subject}),
         });
         return await response.json();
     },
     deleteUserFeed: async (id) => {
-        const response = await fetch(`${API_URL}/feeds/${id}`, {method: 'DELETE', headers: HEADERS});
+        const response = await fetch(`${API_URL}/feeds/${id}`, {method: 'DELETE', headers: withProfile(HEADERS)});
         return await response.json();
     },
     // a source added by hand, {trusted} and/or {shared}. Trusted: its stories come first in the
@@ -73,21 +75,21 @@ export const FeedApi = {
     updateFeed: async (id, changes) => {
         const response = await fetch(`${API_URL}/feeds/${id}`, {
             method: 'PATCH',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify(changes),
         });
         return await response.json();
     },
     // {sources}: feeds found for other readers, or shared by them, that publish on the interests of this one
     getRecommended: async () => {
-        const response = await fetch(`${API_URL}/feeds/recommended`, {method: 'GET', headers: HEADERS});
+        const response = await fetch(`${API_URL}/feeds/recommended`, {method: 'GET', headers: withProfile(HEADERS)});
         return await response.json();
     },
     // {feeds, errors}: the recommended sources added, by their id
     addRecommended: async (ids) => {
         const response = await fetch(`${API_URL}/feeds/recommended`, {
             method: 'POST',
-            headers: HEADERS,
+            headers: withProfile(HEADERS),
             body: JSON.stringify({ids}),
         });
         return await response.json();

@@ -8,10 +8,13 @@
 //
 
 import {useCallback, useEffect, useState} from "react";
-import {useLocation} from "react-router-dom";
+import {useLocation, useNavigate, useSearchParams} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
-import {Help, Label, Select, Textarea} from "@/components/ui/field.jsx";
+import {Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
+import {Dialog} from "@/components/ui/overlay.jsx";
+import {WatchTerms} from "@/features/profiles/WatchTerms.jsx";
+import {profilesChanged, setActiveProfile, useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {Meta, Notice, Working} from "@/components/ui/text.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {FeedApi} from "@/features/search/api/feedApi.js";
@@ -64,9 +67,71 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
     );
 };
 
+// A new profile of the reader: its name and its text, written as the first one. onCreated(answer): the
+// profile shown, the new one
+const NewProfile = ({languages, defaultLanguage, onCreated, onCancel}) => {
+    const [form, setForm] = useState({name: '', text: '', language: defaultLanguage});
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+
+    const create = async () => {
+        setError(null);
+        setSaving(true);
+        try {
+            const answer = await ProfileApi.create(form);
+            if (answer.error) setError(answer.error);
+            else onCreated(answer);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Section kicker="Another profile" title="A new profile"
+                 intro="A profile of its own for another part of what you read, “Work” and “Leisure”: its interests, its sources and its briefings stay apart. Switch between them at the top of the page.">
+            <div className="grid-12 gap-y-6">
+                {error && <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-8">{error}</Notice>}
+                <div className="col-span-12 md:col-span-5">
+                    <Label htmlFor="new-profile-name">Its name</Label>
+                    <Input id="new-profile-name" className="mt-2" maxLength={40} value={form.name} placeholder="Work"
+                           onChange={event => setForm({...form, name: event.target.value})}/>
+                </div>
+                <div className="col-span-12 md:col-span-8">
+                    <Label htmlFor="new-profile-text">What do you want to read in it?</Label>
+                    <Textarea id="new-profile-text" rows={6} className="mt-3" value={form.text} placeholder={PLACEHOLDER}
+                              onChange={event => setForm({...form, text: event.target.value})}/>
+                </div>
+                <div className="col-span-12 md:col-span-5">
+                    <Label htmlFor="new-profile-language">Its language</Label>
+                    <Select id="new-profile-language" className="mt-2" value={form.language}
+                            options={languages.map(value => ({value, label: languageLabel(value)}))}
+                            onChange={event => setForm({...form, language: event.target.value})}/>
+                </div>
+                <div className="col-span-12 flex flex-wrap gap-3 md:col-span-8">
+                    <Button variant="primary" onClick={create} loading={saving}
+                            disabled={!form.name.trim() || form.text.trim().length < MIN_PROFILE_TEXT || !form.language}>
+                        Create this profile
+                    </Button>
+                    <Button variant="subtle" onClick={onCancel} disabled={saving}>Cancel</Button>
+                    {saving && <p className="caption w-full italic">The AI reads the profile, this takes a few seconds…</p>}
+                </div>
+            </div>
+        </Section>
+    );
+};
+
 export const ProfilePage = () => {
     const {user, logout, expired} = useAuth();
     const {hash} = useLocation();
+    const navigate = useNavigate();
+    const [params] = useSearchParams();
+    const creating = params.get('new') === '1';
+    // the profile read: its data is asked again when another one is chosen
+    const active = useActiveProfile();
+    const [name, setName] = useState('');
+    const [deleting, setDeleting] = useState(false);
     const [options, setOptions] = useState({languages: []});
     const [data, setData] = useState(null);         // {profile, interests, sources}
     const [form, setForm] = useState({text: '', language: likelyLanguage(LANGUAGE_OPTIONS.map(option => option.value))});
@@ -92,6 +157,7 @@ export const ProfilePage = () => {
         setData(current => current !== null && JSON.stringify(current) === JSON.stringify(answer) ? current : answer);
         if (fillForm && answer.profile) {
             setForm({text: answer.profile.text, language: answer.profile.language});
+            setName(answer.profile.name ?? '');
         }
         return true;
     }, [expired]);
@@ -102,8 +168,14 @@ export const ProfilePage = () => {
             return;
         }
         ProfileApi.getOptions().then(setOptions).catch(err => setError(err.message));
+    }, [user, logout]);
+
+    // the profile read, asked again when another one is chosen
+    useEffect(() => {
+        if (!user) return;
+        setData(null);
         ProfileApi.get().then(answer => apply(answer, {fillForm: true})).catch(err => setError(err.message));
-    }, [user, logout, apply]);
+    }, [user, active, apply]);
 
     // the categories of the shared sources, in the language of the site added or searched (by default
     // the one the reader reads in)
@@ -144,7 +216,7 @@ export const ProfilePage = () => {
         FeedApi.getUserFeeds()
             .then(answer => setOwn((answer.feeds ?? []).filter(feed => (feed.origin ?? 'user') === 'user')))
             .catch(err => console.error("Failed to fetch sources", err));
-    }, [user, ownVersion]);
+    }, [user, ownVersion, active]);
 
     // the changes of the sources, stable: the list is not drawn again when the profile is asked again
     const onOwnChanged = useCallback(() => ProfileApi.get().then(answer => apply(answer)).catch(() => {}), [apply]);
@@ -175,7 +247,10 @@ export const ProfilePage = () => {
         setError(null);
         setSaving(true);
         try {
-            if (apply(await ProfileApi.save(form))) {
+            const answer = await ProfileApi.save(form);
+            if (apply(answer)) {
+                // the first profile of a reader: the switcher shows it
+                if (!data?.profile) profilesChanged();
                 toast.success('Profile saved, its sources are being found.');
             }
         } finally {
@@ -183,12 +258,46 @@ export const ProfilePage = () => {
         }
     };
 
+    // another profile written: it is the one read now
+    const created = (answer) => {
+        if (!apply(answer, {fillForm: true})) return;
+        setActiveProfile(answer.profile.id);
+        profilesChanged();
+        navigate('/profile', {replace: true});
+        toast.success(`Profile “${answer.profile.name}” created, its sources are being found.`);
+    };
+
+    const rename = async () => {
+        if (await change(() => ProfileApi.rename(data.profile.id, name))) profilesChanged();
+    };
+
+    // the profile deleted with its interests, sources and briefings: the first one left is read
+    const removeProfile = async () => {
+        setDeleting(false);
+        setBusy(true);
+        try {
+            const answer = await ProfileApi.remove(data.profile.id);
+            if (expired(answer)) return;
+            if (answer.error) {
+                setError(answer.error);
+                return;
+            }
+            toast.success(`Profile “${data.profile.name}” deleted.`);
+            setActiveProfile(answer.profiles?.[0]?.id ?? null);
+            profilesChanged();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const saveTerms = (terms) => change(() => ProfileApi.setWatchTerms(terms));
+
     // a change of an interest, then the profile as the server answers it
     const change = useCallback(async (call) => {
         setError(null);
         setBusy(true);
         try {
-            apply(await call());
+            return apply(await call());
         } finally {
             setBusy(false);
         }
@@ -202,7 +311,6 @@ export const ProfilePage = () => {
             const answer = await FeedApi.updateFeed(source.id, {trusted: !source.trusted});
             return answer?.error ? answer : ProfileApi.get();
         }), [change, changeOwn]);
-    const share = useCallback((source) => changeOwn(source, {shared: !source.shared}), [changeOwn]);
     // a source the thumbs left out brought back for good
     const keep = useCallback((source) => change(() => ProfileApi.keepSource(source.leftOut.key)), [change]);
     // a source found for the profile removed, then not found again; or brought back
@@ -253,6 +361,42 @@ export const ProfilePage = () => {
                         <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-7 md:col-start-3">{error}</Notice>
                     </div>
                 </div>
+            )}
+
+            {creating ? (
+                <NewProfile languages={options.languages.length > 0 ? options.languages : LANGUAGE_OPTIONS.map(option => option.value)}
+                            defaultLanguage={data?.profile?.language ?? form.language}
+                            onCreated={created} onCancel={() => navigate('/profile', {replace: true})}/>
+            ) : (<>
+            {data?.profile && (
+                <Section kicker="This profile" title={data.profile.name}
+                         intro={data.profiles?.length > 1
+                             ? 'One of your profiles: its interests, its sources and its briefings are its own. Switch to another at the top of the page.'
+                             : 'You can write other profiles for other parts of what you read, each with its own briefings: choose “New profile” at the top of the page.'}>
+                    <div className="grid-12 gap-y-4">
+                        <div className="col-span-12 md:col-span-5">
+                            <Label htmlFor="profile-name">Its name</Label>
+                            <div className="mt-2 flex gap-2">
+                                <Input id="profile-name" maxLength={40} value={name} onChange={event => setName(event.target.value)}/>
+                                <Button onClick={rename} disabled={busy || !name.trim() || name.trim() === data.profile.name}>Rename</Button>
+                            </div>
+                        </div>
+                        <div className="col-span-12 flex flex-wrap items-end gap-3 md:col-span-6 md:col-start-7 md:justify-end">
+                            <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 5)}>
+                                New profile
+                            </Button>
+                            {data.profiles?.length > 1 && (
+                                <Button variant="subtle" onClick={() => setDeleting(true)} disabled={busy}>Delete this profile</Button>
+                            )}
+                        </div>
+                    </div>
+                    <Dialog open={deleting} onOpenChange={setDeleting} kicker="Delete" title={`Delete “${data.profile.name}”?`}
+                            description="Its interests, the sources found for it, the ones you added to it and its briefings are deleted with it."
+                            footer={<>
+                                <Button variant="subtle" onClick={() => setDeleting(false)}>Keep it</Button>
+                                <Button variant="primary" onClick={removeProfile}>Delete it</Button>
+                            </>}/>
+                </Section>
             )}
 
             <Section kicker="Your words" title="In your own words"
@@ -315,6 +459,13 @@ export const ProfilePage = () => {
                 </Section>
             )}
 
+            {data?.profile && (
+                <Section id="terms" kicker="Always shown" title="Names and terms you follow"
+                         intro="A person, a club, an organisation, a word: every news of your sources that names one is listed in your briefing, in a section of its own, whatever the AI chose for the cards.">
+                    <WatchTerms terms={data.profile.watchTerms ?? []} max={data.limits?.watchTerms ?? 20} busy={busy} onSave={saveTerms}/>
+                </Section>
+            )}
+
             {data && (
                 <Section
                     id="sources"
@@ -322,7 +473,8 @@ export const ProfilePage = () => {
                     title="Your sources"
                     intro={<>
                         <p>
-                            Every source read for your briefing and your searches, with the shared ones, only for you.
+                            The sources of this profile. Every reader's sources are read for every briefing and every
+                            search, yours for the others too, and theirs for you: the ones listed here are the ones you look after.
                             The ones <em>found for you</em> publish on your interests: each search adds new ones, up
                             to {limits.profileFeeds}, and one with no news on your interests in {limits.relevanceDays} days
                             is removed; remove one yourself and it is never found again.
@@ -366,13 +518,13 @@ export const ProfilePage = () => {
                     )}
                     <SourceList found={data.sources} own={own} refused={data.refusedSources} removed={data.removedSources}
                                 limits={limits} busy={busy}
-                                onTrust={trust} onShare={share} onRemove={remove} onKeep={keep} onRestore={restore}/>
+                                onTrust={trust} onRemove={remove} onKeep={keep} onRestore={restore}/>
                 </Section>
             )}
 
             {data && (
                 <Section id="add-sources" kicker="Add sources" title="Add sources"
-                         intro="A website, a search of the directory and the web, a file of yours, or a source other readers read on your interests: the ones you add join your sources, above. Share one you added and it can be suggested to the other readers who follow its subjects.">
+                         intro="A website, a search of the directory and the web, a file of yours, or a source other readers read on your interests: the ones you add join your sources, above, and are read for every reader.">
                     <div className="space-y-12">
                         <AddSources api={FeedApi} onAdded={onAdded}
                                     categories={ownCategories} language={language}
@@ -384,6 +536,7 @@ export const ProfilePage = () => {
                     </div>
                 </Section>
             )}
+            </>)}
         </PageShell>
     );
 };

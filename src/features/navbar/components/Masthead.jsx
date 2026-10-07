@@ -9,6 +9,7 @@
 import {useEffect, useState} from "react";
 import {Link, NavLink, useNavigate} from "react-router-dom";
 import {cn} from "@/lib/utils.js";
+import {ProfileSwitcher} from "@/features/profiles/ProfileSwitcher.jsx";
 
 const SECTIONS = [
     {to: '/briefing', label: 'Briefing'},
@@ -39,6 +40,7 @@ export const Masthead = ({user, onSignOut}) => {
         ? (
             <>
                 <span className="folio">Read by <span className="text-ink">{user.username}</span></span>
+                <ProfileSwitcher onChoose={() => setMenu(false)}/>
                 <NavLink to="/settings" onClick={() => setMenu(false)} className={sectionClass}>Settings</NavLink>
                 <button type="button" onClick={() => { setMenu(false); onSignOut?.(); }}
                         className="cursor-pointer text-[0.9375rem] font-semibold tracking-[0.08em] text-ink-mute [font-variant-caps:all-small-caps] hover:text-accent-ink">

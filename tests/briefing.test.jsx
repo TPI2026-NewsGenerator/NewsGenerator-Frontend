@@ -125,27 +125,34 @@ describe('BriefingCard and a trusted source', () => {
 });
 
 describe('BriefingCard passages', () => {
-    it('should show the passages of the article with a gap between them, and a translation marked as such', () => {
-        render(<BriefingCard item={item({summary: 'He was fined $10,000.\n\nThe appeal was heard on Thursday.',
+    it('should show the translated passages with a gap between them, and the original only when asked', () => {
+        render(<BriefingCard item={item({language: 'en', summary: 'He was fined $10,000.\n\nThe appeal was heard on Thursday.',
             translation: 'Il a reçu une amende de 10 000 $.\n\nL\'appel a été entendu jeudi.'})}/>);
+        expect(screen.getByText('Il a reçu une amende de 10 000 $.')).toBeInTheDocument();
+        expect(screen.getAllByText('[…]')).toHaveLength(1);
+        expect(screen.getByText(/the original is the reference/)).toBeInTheDocument();
+        expect(screen.queryByText('He was fined $10,000.')).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
         expect(screen.getByText('He was fined $10,000.')).toBeInTheDocument();
         expect(screen.getAllByText('[…]')).toHaveLength(2);
-        expect(screen.getByText('Machine translation')).toBeInTheDocument();
-        expect(screen.getByText('Il a reçu une amende de 10 000 $.')).toBeInTheDocument();
-        expect(screen.getByText(/the original above is the reference/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Hide original'}));
+        expect(screen.queryByText('He was fined $10,000.')).toBeNull();
     });
 
     it('should show no translation for an article in the language of the reader', () => {
         render(<BriefingCard item={item()}/>);
-        expect(screen.queryByText('Machine translation')).toBeNull();
-        expect(screen.queryByText(/Translated from/)).toBeNull();
+        expect(screen.queryByText(/translated/i)).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Show original'})).toBeNull();
     });
 
-    it('should show a translated title with the title as written under it, without a click', () => {
+    it('should show a translated title, and the title as written once the original is shown', () => {
         render(<BriefingCard item={item({title: 'Thierno Barry goal decision upheld', language: 'en',
             titleTranslation: 'La décision sur le but de Thierno Barry maintenue'})}/>);
         expect(screen.getByRole('heading', {name: 'La décision sur le but de Thierno Barry maintenue'})).toBeInTheDocument();
         expect(screen.getByText('Translated from English')).toBeInTheDocument();
+        expect(screen.queryByText('“Thierno Barry goal decision upheld”')).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
         expect(screen.getByText('“Thierno Barry goal decision upheld”')).toBeInTheDocument();
     });
 });

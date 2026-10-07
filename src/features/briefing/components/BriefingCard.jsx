@@ -6,12 +6,13 @@
 //               many of them wrote it themselves, and who denies it
 //
 
-import {Fragment} from "react";
+import {Fragment, useState} from "react";
 import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-icons/fa";
 import {IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {coverageLabel} from "@/features/briefing/corroboration.js";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
+import {LanguageMark} from "@/components/news/LanguageMark.jsx";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
@@ -87,6 +88,9 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
     const lead = item.lead ?? item.articles[0];
     const paragraphs = paragraphsOf(item.summary);
     const translation = paragraphsOf(item.translation);
+    // the translation is shown, the original only when the reader opens it
+    const translated = Boolean(item.titleTranslation) || translation.length > 0;
+    const [original, setOriginal] = useState(false);
 
     return (
         <article className="grid-12 border-t border-rule pt-7 pb-14">
@@ -99,39 +103,53 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                 <div className="md:mt-4">
                     {item.topic && <p className="kicker !text-ink">{item.topic}</p>}
                     {item.publishedAt && <p className="folio mt-1"><time dateTime={item.publishedAt}>{when(item.publishedAt)}</time></p>}
+                    {item.language && <p className="mt-1"><LanguageMark code={item.language} className="ml-0"/></p>}
                 </div>
             </div>
 
             <div className="col-span-12 mt-4 md:col-span-7 md:mt-0">
                 <h2 className="story-head text-balance">{item.titleTranslation ?? item.title}</h2>
-                {/* a translated title shows the one as written under it, as the passages do */}
-                {item.titleTranslation && (
-                    <p className="caption mt-2">
-                        <span className="kicker">Translated from {languageLabel(item.language)}</span>{' '}
-                        <span lang={item.language ?? undefined} className="italic">“{item.title}”</span>
+                {/* written in another language: translated, the original shown on demand */}
+                {translated && (
+                    <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
+                        <span className="kicker">Translated from {languageLabel(item.language)}</span>
+                        <button type="button" onClick={() => setOriginal(!original)} aria-expanded={original} aria-controls={`original-${item.storyId}`}
+                                className="cursor-pointer font-semibold tracking-[0.06em] text-ink-mute [font-variant-caps:all-small-caps] underline underline-offset-4 hover:text-ink">
+                            {original ? 'Hide original' : 'Show original'}
+                        </button>
                     </p>
+                )}
+                {translated && original && item.titleTranslation && (
+                    <p lang={item.language ?? undefined} className="caption mt-1 italic">“{item.title}”</p>
                 )}
                 {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
 
-                {paragraphs.length > 0 ? (
+                {paragraphs.length === 0 ? (
+                    <div className="mt-6">
+                        <Notice>{item.summaryError ?? 'No article of this story could be read (paywall or protected site).'}</Notice>
+                    </div>
+                ) : translation.length > 0 ? (
+                    <div className="mt-6">
+                        <p className="kicker">In the article's words, translated</p>
+                        <div className="body-text mt-3"><Passages paragraphs={translation} lede={lede}/></div>
+                        <p className="caption mt-3">
+                            Sentences chosen by the AI in the article {lead && <>of {lead.source} </>}and translated by it: it may contain errors, the original is the reference.
+                        </p>
+                        {original && (
+                            <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
+                                <p className="kicker">Original, {languageLabel(item.language)}</p>
+                                <div lang={item.language ?? undefined} className="body-text mt-3 text-ink/85"><Passages paragraphs={paragraphs}/></div>
+                                <p className="caption mt-3">As the article published them.</p>
+                            </div>
+                        )}
+                    </div>
+                ) : (
                     <div className="mt-6">
                         <p className="kicker">In the article's words</p>
                         <div className="body-text mt-3"><Passages paragraphs={paragraphs} lede={lede}/></div>
                         <p className="caption mt-3">
                             Sentences chosen by the AI, shown as the article {lead && <>of {lead.source} </>}published them.
                         </p>
-                    </div>
-                ) : (
-                    <div className="mt-6">
-                        <Notice>{item.summaryError ?? 'No article of this story could be read (paywall or protected site).'}</Notice>
-                    </div>
-                )}
-
-                {translation.length > 0 && (
-                    <div className="mt-6 border-l border-rule pl-5">
-                        <p className="kicker">Machine translation</p>
-                        <div className="body-text mt-3 text-ink/85 italic"><Passages paragraphs={translation}/></div>
-                        <p className="caption mt-3">Translated by the AI, it may contain errors: the original above is the reference.</p>
                     </div>
                 )}
 

@@ -63,17 +63,15 @@ describe('SourceList', () => {
         expect(screen.queryByText('arbitre.fr')).not.toBeInTheDocument();
     });
 
-    it('should share only a source added by hand, and trust and remove any', () => {
+    it('should trust and remove any source, and share none: every source is read for every reader', () => {
         const told = handlers();
         render(<SourceList found={[found(1, 'goal.com')]} own={[own(7, 'arbitre.fr')]} refused={[]} limits={limits} {...told}/>);
 
-        expect(screen.queryByRole('button', {name: 'Share goal.com'})).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: /^Share/})).not.toBeInTheDocument();
 
-        fireEvent.click(screen.getByRole('button', {name: 'Share arbitre.fr'}));
         fireEvent.click(screen.getByRole('button', {name: 'Remove arbitre.fr'}));
         fireEvent.click(screen.getByRole('button', {name: 'Remove goal.com'}));
         fireEvent.click(screen.getByRole('button', {name: 'Trust goal.com'}));
-        expect(told.onShare).toHaveBeenCalledWith(expect.objectContaining({id: 7}));
         expect(told.onRemove).toHaveBeenCalledWith(expect.objectContaining({id: 7, origin: 'user'}));
         expect(told.onRemove).toHaveBeenCalledWith(expect.objectContaining({id: 1, origin: 'profile'}));
         expect(told.onTrust).toHaveBeenCalledWith(expect.objectContaining({id: 1, origin: 'profile'}));

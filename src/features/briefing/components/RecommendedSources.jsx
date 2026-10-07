@@ -69,7 +69,7 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
                 <div className="max-w-[60ch]">
                     <p className="kicker !text-ink">Read by other readers on your interests</p>
                     <p className="caption mt-2">
-                        Found for the profiles of other readers, or shared by them, they published on your interests this week.
+                        Sources of your other profiles or of other readers, found or added by hand: they published on your interests this week.
                         A source another reader added by hand is never shown here unless they chose to share it.
                     </p>
                 </div>

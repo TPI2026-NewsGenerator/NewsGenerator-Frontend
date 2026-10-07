@@ -9,6 +9,7 @@
 import {useCallback, useEffect, useState} from "react";
 import {AuthContext} from "./sessionContext.js";
 import {forgetSearch} from "@/features/search/keptSearch.js";
+import {setActiveProfile} from "@/features/profiles/activeProfile.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -39,6 +40,8 @@ export const AuthProvider = ({children}) => {
     const forget = useCallback(async () => {
         setUser(null);
         forgetSearch();
+        // the next reader of this browser has profiles of their own
+        setActiveProfile(null);
         await fetch(`${API_URL}/session`, {method: 'DELETE'}).catch(() => null);
     }, []);
 

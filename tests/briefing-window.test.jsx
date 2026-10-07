@@ -49,7 +49,8 @@ describe('BriefingPage and the news it is written from', () => {
         fireEvent.click(choice('24 hours'));
         fireEvent.click(screen.getByRole('button', {name: 'New briefing'}));
 
-        await waitFor(() => expect(BriefingApi.start).toHaveBeenCalledWith(24));
+        // and of the cards chosen last, 10 by default
+        await waitFor(() => expect(BriefingApi.start).toHaveBeenCalledWith(24, 10));
         expect(await screen.findByText(/stories of the last 24 hours closest to your interests/)).toBeInTheDocument();
     });
 

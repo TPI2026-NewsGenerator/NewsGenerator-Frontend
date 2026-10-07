@@ -9,7 +9,7 @@
 
 import {memo, useMemo, useState} from "react";
 import {ToggleGroup} from "radix-ui";
-import {FaRegStar, FaShareAlt, FaStar, FaTrash} from "react-icons/fa";
+import {FaRegStar, FaStar, FaTrash} from "react-icons/fa";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
@@ -39,10 +39,11 @@ const isShown = (show) => (row) => show === 'all'
 
 const REMOVE_FOUND_TITLE = 'Remove it: it is no longer read for your briefing and never found for you again. You can bring it back from “Left out”';
 
-// limits: {relevanceDays}. busy: a change in progress. onTrust, onShare, onRemove, onKeep, onRestore(row):
-// the changes of a source, told to the page. Memoized: the page asks the profile again every few seconds
-// while sources are found, three hundred sources are not drawn again each time
-export const SourceList = memo(({found, own, refused, removed, limits, busy, onTrust, onShare, onRemove, onKeep, onRestore}) => {
+// limits: {relevanceDays}. busy: a change in progress. onTrust, onRemove, onKeep, onRestore(row): the
+// changes of a source, told to the page. Memoized: the page asks the profile again every few seconds
+// while sources are found, three hundred sources are not drawn again each time. Every source is read
+// for every reader (8.10.2026): there is nothing to share
+export const SourceList = memo(({found, own, refused, removed, limits, busy, onTrust, onRemove, onKeep, onRestore}) => {
     const [chosen, setShow] = useState('all');
     const [query, setQuery] = useState('');
     const rows = useMemo(() => sourceRows(found, own, refused, removed), [found, own, refused, removed]);
@@ -84,17 +85,6 @@ export const SourceList = memo(({found, own, refused, removed, limits, busy, onT
                                             title={row.trusted ? TRUST_TITLE.on : TRUST_TITLE.off}
                                             onClick={() => onTrust(row)}>
                                     {row.trusted ? <FaStar/> : <FaRegStar/>}
-                                </IconButton>
-                            )}
-                            {/* only a source added by hand is shared: the ones found are suggested anyway */}
-                            {row.origin === 'user' && (
-                                <IconButton label={row.shared ? `Stop sharing ${row.site}` : `Share ${row.site}`}
-                                            pressed={Boolean(row.shared)} disabled={busy}
-                                            title={row.shared
-                                                ? 'Shared: it can be recommended to the other readers who follow its subjects'
-                                                : 'Share this source: it can be recommended to the other readers who follow its subjects. Nobody sees it otherwise'}
-                                            onClick={() => onShare(row)}>
-                                    <FaShareAlt/>
                                 </IconButton>
                             )}
                             <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{row.site}</span>

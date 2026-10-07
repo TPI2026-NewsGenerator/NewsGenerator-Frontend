@@ -5,6 +5,8 @@
 //  Description: Fetch news api for news feed component
 //
 
+import {withProfile} from "@/features/profiles/activeProfile.js";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const SearchApi = {
@@ -17,9 +19,7 @@ export const SearchApi = {
     getNews: async (query) => {
         const response = await fetch(`${API_URL}/news`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: withProfile({'Content-Type': 'application/json'}),
             body: JSON.stringify(query),
         });
 
@@ -29,9 +29,7 @@ export const SearchApi = {
     getNewsContent: async (urls) => {
         const response = await fetch(`${API_URL}/news/content`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: withProfile({'Content-Type': 'application/json'}),
             body: JSON.stringify({urls}),
         });
 
@@ -43,9 +41,7 @@ export const SearchApi = {
     translateNews: async ({news, titles}, language) => {
         const response = await fetch(`${API_URL}/news/translations`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: withProfile({'Content-Type': 'application/json'}),
             body: JSON.stringify({news, titles, language}),
         });
 
@@ -56,9 +52,7 @@ export const SearchApi = {
     getNewsSummary: async (stories, language) => {
         const response = await fetch(`${API_URL}/news/summary`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: withProfile({'Content-Type': 'application/json'}),
             body: JSON.stringify({stories, language}),
         });
 
