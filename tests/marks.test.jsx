@@ -8,7 +8,7 @@
 
 import '@testing-library/jest-dom';
 import {describe, expect, it} from 'vitest';
-import {render} from '@testing-library/react';
+import {fireEvent, render} from '@testing-library/react';
 import {paragraphsWithMarks, segmentsOf} from '@/features/briefing/marks.js';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {WatchedNews} from '@/features/briefing/components/WatchedNews.jsx';
@@ -64,5 +64,29 @@ describe('BriefingCard and WatchedNews marks', () => {
         ]}]}/>);
         expect(getByText(/a annulé le but/)).toBeInTheDocument();
         expect(marked(container)).toEqual(['VAR']);
+    });
+});
+
+describe('WatchedNews tabs', () => {
+    const watched = [
+        {term: 'VAR', count: 2, news: [{title: 'A VAR news', url: 'https://x/1', source: 'x.fr'}, {title: 'Another VAR news', url: 'https://x/2', source: 'x.fr'}]},
+        {term: 'Dario Amodei', count: 1, news: [{title: 'Dario Amodei speaks', url: 'https://y/1', source: 'y.com'}]},
+    ];
+
+    it('should give each term a tab, the news of the one chosen only', async () => {
+        const {getByRole, queryByText, getByText} = render(<WatchedNews watched={watched}/>);
+        expect(getByRole('tab', {name: 'VAR 2'})).toHaveAttribute('aria-selected', 'true');
+        expect(getByText('A VAR news')).toBeInTheDocument();
+        expect(queryByText('Dario Amodei speaks')).toBeNull();
+
+        fireEvent.mouseDown(getByRole('tab', {name: 'Dario Amodei 1'}));
+        expect(getByText('Dario Amodei speaks')).toBeInTheDocument();
+        expect(queryByText('A VAR news')).toBeNull();
+    });
+
+    it('should show the news of a single term without a tab', () => {
+        const {queryByRole, getByText} = render(<WatchedNews watched={[watched[1]]}/>);
+        expect(queryByRole('tab')).toBeNull();
+        expect(getByText('Dario Amodei speaks')).toBeInTheDocument();
     });
 });
