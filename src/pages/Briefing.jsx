@@ -119,11 +119,11 @@ export const BriefingPage = () => {
     const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
 
     // the cards ticked, in the order the reader gave them in the bar, with the pictures and titles they changed,
-    // sent to the address 'to': true when sent
-    const email = async (to, storyIds, pictures, titles) => {
+    // without the denials and angles they took out, sent to the address 'to': true when sent
+    const email = async (to, storyIds, pictures, titles, removed) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles);
+            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed);
             toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}.`);
             tick([]);
             return true;
@@ -313,7 +313,9 @@ export const BriefingPage = () => {
                              onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
                              stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
                                  ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
-                                     thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null}] : [])}/>
+                                     thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
+                                     contested: item.contested ?? [],
+                                     angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source}))}] : [])}/>
                 )}
             </div>
         </PageShell>

@@ -11,6 +11,7 @@ import {useState} from "react";
 import {ArrowDown, ArrowUp} from "lucide-react";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {FieldError, Input, Label} from "@/components/ui/field.jsx";
+import {MailAside} from "@/features/briefing/components/MailAside.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
 import {fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture} from "@/features/briefing/mailPictures.js";
 
@@ -19,16 +20,23 @@ const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
 
 const two = (number) => String(number).padStart(2, '0');
 
+// "2 angles taken out", "1 denial taken out", or nothing (see MailAside)
+const takenOut = (removed = {}) => [
+    [removed.contested?.length ?? 0, 'denial', 'denials'],
+    [removed.angles?.length ?? 0, 'angle', 'angles'],
+].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
+
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
-// thumbnailSource}] (number: their place in the briefing); accountEmail: the address of the account;
-// onSend(to, storyIds, pictures, titles): sends them in this order with the pictures and the titles the
-// reader changed, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks
-// them all
+// thumbnailSource, contested, angles}] (number: their place in the briefing); accountEmail: the address
+// of the account; onSend(to, storyIds, pictures, titles, removed): sends them in this order with the
+// pictures and the titles the reader changed, without the denials and angles they took out, true when
+// sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks them all
 export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onClear}) => {
     const [to, setTo] = useState(null);         // null: the address is not asked yet
     const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
     const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
     const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
+    const [removed, setRemoved] = useState({}); // storyId -> {contested, angles}: the places taken out
     const [galleries, setGalleries] = useState({});     // storyId -> its pictures, null while asked
     const [editing, setEditing] = useState(null);       // the storyId whose title and picture are being changed
     const [error, setError] = useState(null);
@@ -42,6 +50,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
         setOrder(stories.map(story => story.storyId));
         setChoices({});
         setTitles({});
+        setRemoved({});
         setEditing(null);
         setTo(accountEmail ?? '');
     };
@@ -95,7 +104,9 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
         setPicturesError(null);
         const pictures = Object.fromEntries(sent.map(story => [story.storyId, sentPicture(choices[story.storyId])]));
         const retitled = Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title));
-        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled)) setTo(null);
+        const left = Object.fromEntries(ordered.filter(story => takenOut(removed[story.storyId]))
+            .map(story => [story.storyId, removed[story.storyId]]));
+        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left)) setTo(null);
     };
 
     return (
@@ -111,7 +122,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
             ) : (
                 <form className="page py-3" onSubmit={send} noValidate>
                     <div className="mb-3">
-                        <p className="kicker">{ordered.length > 1 ? 'Their order, title and picture in the e-mail' : 'Its title and picture in the e-mail'}</p>
+                        <p className="kicker">{ordered.length > 1 ? 'Their order, title, picture and asides in the e-mail' : 'Its title, picture and asides in the e-mail'}</p>
                         <ol aria-label={ordered.length > 1 ? 'The stories of the e-mail, in their order' : 'The story of the e-mail'}
                             className="mt-1 max-h-[45vh] list-none overflow-y-auto border-y border-rule p-0">
                             {ordered.map((story, at) => {
@@ -128,6 +139,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                                                     {ownTitle(story) && ' · title changed'}
                                                     {choice?.kind === 'none' && ' · no picture'}
                                                     {choice && choice.kind !== 'none' && ' · picture changed'}
+                                                    {takenOut(removed[story.storyId]) && ` · ${takenOut(removed[story.storyId])}`}
                                                 </span>
                                             </span>
                                             <Button size="sm" variant="subtle" onClick={() => edit(story)} disabled={sending}
@@ -160,6 +172,8 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                                                         </Button>
                                                     )}
                                                 </div>
+                                                <MailAside story={story} removed={removed[story.storyId]}
+                                                           onChange={next => setRemoved(current => ({...current, [story.storyId]: next}))}/>
                                                 <MailPicture story={story} choice={choice} pictures={galleries[story.storyId] ?? null}
                                                              onChoose={next => choose(story.storyId, next)} onClose={() => setEditing(null)}/>
                                             </>
