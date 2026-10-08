@@ -27,6 +27,15 @@ export const BriefingApi = {
     // a new briefing of the news of the last hours (24, 48 or 168), of 'size' cards (10, 20 or 30),
     // written in background: getLatest until its status is 'ready' or 'failed'
     start: (hours, size) => send('/briefing', {method: 'POST', body: {hours, size}}),
+    // the cards of the briefing ticked (their storyId) sent to the address of the account (204, no body)
+    email: async (briefingId, storyIds) => {
+        const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
+            method: 'POST',
+            headers: withProfile(HEADERS),
+            body: JSON.stringify({storyIds}),
+        });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
+    },
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {
