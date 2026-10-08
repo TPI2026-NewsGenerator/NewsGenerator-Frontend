@@ -53,9 +53,37 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.getByLabelText('Send the 2 stories to')).toHaveValue('reader@example.org');
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [3, 1], 'reader@example.org'));
+        // in the order of the briefing, whatever the order they were ticked in
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 3], 'reader@example.org'));
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull());
         screen.getAllByRole('checkbox', BOX).forEach(box => expect(box).not.toBeChecked());
+    });
+
+    it('should send the stories in the order the reader gives them, their place in the briefing told', async () => {
+        await renderPage();
+        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+
+        const order = screen.getByRole('list', {name: 'The stories of the e-mail, in their order'});
+        expect(screen.getByRole('button', {name: 'Move “First story” up'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Move “Third story” down'})).toBeDisabled();
+        // the first of the briefing second, the third first
+        fireEvent.click(screen.getByRole('button', {name: 'Move “First story” down'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Move “Third story” up'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Move “Third story” up'}));
+        expect([...order.querySelectorAll('li')].map(li => li.textContent)).toEqual([
+            '01Third story03 in the briefing', '02Second story02 in the briefing', '03First story01 in the briefing',
+        ]);
+
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [3, 2, 1], 'reader@example.org'));
+    });
+
+    it('should not ask an order for a single story', async () => {
+        await renderPage();
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[1]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        expect(screen.queryByRole('list', {name: 'The stories of the e-mail, in their order'})).toBeNull();
     });
 
     it('should keep the cards ticked when the server could not send them', async () => {
