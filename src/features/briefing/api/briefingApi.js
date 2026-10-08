@@ -28,15 +28,18 @@ export const BriefingApi = {
     // written in background: getLatest until its status is 'ready' or 'failed'
     start: (hours, size) => send('/briefing', {method: 'POST', body: {hours, size}}),
     // the cards of the briefing ticked (their storyId) sent to the address 'to', the one of the account
-    // when not given (204, no body)
-    email: async (briefingId, storyIds, to) => {
+    // when not given (204, no body). pictures: {storyId: null | {url} | {data}}, the picture of the
+    // cards the reader changed: taken out, an image of the web, a file of theirs in base64
+    email: async (briefingId, storyIds, to, pictures) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
-            body: JSON.stringify({storyIds, to}),
+            body: JSON.stringify({storyIds, to, ...(pictures && Object.keys(pictures).length > 0 ? {pictures} : {})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },
+    // {pictures: [{url, source}]}: the pictures of a card the reader can put in the e-mail instead
+    pictures: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/pictures`),
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {

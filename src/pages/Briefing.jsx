@@ -117,11 +117,12 @@ export const BriefingPage = () => {
     const tick = (storyIds) => setTicks({briefingId: briefing.id, storyIds});
     const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
 
-    // the cards ticked, in the order the reader gave them in the bar, sent to the address 'to': true when sent
-    const email = async (to, storyIds) => {
+    // the cards ticked, in the order the reader gave them in the bar, with the pictures they changed,
+    // sent to the address 'to': true when sent
+    const email = async (to, storyIds, pictures) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, storyIds, to);
+            await BriefingApi.email(briefing.id, storyIds, to, pictures);
             toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}.`);
             tick([]);
             return true;
@@ -308,8 +309,10 @@ export const BriefingPage = () => {
                 {/* the cards ticked are sent from the tab of the briefing */}
                 {mail && ready && ticked.length > 0 && tab === 'briefing' && (
                     <MailBar accountEmail={user?.email} sending={sending} onSend={email} onClear={() => tick([])}
+                             onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
                              stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
-                                 ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1}] : [])}/>
+                                 ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
+                                     thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null}] : [])}/>
                 )}
             </div>
         </PageShell>
