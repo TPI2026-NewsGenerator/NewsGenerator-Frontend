@@ -65,6 +65,48 @@ describe('ImportSources', () => {
         expect(screen.queryByText('www.vi.nl')).not.toBeInTheDocument();
     });
 
+    it('should show the sites leading to one feed as one line, even checked apart, and add it once', async () => {
+        const same = {...checked['https://www.kicker.de'], name: 'kicker.de'};
+        const server = api();
+        // 30 sites: two parts of 25 checked one after the other, the two kicker in each
+        const others = Array.from({length: 28}, (_, i) => `https://site${i}.example`);
+        server.checkSites.mockImplementation(async (sites) => ({sites: sites.map(site => site.includes('kicker')
+            ? {site, ...same}
+            : {site, status: 'none', reason: 'No feed found'})}));
+        const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+        pick(container, ['https://www.kicker.de', ...others, 'https://kicker.de/news']);
+
+        await waitFor(() => expect(server.checkSites).toHaveBeenCalledTimes(2));
+        await screen.findByText(/Same feed as kicker.de\/news in your list/);
+        expect(screen.getAllByRole('checkbox', {name: /kicker.de/})).toHaveLength(1);
+        expect(screen.getByText(/1 leading to a feed listed already/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Add 1 source'}));
+        await waitFor(() => expect(server.importSources).toHaveBeenCalledWith([
+            {site: 'https://www.kicker.de', feed: 'https://newsfeed.kicker.de/news/aktuell', category: 'sport'},
+        ], 'en'));
+    });
+
+    it('should leave a feed unticked by the reader unticked when the next part of the list names it again', async () => {
+        const server = api();
+        let release;
+        const second = new Promise(resolve => { release = resolve; });
+        const others = Array.from({length: 24}, (_, i) => `https://site${i}.example`);
+        server.checkSites.mockImplementation(async (sites) => {
+            if (!sites.includes('https://www.kicker.de')) await second;
+            return {sites: sites.map(site => site.includes('kicker')
+                ? {site, ...checked['https://www.kicker.de']}
+                : {site, status: 'none', reason: 'No feed found'})};
+        });
+        const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+        pick(container, ['https://www.kicker.de', ...others, 'https://kicker.de/news']);
+
+        fireEvent.click(await screen.findByRole('checkbox', {name: /www.kicker.de/}));
+        release();
+        await screen.findByText(/Same feed as kicker.de\/news/);
+        expect(screen.getByRole('checkbox', {name: /www.kicker.de/})).not.toBeChecked();
+    });
+
     it('should add nothing without a category', async () => {
         const server = api();
         const {container} = render(<ImportSources api={server} language="en" category="" needCategory={() => false}/>);

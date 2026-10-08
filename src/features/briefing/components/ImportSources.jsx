@@ -27,6 +27,20 @@ const STATUS = {
     asleep: {label: 'quiet', ticked: false, title: 'Fewer than 3 news in the last 7 days'},
 };
 
+// The sites of a list leading to one feed (the same key: "kicker.de" and "kicker.de/news") are one
+// line, the first one, the others named under it (also): added once, never refused as a source added
+// already. A site without a feed has no key, each stays
+const joined = (previous, sites) => {
+    const next = [...previous];
+    for (const site of sites) {
+        const at = site.key ? next.findIndex(other => other.key === site.key) : -1;
+        if (at < 0) next.push(site);
+        else next[at] = {...next[at], also: [...(next[at].also ?? []), site.site]};
+    }
+    return next;
+};
+const shortAddress = (site) => site.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+
 // category: the one the sources go to, chosen above. needCategory: says when it is missing
 export const ImportSources = ({api, language, category, needCategory, onAdded}) => {
     const [fileName, setFileName] = useState('');
@@ -67,6 +81,7 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         setFailed([]);
         setIsChecking(true);
 
+        let collected = [];
         for (let start = 0; start < read.addresses.length; start += CHECKED_AT_ONCE) {
             const data = await api.checkSites(read.addresses.slice(start, start + CHECKED_AT_ONCE), language).catch(() => null);
             if (current !== run.current) return;
@@ -74,8 +89,11 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
                 toast.error(data?.error ?? 'The sites could not be checked.');
                 break;
             }
-            setResults(previous => [...previous, ...data.sites]);
-            setSelected(previous => [...previous, ...data.sites.filter(site => STATUS[site.status]?.ticked).map(site => site.key)]);
+            // a feed met before keeps its line, and its tick as the reader left it
+            const fresh = data.sites.filter(site => STATUS[site.status]?.ticked && !collected.some(other => other.key === site.key));
+            collected = joined(collected, data.sites);
+            setResults(collected);
+            setSelected(previous => [...new Set([...previous, ...fresh.map(site => site.key)])]);
         }
         setIsChecking(false);
     };
@@ -127,6 +145,7 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
     const ready = choosable.filter(result => result.status === 'ready');
     const added = results.filter(result => result.status === 'added');
     const none = results.filter(result => result.status === 'none');
+    const sharing = results.reduce((sum, result) => sum + (result.also?.length ?? 0), 0);
     const toggle = (key, on) => setSelected(on ? [...selected, key] : selected.filter(other => other !== key));
 
     return (
@@ -153,7 +172,8 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
                         {fileName}: {ready.length} feed{ready.length > 1 ? 's' : ''} ready, ticked
                         {choosable.length > ready.length && `, ${choosable.length - ready.length} more you can take`}
                         {added.length > 0 && `, ${added.length} already among your sources`}
-                        {none.length > 0 && `, ${none.length} without a feed or page to read`}.
+                        {none.length > 0 && `, ${none.length} without a feed or page to read`}
+                        {sharing > 0 && `, ${sharing} leading to a feed listed already`}.
                     </p>
                     {choosable.length > 0 && (
                         <>
@@ -174,6 +194,11 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
                                             {result.recent !== null && <Meta>{result.recent} news this week</Meta>}
                                         </MetaLine>
                                         {result.sample && <span className="caption block">e.g. “{result.sample}”</span>}
+                                        {result.also?.length > 0 && (
+                                            <span className="caption block [overflow-wrap:anywhere]">
+                                                Same feed as {result.also.map(shortAddress).join(', ')} in your list
+                                            </span>
+                                        )}
                                     </Checkbox>
                                 ))}
                             </div>
