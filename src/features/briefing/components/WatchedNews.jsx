@@ -8,6 +8,7 @@
 
 import {useState} from "react";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
+import {Marked} from "@/components/news/Marked.jsx";
 
 const SHOWN = 8;
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
@@ -26,7 +27,15 @@ const Term = ({group}) => {
                 <ul className="mt-3 list-none space-y-3 p-0">
                     {shown.map(news => (
                         <li key={news.url} className="body-text">
-                            <a href={news.url} target="_blank" rel="noreferrer" className="link">{news.title}</a>
+                            <a href={news.url} target="_blank" rel="noreferrer" className="link">
+                                <Marked text={news.title} marks={news.marks?.title}/>
+                            </a>
+                            {/* the title does not name it: the words of the news around it */}
+                            {news.excerpt && (
+                                <span lang={news.language ?? undefined} className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80">
+                                    <Marked text={news.excerpt} marks={news.marks?.excerpt}/>
+                                </span>
+                            )}
                             <span className="caption block">
                                 {news.source}<LanguageMark code={news.language}/>
                                 {news.publishedAt && <> · <time dateTime={news.publishedAt}>{when(news.publishedAt)}</time></>}
@@ -46,7 +55,9 @@ const Term = ({group}) => {
     );
 };
 
-// watched: [{term, count, news: [{storyId, title, url, source, language, publishedAt, media}]}]
+// watched: [{term, count, news: [{storyId, title, url, source, language, publishedAt, media, excerpt, marks}]}],
+// excerpt: the words of its description around the term when its title does not name it, absent from
+// the older briefings; marks: the places of the terms in its title and excerpt (see marks.js)
 export const WatchedNews = ({watched}) => (
     <div className="space-y-6">
         {watched.map(group => <Term key={group.term} group={group}/>)}

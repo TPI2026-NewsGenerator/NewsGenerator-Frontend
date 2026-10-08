@@ -103,3 +103,35 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.queryByRole('button', {name: 'tick them all'})).toBeNull();
     });
 });
+
+describe('BriefingPage stories of the terms followed', () => {
+    afterEach(() => vi.clearAllMocks());
+
+    it('should show alone, on demand, the stories naming a term followed, at their place and marked', async () => {
+        const items = [
+            card(1, 'First story'),
+            {...card(2, 'The VAR story'), marks: {title: [[4, 7]]}, found: [{term: 'VAR', angle: false}]},
+            {...card(3, 'Third story'), found: [{term: 'Infantino', angle: true}]},
+        ];
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items}, mail: false});
+        const {container} = render(<MemoryRouter><WithSession user={{id: 4, username: 'reader'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        expect(container.querySelectorAll('mark')).toHaveLength(0);
+
+        fireEvent.click(screen.getByRole('button', {name: 'Names and terms found · 2 stories'}));
+        expect(screen.queryByText('First story')).toBeNull();
+        expect(container.querySelectorAll('article')).toHaveLength(2);
+        expect([...container.querySelectorAll('mark')].map(mark => mark.textContent)).toEqual(['VAR']);
+        expect(screen.getByText('Infantino (other angle)')).toBeInTheDocument();
+        expect(screen.getByText('03')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show the whole briefing'}));
+        expect(screen.getByText('First story')).toBeInTheDocument();
+        expect(container.querySelectorAll('mark')).toHaveLength(0);
+    });
+
+    it('should show no button when no story names a term followed', async () => {
+        await renderPage();
+        expect(screen.queryByRole('button', {name: /Names and terms found/})).toBeNull();
+    });
+});

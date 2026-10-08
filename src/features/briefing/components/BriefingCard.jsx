@@ -13,6 +13,8 @@ import {Notice} from "@/components/ui/text.jsx";
 import {coverageLabel} from "@/features/briefing/corroboration.js";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
+import {Marked} from "@/components/news/Marked.jsx";
+import {paragraphsWithMarks} from "@/features/briefing/marks.js";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
@@ -27,14 +29,12 @@ const SOURCING = {
 };
 const SOURCING_NOTE = 'Read by the AI in the article quoted. It says nothing on whether the news is true.';
 
-const paragraphsOf = (text) => text ? text.split(/\n\s*\n/) : [];
-
 // Passages of an article, a gap between two of them: the sentences are the article's own, the AI only
-// chose them (see server/services/utils/extract.js)
+// chose them (see server/services/utils/extract.js). paragraphs: [{text, marks}] (see marks.js)
 const Passages = ({paragraphs, lede, className}) => paragraphs.map((paragraph, i) => (
     <Fragment key={i}>
         {i > 0 && <p aria-hidden className="text-ink-mute">[…]</p>}
-        <p className={cn(lede && i === 0 && 'lede', className)}>{paragraph}</p>
+        <p className={cn(lede && i === 0 && 'lede', className)}><Marked text={paragraph.text} marks={paragraph.marks}/></p>
     </Fragment>
 ));
 
@@ -54,10 +54,10 @@ const Contested = ({denials}) => (
             {denials.map(denial => (
                 <li key={denial.url + denial.sentence}>
                     <p className="body-text"><span className="font-semibold">{denial.by} denies:</span>{' '}
-                        <span lang={denial.language ?? undefined}>“{denial.sentence}”</span>
+                        <span lang={denial.language ?? undefined}>“<Marked text={denial.sentence} marks={denial.marks?.sentence}/>”</span>
                     </p>
                     {denial.translation && (
-                        <p className="caption mt-1 italic">Machine translation: “{denial.translation}”</p>
+                        <p className="caption mt-1 italic">Machine translation: “<Marked text={denial.translation} marks={denial.marks?.translation}/>”</p>
                     )}
                     <p className="caption mt-1">
                         — <a href={denial.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">{denial.source}</a>
@@ -84,10 +84,12 @@ const OtherAngles = ({angles, original}) => (
                 <li key={angle.url}>
                     <a href={angle.url} target="_blank" rel="noreferrer" title={angle.titleTranslation ? angle.title : undefined}
                        className="body-text font-semibold underline-offset-2 hover:underline">
-                        {angle.titleTranslation ?? angle.title}
+                        {angle.titleTranslation
+                            ? <Marked text={angle.titleTranslation} marks={angle.marks?.titleTranslation}/>
+                            : <Marked text={angle.title} marks={angle.marks?.title}/>}
                     </a>
                     {original && angle.titleTranslation && (
-                        <p lang={angle.language ?? undefined} className="caption mt-1 italic">“{angle.title}”</p>
+                        <p lang={angle.language ?? undefined} className="caption mt-1 italic">“<Marked text={angle.title} marks={angle.marks?.title}/>”</p>
                     )}
                     <p className="caption mt-1">
                         {angle.source}
@@ -131,13 +133,20 @@ const Margin = ({kicker, tone, children}) => (
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
 // item.angles: news of the same affair telling something else, absent from the older ones.
+// item.marks (and the marks of its angles and denials): {field: [[start, end]]}, the places of the terms
+// the profile follows in its texts; item.found: [{term, angle}] the terms it names, angle when only one
+// of its other angles does. marked: they are shown, with the terms found; else the card is as written
 // item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones).
 // onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
-export const BriefingCard = ({item, onVote, onSelect, selected = false, number, lede = false}) => {
+const unmarked = (entry) => ({...entry, marks: undefined});
+export const BriefingCard = ({item: given, onVote, onSelect, selected = false, number, lede = false, marked = false}) => {
+    const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
-    const paragraphs = paragraphsOf(item.summary);
-    const translation = paragraphsOf(item.translation);
+    // the terms the profile follows, marked where they are (see marks.js)
+    const marks = item.marks ?? {};
+    const paragraphs = paragraphsWithMarks(item.summary, marks.summary);
+    const translation = paragraphsWithMarks(item.translation, marks.translation);
     // the translation is shown, the original only when the reader opens it
     const translated = Boolean(item.titleTranslation) || translation.length > 0;
     const [original, setOriginal] = useState(false);
@@ -154,11 +163,23 @@ export const BriefingCard = ({item, onVote, onSelect, selected = false, number, 
                     {item.topic && <p className="kicker !text-ink">{item.topic}</p>}
                     {item.publishedAt && <p className="folio mt-1"><time dateTime={item.publishedAt}>{when(item.publishedAt)}</time></p>}
                     {item.language && <p className="mt-1"><LanguageMark code={item.language} className="ml-0"/></p>}
+                    {marked && item.found?.length > 0 && (
+                        <div className="mt-3">
+                            <p className="kicker !text-accent-ink">Found</p>
+                            <p className="caption mt-0.5 !text-ink">
+                                {item.found.map(({term, angle}) => angle ? `${term} (other angle)` : term).join(' · ')}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 
             <div className="col-span-12 mt-4 md:col-span-7 md:mt-0">
-                <h2 className="story-head text-balance">{item.titleTranslation ?? item.title}</h2>
+                <h2 className="story-head text-balance">
+                    {item.titleTranslation
+                        ? <Marked text={item.titleTranslation} marks={marks.titleTranslation}/>
+                        : <Marked text={item.title} marks={marks.title}/>}
+                </h2>
                 {/* written in another language: translated, the original shown on demand */}
                 {translated && (
                     <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
@@ -170,7 +191,7 @@ export const BriefingCard = ({item, onVote, onSelect, selected = false, number, 
                     </p>
                 )}
                 {translated && original && item.titleTranslation && (
-                    <p lang={item.language ?? undefined} className="caption mt-1 italic">“{item.title}”</p>
+                    <p lang={item.language ?? undefined} className="caption mt-1 italic">“<Marked text={item.title} marks={marks.title}/>”</p>
                 )}
                 {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
                 {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}/>}

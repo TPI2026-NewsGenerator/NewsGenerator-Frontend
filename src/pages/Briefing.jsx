@@ -52,6 +52,8 @@ export const BriefingPage = () => {
     const [sending, setSending] = useState(false);
     // the cards ticked for the e-mail (their storyId), of one briefing: none in the next one
     const [ticks, setTicks] = useState({briefingId: null, storyIds: []});
+    // the briefing whose stories of the terms followed are shown alone, none in the next one
+    const [foundView, setFoundView] = useState(null);
     // the profile read: its briefing is shown, asked again when another one is chosen
     const active = useActiveProfile();
 
@@ -144,6 +146,10 @@ export const BriefingPage = () => {
     const running = briefing?.status === 'running';
     const ready = briefing?.status === 'ready';
     const count = ready ? briefing.items.length : 0;
+    // the stories naming a term the profile follows (item.found), shown alone on demand, the briefing as
+    // written otherwise
+    const found = ready ? briefing.items.filter(item => item.found?.length > 0).length : 0;
+    const onlyFound = found > 0 && foundView === briefing.id;
 
     return (
         <PageShell user={user} onSignOut={logout}>
@@ -210,11 +216,28 @@ export const BriefingPage = () => {
                     </div>
                 </div>
 
+                {found > 0 && (
+                    <div className="grid-12">
+                        <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-7 md:col-start-3">
+                            <Button size="sm" variant={onlyFound ? 'primary' : 'quiet'} aria-pressed={onlyFound}
+                                    onClick={() => setFoundView(onlyFound ? null : briefing.id)}>
+                                {onlyFound ? 'Show the whole briefing' : `Names and terms found · ${found} ${found === 1 ? 'story' : 'stories'}`}
+                            </Button>
+                            <p className="caption">
+                                {onlyFound
+                                    ? 'Only the stories that name a name or a term you follow, marked where they are.'
+                                    : 'The stories that name a name or a term you follow.'}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {ready && count > 0 && (
                     <ol className="list-none p-0">
-                        {briefing.items.map((item, index) => (
+                        {/* the stories of the terms followed keep their place in the briefing */}
+                        {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                             <li key={item.storyId}>
-                                <BriefingCard item={item} number={index + 1} lede={index === 0}
+                                <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound}
                                               onVote={value => vote(item.storyId, value)}
                                               onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
                                               selected={ticked.includes(item.storyId)}/>
