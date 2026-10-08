@@ -8,27 +8,7 @@
 import {ToggleGroup} from "radix-ui";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {cn} from "@/lib/utils.js";
-
-export const SIZES = [10, 20, 30];
-export const DEFAULT_SIZE = 10;
-const KEY = 'newsgenerator.briefing-size';
-
-// the size the reader chose last, kept in the browser
-export const keptSize = () => {
-    try {
-        const value = Number(localStorage.getItem(KEY));
-        return SIZES.includes(value) ? value : DEFAULT_SIZE;
-    } catch {
-        return DEFAULT_SIZE;
-    }
-};
-export const keepSize = (size) => {
-    try {
-        localStorage.setItem(KEY, String(size));
-    } catch {
-        // kept for the page only
-    }
-};
+import {SIZES} from "@/features/briefing/sizes.js";
 
 // size: the one chosen; onChange(size)
 export const BriefingSize = ({size, onChange, disabled = false}) => (

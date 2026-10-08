@@ -14,6 +14,7 @@ import {ProfileSwitcher} from "@/features/profiles/ProfileSwitcher.jsx";
 const SECTIONS = [
     {to: '/briefing', label: 'Briefing'},
     {to: '/profile', label: 'Profile'},
+    {to: '/following', label: 'Following'},
     {to: '/search', label: 'Search'},
 ];
 
@@ -41,7 +42,7 @@ export const Masthead = ({user, onSignOut}) => {
         ? (
             <>
                 <span className="folio">Read by <span className="text-ink">{user.username}</span></span>
-                {!inMenu && <ProfileSwitcher/>}
+                {!inMenu && <ProfileSwitcher admin={user.admin === true}/>}
                 <NavLink to="/settings" onClick={() => setMenu(false)} className={sectionClass}>Settings</NavLink>
                 <button type="button" onClick={() => { setMenu(false); onSignOut?.(); }}
                         className="cursor-pointer text-[0.9375rem] font-semibold tracking-[0.08em] text-ink-mute [font-variant-caps:all-small-caps] hover:text-accent-ink">
@@ -62,7 +63,7 @@ export const Masthead = ({user, onSignOut}) => {
                 <div className="flex items-center justify-between gap-6 border-b border-rule py-2">
                     <p className="folio shrink-0 whitespace-nowrap">{today()}</p>
                     <p className="folio hidden md:block">The news of the last days, chosen for one reader</p>
-                    {user && <div className="flex min-w-0 justify-end md:hidden"><ProfileSwitcher/></div>}
+                    {user && <div className="flex min-w-0 justify-end md:hidden"><ProfileSwitcher admin={user.admin === true}/></div>}
                 </div>
                 <div className="flex items-end justify-between gap-6 pt-5 pb-4">
                     <Link to="/briefing" className="min-w-0 font-display text-[clamp(1.4rem,7.5vw,2rem)] leading-none font-medium tracking-[-0.015em] text-ink no-underline md:text-[2.6rem]">

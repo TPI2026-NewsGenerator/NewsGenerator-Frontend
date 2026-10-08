@@ -29,12 +29,14 @@ export const BriefingApi = {
     start: (hours, size) => send('/briefing', {method: 'POST', body: {hours, size}}),
     // the cards of the briefing ticked (their storyId) sent to the address 'to', the one of the account
     // when not given (204, no body). pictures: {storyId: null | {url} | {data}}, the picture of the
-    // cards the reader changed: taken out, an image of the web, a file of theirs in base64
-    email: async (briefingId, storyIds, to, pictures) => {
+    // cards the reader changed: taken out, an image of the web, a file of theirs in base64. titles:
+    // {storyId: title}, the ones the reader wrote for the e-mail
+    email: async (briefingId, storyIds, to, pictures, titles) => {
+        const some = (map) => map && Object.keys(map).length > 0;
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
-            body: JSON.stringify({storyIds, to, ...(pictures && Object.keys(pictures).length > 0 ? {pictures} : {})}),
+            body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },

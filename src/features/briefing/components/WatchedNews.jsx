@@ -14,8 +14,9 @@ import {Marked} from "@/components/news/Marked.jsx";
 const SHOWN = 8;
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
-// heading: the term named above its news, when it has no tab of its own
-const Term = ({group, heading = true}) => {
+// heading: the term named above its news, when it has no tab of its own. Also the news of a club or a
+// person followed (see pages/Entity.jsx)
+export const Term = ({group, heading = true}) => {
     const [all, setAll] = useState(false);
     const shown = all ? group.news : group.news.slice(0, SHOWN);
     return (

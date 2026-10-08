@@ -16,7 +16,8 @@ import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {DEFAULT_HOURS, spanOf} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
-import {BriefingSize, keepSize, keptSize} from "@/features/briefing/components/BriefingSize.jsx";
+import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
+import {keepSize, keptSize} from "@/features/briefing/sizes.js";
 import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
@@ -117,12 +118,12 @@ export const BriefingPage = () => {
     const tick = (storyIds) => setTicks({briefingId: briefing.id, storyIds});
     const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
 
-    // the cards ticked, in the order the reader gave them in the bar, with the pictures they changed,
+    // the cards ticked, in the order the reader gave them in the bar, with the pictures and titles they changed,
     // sent to the address 'to': true when sent
-    const email = async (to, storyIds, pictures) => {
+    const email = async (to, storyIds, pictures, titles) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, storyIds, to, pictures);
+            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles);
             toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}.`);
             tick([]);
             return true;

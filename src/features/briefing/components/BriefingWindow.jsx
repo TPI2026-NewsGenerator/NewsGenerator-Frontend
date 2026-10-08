@@ -10,14 +10,13 @@ import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {cn} from "@/lib/utils.js";
 import {WINDOWS} from "@/features/briefing/windows.js";
 
-// hours: the one chosen; onChange(hours)
-export const BriefingWindow = ({hours, onChange, disabled = false}) => (
+// hours: the one chosen; onChange(hours); tip: what the window is for, the next briefing by default
+export const BriefingWindow = ({hours, onChange, disabled = false, tip}) => (
     <div>
         <p className="kicker">
             The news of the last
             <InfoTip label="The news of the last">
-                What the next briefing is chosen from. Over 7 days, an affair followed for several days is one card,
-                and the news told by several media come first.
+                {tip ?? 'What the next briefing is chosen from. Over 7 days, an affair followed for several days is one card, and the news told by several media come first.'}
             </InfoTip>
         </p>
         {/* the radix group of the ToggleGroup of shadcn: one of them always chosen */}

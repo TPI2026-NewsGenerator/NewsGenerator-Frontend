@@ -21,14 +21,16 @@ const two = (number) => String(number).padStart(2, '0');
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
 // thumbnailSource}] (number: their place in the briefing); accountEmail: the address of the account;
-// onSend(to, storyIds, pictures): sends them in this order with the pictures changed, true when sent;
-// onPictures(storyId): {pictures}, the ones of a story; onClear: unticks them all
+// onSend(to, storyIds, pictures, titles): sends them in this order with the pictures and the titles the
+// reader changed, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks
+// them all
 export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onClear}) => {
     const [to, setTo] = useState(null);         // null: the address is not asked yet
     const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
     const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
+    const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
     const [galleries, setGalleries] = useState({});     // storyId -> its pictures, null while asked
-    const [editing, setEditing] = useState(null);       // the storyId whose picture is being chosen
+    const [editing, setEditing] = useState(null);       // the storyId whose title and picture are being changed
     const [error, setError] = useState(null);
     const [picturesError, setPicturesError] = useState(null);
     const count = stories.length;
@@ -39,6 +41,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
     const open = () => {
         setOrder(stories.map(story => story.storyId));
         setChoices({});
+        setTitles({});
         setEditing(null);
         setTo(accountEmail ?? '');
     };
@@ -60,6 +63,12 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
         const own = story.thumbnail && !found.some(picture => picture.url === story.thumbnail)
             ? [{url: story.thumbnail, source: story.thumbnailSource ?? ''}] : [];
         setGalleries(current => ({...current, [story.storyId]: [...own, ...found]}));
+    };
+
+    // the title the reader wrote, when it is not the one of the card
+    const ownTitle = (story) => {
+        const title = (titles[story.storyId] ?? '').replace(/\s+/g, ' ').trim();
+        return title && title !== story.title ? title : null;
     };
 
     const choose = (storyId, choice) => setChoices(current => {
@@ -85,7 +94,8 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
         setError(null);
         setPicturesError(null);
         const pictures = Object.fromEntries(sent.map(story => [story.storyId, sentPicture(choices[story.storyId])]));
-        if (await onSend(address, ordered.map(story => story.storyId), pictures)) setTo(null);
+        const retitled = Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title));
+        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled)) setTo(null);
     };
 
     return (
@@ -101,7 +111,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
             ) : (
                 <form className="page py-3" onSubmit={send} noValidate>
                     <div className="mb-3">
-                        <p className="kicker">{ordered.length > 1 ? 'Their order and their picture in the e-mail' : 'Its picture in the e-mail'}</p>
+                        <p className="kicker">{ordered.length > 1 ? 'Their order, title and picture in the e-mail' : 'Its title and picture in the e-mail'}</p>
                         <ol aria-label={ordered.length > 1 ? 'The stories of the e-mail, in their order' : 'The story of the e-mail'}
                             className="mt-1 max-h-[45vh] list-none overflow-y-auto border-y border-rule p-0">
                             {ordered.map((story, at) => {
@@ -112,16 +122,17 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                                             {ordered.length > 1 && <span aria-hidden className="w-7 shrink-0 font-display text-[1.2rem] leading-none text-ink-mute">{two(at + 1)}</span>}
                                             <Thumbnail src={shownPicture(story, choice)}/>
                                             <span className="min-w-0 flex-1">
-                                                <span className="block truncate text-[0.9375rem]">{story.title}</span>
+                                                <span className="block truncate text-[0.9375rem]">{ownTitle(story) ?? story.title}</span>
                                                 <span className="caption block">
                                                     {two(story.number)} in the briefing
+                                                    {ownTitle(story) && ' · title changed'}
                                                     {choice?.kind === 'none' && ' · no picture'}
                                                     {choice && choice.kind !== 'none' && ' · picture changed'}
                                                 </span>
                                             </span>
                                             <Button size="sm" variant="subtle" onClick={() => edit(story)} disabled={sending}
-                                                    aria-expanded={editing === story.storyId} aria-label={`Change the picture of “${story.title}”`}>
-                                                Picture
+                                                    aria-expanded={editing === story.storyId} aria-label={`Edit “${story.title}” in the e-mail`}>
+                                                Edit
                                             </Button>
                                             {ordered.length > 1 && (
                                                 <>
@@ -135,8 +146,23 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                                             )}
                                         </div>
                                         {editing === story.storyId && (
-                                            <MailPicture story={story} choice={choice} pictures={galleries[story.storyId] ?? null}
-                                                         onChoose={next => choose(story.storyId, next)} onClose={() => setEditing(null)}/>
+                                            <>
+                                                <div className="mt-2">
+                                                    <Label htmlFor={`mail-title-${story.storyId}`}>Its title in the e-mail</Label>
+                                                    {/* Enter would send the e-mail */}
+                                                    <Input id={`mail-title-${story.storyId}`} maxLength={300} value={titles[story.storyId] ?? story.title}
+                                                           onChange={event => setTitles(current => ({...current, [story.storyId]: event.target.value}))}
+                                                           onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/>
+                                                    {ownTitle(story) && (
+                                                        <Button size="sm" variant="link" className="mt-1"
+                                                                onClick={() => setTitles(current => ({...current, [story.storyId]: story.title}))}>
+                                                            Back to its own title
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <MailPicture story={story} choice={choice} pictures={galleries[story.storyId] ?? null}
+                                                             onChoose={next => choose(story.storyId, next)} onClose={() => setEditing(null)}/>
+                                            </>
                                         )}
                                     </li>
                                 );

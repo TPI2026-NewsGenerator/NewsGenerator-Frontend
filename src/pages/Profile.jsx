@@ -127,7 +127,8 @@ export const ProfilePage = () => {
     const {hash} = useLocation();
     const navigate = useNavigate();
     const [params] = useSearchParams();
-    const creating = params.get('new') === '1';
+    // several profiles are for the administrators (see server/services/utils/admin.js)
+    const creating = user?.admin === true && params.get('new') === '1';
     // the profile read: its data is asked again when another one is chosen
     const active = useActiveProfile();
     const [name, setName] = useState('');
@@ -372,7 +373,9 @@ export const ProfilePage = () => {
                 <Section kicker="This profile" title={data.profile.name}
                          intro={data.profiles?.length > 1
                              ? 'One of your profiles: its interests, its sources and its briefings are its own. Switch to another at the top of the page.'
-                             : 'You can write other profiles for other parts of what you read, each with its own briefings: choose “New profile” at the top of the page.'}>
+                             : user?.admin
+                                 ? 'You can write other profiles for other parts of what you read, each with its own briefings: choose “New profile” at the top of the page.'
+                                 : 'Your profile: its interests, its sources and its briefings.'}>
                     <div className="grid-12 gap-y-4">
                         <div className="col-span-12 md:col-span-5">
                             <Label htmlFor="profile-name">Its name</Label>
@@ -382,9 +385,11 @@ export const ProfilePage = () => {
                             </div>
                         </div>
                         <div className="col-span-12 flex flex-wrap items-end gap-3 md:col-span-6 md:col-start-7 md:justify-end">
-                            <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 15)}>
-                                New profile
-                            </Button>
+                            {user?.admin && (
+                                <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 15)}>
+                                    New profile
+                                </Button>
+                            )}
                             {data.profiles?.length > 1 && (
                                 <Button variant="subtle" onClick={() => setDeleting(true)} disabled={busy}>Delete this profile</Button>
                             )}

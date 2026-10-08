@@ -16,8 +16,10 @@ import {cn} from "@/lib/utils.js";
 
 const itemClass = 'flex cursor-pointer items-center gap-2 px-3 py-2 text-[0.9375rem] text-ink outline-none data-[highlighted]:bg-paper-deep';
 
-// onChoose: called once a profile is chosen (the mobile menu closes). className: of the trigger
-export const ProfileSwitcher = ({onChoose, className}) => {
+// onChoose: called once a profile is chosen (the mobile menu closes). className: of the trigger.
+// admin: may write other profiles (see server/services/utils/admin.js); a reader with one profile
+// who may not is only told which one they read
+export const ProfileSwitcher = ({onChoose, className, admin = false}) => {
     const active = useActiveProfile();
     const navigate = useNavigate();
     const [profiles, setProfiles] = useState([]);
@@ -36,7 +38,8 @@ export const ProfileSwitcher = ({onChoose, className}) => {
         if (active !== null && profiles.length > 0 && !profiles.some(profile => profile.id === active)) setActiveProfile(null);
     }, [active, profiles]);
 
-    if (profiles.length === 0) return null;
+    // a reader who may have one profile only reads no name of a profile
+    if (profiles.length === 0 || (!admin && profiles.length === 1)) return null;
     const current = profiles.find(profile => profile.id === active) ?? profiles[0];
 
     const choose = (id) => {
@@ -66,10 +69,14 @@ export const ProfileSwitcher = ({onChoose, className}) => {
                             </DropdownMenu.RadioItem>
                         ))}
                     </DropdownMenu.RadioGroup>
-                    <DropdownMenu.Separator className="my-1 h-px bg-rule"/>
-                    <DropdownMenu.Item className={itemClass} onSelect={() => { onChoose?.(); navigate('/profile?new=1'); }}>
-                        New profile…
-                    </DropdownMenu.Item>
+                    {admin && (
+                        <>
+                            <DropdownMenu.Separator className="my-1 h-px bg-rule"/>
+                            <DropdownMenu.Item className={itemClass} onSelect={() => { onChoose?.(); navigate('/profile?new=1'); }}>
+                                New profile…
+                            </DropdownMenu.Item>
+                        </>
+                    )}
                 </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu.Root>

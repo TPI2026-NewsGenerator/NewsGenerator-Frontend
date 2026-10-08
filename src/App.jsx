@@ -12,6 +12,8 @@ import {SignupPage} from "@/pages/Signup.jsx";
 import {BriefingPage} from "@/pages/Briefing.jsx";
 import {ProfilePage} from "@/pages/Profile.jsx";
 import {SettingsPage} from "@/pages/Settings.jsx";
+import {FollowingPage} from "@/pages/Following.jsx";
+import {EntityPage} from "@/pages/Entity.jsx";
 import {Toaster} from "@/components/ui/overlay.jsx";
 
 function App() {
@@ -21,6 +23,8 @@ function App() {
                 <Route path="/briefing" element={<BriefingPage/>}/>
                 <Route path="/profile" element={<ProfilePage/>}/>
                 <Route path="/search" element={<SearchPage/>}/>
+                <Route path="/following" element={<FollowingPage/>}/>
+                <Route path="/following/:qid" element={<EntityPage/>}/>
                 <Route path="/settings" element={<SettingsPage/>}/>
                 <Route path="/login" element={<LoginPage/>}/>
                 <Route path="/register" element={<SignupPage/>}/>
