@@ -31,6 +31,7 @@ const steps = (span) => ({
     checking: 'The AI checks which articles tell the same news…',
     reading: 'Reading the articles of each story…',
     summarizing: 'Choosing the key passages of each story…',
+    angles: 'Looking for other angles on each story…',
 });
 
 const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});

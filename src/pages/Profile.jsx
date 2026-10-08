@@ -382,7 +382,7 @@ export const ProfilePage = () => {
                             </div>
                         </div>
                         <div className="col-span-12 flex flex-wrap items-end gap-3 md:col-span-6 md:col-start-7 md:justify-end">
-                            <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 5)}>
+                            <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 15)}>
                                 New profile
                             </Button>
                             {data.profiles?.length > 1 && (

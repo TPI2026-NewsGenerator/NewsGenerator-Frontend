@@ -176,3 +176,29 @@ describe('BriefingCard contested', () => {
         expect(screen.queryByText('Contested')).toBeNull();
     });
 });
+
+describe('BriefingCard other angles', () => {
+    const angle = {title: 'Infantino tiene por ahora el camino despejado', titleTranslation: 'Infantino a pour l’instant le chemin dégagé',
+        url: 'https://si.com/infantino', source: 'si.com', language: 'es', publishedAt: '2026-10-08T07:00:00.000Z', media: 3};
+
+    it('should list the other angles, translated, with their source, language and media', () => {
+        render(<BriefingCard item={item({angles: [angle]})}/>);
+        expect(screen.getByText('Same affair, other angles')).toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'Infantino a pour l’instant le chemin dégagé'})).toHaveAttribute('href', 'https://si.com/infantino');
+        expect(screen.getByText(/told by 3 media/)).toBeInTheDocument();
+        expect(screen.getByLabelText('written in Spanish')).toBeInTheDocument();
+        expect(screen.queryByText('“Infantino tiene por ahora el camino despejado”')).toBeNull();
+    });
+
+    it('should show the original title of an angle with the original of the card', () => {
+        render(<BriefingCard item={item({title: 'Summit in Berlin', language: 'en', titleTranslation: 'Sommet à Berlin', angles: [angle]})}/>);
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(screen.getByText('“Infantino tiene por ahora el camino despejado”')).toBeInTheDocument();
+    });
+
+    it('should say nothing on a card without any, or of a briefing made before', () => {
+        render(<BriefingCard item={item({angles: []})}/>);
+        render(<BriefingCard item={item()}/>);
+        expect(screen.queryByText('Same affair, other angles')).toBeNull();
+    });
+});

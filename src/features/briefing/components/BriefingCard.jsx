@@ -3,7 +3,7 @@
 //  Date: 24.09.2026
 //  File: BriefingCard.jsx
 //  Description: One story of the briefing: why it was chosen, its summary, who tells it and how
-//               many of them wrote it themselves, and who denies it
+//               many of them wrote it themselves, who denies it, and its other angles
 //
 
 import {Fragment, useState} from "react";
@@ -68,6 +68,38 @@ const Contested = ({denials}) => (
     </div>
 );
 
+// News of the same affair that tell something the card does not: an earlier or later step, a reaction,
+// another party's view (see server/services/utils/other-angles.js). The title translated when written
+// in another language than the reader's, the original shown with the card's
+const ANGLES_NOTE = 'Close news of the last days, in any language, that the AI read as the same affair seen from another side: what came before or after, a reaction, a background. Judged from their titles: one may only be close.';
+const OtherAngles = ({angles, original}) => (
+    <div className="mt-8 border-l-2 border-rule pl-5">
+        <p className="kicker">
+            Same affair, other angles
+            <InfoTip label="Same affair, other angles">{ANGLES_NOTE}</InfoTip>
+        </p>
+        <ul className="mt-3 space-y-3">
+            {angles.map(angle => (
+                <li key={angle.url}>
+                    <a href={angle.url} target="_blank" rel="noreferrer" title={angle.titleTranslation ? angle.title : undefined}
+                       className="body-text font-semibold underline-offset-2 hover:underline">
+                        {angle.titleTranslation ?? angle.title}
+                    </a>
+                    {original && angle.titleTranslation && (
+                        <p lang={angle.language ?? undefined} className="caption mt-1 italic">“{angle.title}”</p>
+                    )}
+                    <p className="caption mt-1">
+                        {angle.source}
+                        {angle.language && <LanguageMark code={angle.language}/>}
+                        {angle.publishedAt && <> · <time dateTime={angle.publishedAt}>{when(angle.publishedAt)}</time></>}
+                        {angle.media > 1 && <> · told by {angle.media} media</>}
+                    </p>
+                </li>
+            ))}
+        </ul>
+    </div>
+);
+
 // a note of the outer column: its kicker and what it says
 const Margin = ({kicker, tone, children}) => (
     <div>
@@ -82,7 +114,8 @@ const Margin = ({kicker, tone, children}) => (
 // article as published, a paragraph per passage; item.translation: their machine translation.
 // item.titleTranslation: the title in the language of the reader, when written in another (item.language).
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
-// sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones
+// sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
+// item.angles: news of the same affair telling something else, absent from the older ones
 export const BriefingCard = ({item, onVote, number, lede = false}) => {
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
@@ -154,6 +187,7 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                 )}
 
                 {item.contested?.length > 0 && <Contested denials={item.contested}/>}
+                {item.angles?.length > 0 && <OtherAngles angles={item.angles} original={original}/>}
 
                 {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-8"/>}
             </div>
