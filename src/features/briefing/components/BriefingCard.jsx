@@ -100,6 +100,20 @@ const OtherAngles = ({angles, original}) => (
     </div>
 );
 
+// The picture of one of its articles, the site it is of under it. Asked without the address of the page
+// (some sites refuse their pictures to other sites), and left out when it can't be loaded
+const Picture = ({src, source}) => {
+    const [failed, setFailed] = useState(false);
+    if (failed) return null;
+    return (
+        <figure className="m-0 mt-5">
+            <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}
+                 className="aspect-[16/9] w-full bg-secondary object-cover"/>
+            {source && <figcaption className="caption mt-1.5">Picture — {source}</figcaption>}
+        </figure>
+    );
+};
+
 // a note of the outer column: its kicker and what it says
 const Margin = ({kicker, tone, children}) => (
     <div>
@@ -115,7 +129,8 @@ const Margin = ({kicker, tone, children}) => (
 // item.titleTranslation: the title in the language of the reader, when written in another (item.language).
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
-// item.angles: news of the same affair telling something else, absent from the older ones
+// item.angles: news of the same affair telling something else, absent from the older ones.
+// item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones)
 export const BriefingCard = ({item, onVote, number, lede = false}) => {
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
@@ -156,6 +171,7 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                     <p lang={item.language ?? undefined} className="caption mt-1 italic">“{item.title}”</p>
                 )}
                 {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
+                {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}/>}
 
                 {paragraphs.length === 0 ? (
                     <div className="mt-6">

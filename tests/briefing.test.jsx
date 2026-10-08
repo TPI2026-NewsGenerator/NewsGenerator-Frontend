@@ -60,6 +60,13 @@ describe('BriefingCard', () => {
         expect(screen.getByText(/Also covered by/)).toHaveTextContent('Also covered by media1.fr, media3.fr');
     });
 
+    it('should end the links of the sources with their language, no arrow after it', () => {
+        render(<BriefingCard item={item({lead: {...article(2), language: 'fr'}, articles: [article(1), {...article(3), language: 'de'}]})}/>);
+        expect(screen.getByRole('link', {name: /Read the article at media2.fr/})).toHaveTextContent(/^Read the article at media2\.fr\s*fr$/);
+        expect(screen.getByText(/Also covered by/)).toHaveTextContent(/^Also covered by media1\.fr, media3\.fr\s*de$/);
+        expect(screen.queryByText(/↗/)).toBeNull();
+    });
+
     it('should send to its first article a card of a briefing made before the article of the passages was given', () => {
         render(<BriefingCard item={item()}/>);
         expect(screen.getByRole('link', {name: /Read the article at media1.fr/})).toBeInTheDocument();
@@ -200,5 +207,24 @@ describe('BriefingCard other angles', () => {
         render(<BriefingCard item={item({angles: []})}/>);
         render(<BriefingCard item={item()}/>);
         expect(screen.queryByText('Same affair, other angles')).toBeNull();
+    });
+});
+
+describe('BriefingCard picture', () => {
+    it('should show the picture of one of its articles, with its site, and leave it out when it fails to load', () => {
+        const {container} = render(<BriefingCard item={item({thumbnail: 'https://cdn.example/a.jpg', thumbnailSource: 'lequipe.fr'})}/>);
+        const picture = container.querySelector('img');
+        expect(picture).toHaveAttribute('src', 'https://cdn.example/a.jpg');
+        expect(picture).toHaveAttribute('referrerpolicy', 'no-referrer');
+        expect(screen.getByText('Picture — lequipe.fr')).toBeInTheDocument();
+
+        fireEvent.error(picture);
+        expect(container.querySelector('img')).toBeNull();
+        expect(screen.queryByText('Picture — lequipe.fr')).toBeNull();
+    });
+
+    it('should show none on a card without a picture', () => {
+        const {container} = render(<BriefingCard item={item({thumbnail: null})}/>);
+        expect(container.querySelector('img')).toBeNull();
     });
 });

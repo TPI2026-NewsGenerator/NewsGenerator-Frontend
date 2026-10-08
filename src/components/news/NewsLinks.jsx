@@ -27,7 +27,7 @@ export const NewsLinks = ({lead, others = [], className}) => {
     return (
         <div className={cn('mt-4 space-y-2', className)}>
             <a href={lead.url} target="_blank" rel="noreferrer" className="link inline-block text-[0.9375rem]">
-                Read the article at {lead.source}<Trusted article={lead}/><LanguageMark code={lead.language}/> ↗
+                Read the article at {lead.source}<Trusted article={lead}/><LanguageMark code={lead.language}/>
             </a>
             {media.length > 0 && (
                 <p className="caption max-w-[66ch]">

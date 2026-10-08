@@ -59,7 +59,7 @@ export const Article = memo(({id, onSelect, news}) => {
 
             {news.thumbnail && (
                 <figure className="col-span-11 m-0 md:col-span-3">
-                    <img src={news.thumbnail} alt="" loading="lazy" width={300} height={200}
+                    <img src={news.thumbnail} alt="" loading="lazy" width={300} height={200} referrerPolicy="no-referrer"
                          className="aspect-[3/2] w-full object-cover"/>
                     <figcaption className="caption mt-1.5">Picture — {news.source}</figcaption>
                 </figure>
