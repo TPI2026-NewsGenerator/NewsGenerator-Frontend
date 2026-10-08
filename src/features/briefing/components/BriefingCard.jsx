@@ -14,6 +14,7 @@ import {coverageLabel} from "@/features/briefing/corroboration.js";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
+import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
 
@@ -130,8 +131,9 @@ const Margin = ({kicker, tone, children}) => (
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
 // item.angles: news of the same affair telling something else, absent from the older ones.
-// item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones)
-export const BriefingCard = ({item, onVote, number, lede = false}) => {
+// item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones).
+// onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
+export const BriefingCard = ({item, onVote, onSelect, selected = false, number, lede = false}) => {
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
     const paragraphs = paragraphsOf(item.summary);
@@ -231,6 +233,14 @@ export const BriefingCard = ({item, onVote, number, lede = false}) => {
                         unconfirmed: “{item.hedged}”
                         <InfoTip label="unconfirmed">The article says itself, in these words, that this is not confirmed yet.</InfoTip>
                     </Margin>
+                )}
+                {onSelect && (
+                    <div>
+                        <p className="kicker">E-mail</p>
+                        <Checkbox checked={selected} onChange={event => onSelect(event.target.checked)} className="mt-0.5 text-[0.9375rem]">
+                            Add to the e-mail
+                        </Checkbox>
+                    </div>
                 )}
                 {onVote && (
                     <div>

@@ -19,7 +19,8 @@ import {BriefingSize, keepSize, keptSize} from "@/features/briefing/components/B
 import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
-import {toast} from "@/lib/toast.js";
+import {buttonClass} from "@/components/ui/button-class.js";
+import {mailtoOf} from "@/features/briefing/mailto.js";
 
 const POLL_MS = 3000;
 
@@ -46,9 +47,8 @@ export const BriefingPage = () => {
     const hours = chosen ?? briefing?.hours ?? DEFAULT_HOURS;
     // the cards of the next briefing, the last choice of the reader
     const [size, setSize] = useState(keptSize);
-    // the server can send a briefing by e-mail
-    const [mail, setMail] = useState(false);
-    const [sending, setSending] = useState(false);
+    // the cards ticked for the e-mail (their storyId), of one briefing: none in the next one
+    const [ticks, setTicks] = useState({briefingId: null, storyIds: []});
     // the profile read: its briefing is shown, asked again when another one is chosen
     const active = useActiveProfile();
 
@@ -58,7 +58,6 @@ export const BriefingPage = () => {
             if (expired(data)) return;
             if (data.error) throw new Error(data.error);
             setBriefing(data.briefing);
-            setMail(Boolean(data.mail));
         } catch (err) {
             setError(err.message);
         }
@@ -102,17 +101,9 @@ export const BriefingPage = () => {
         keepSize(value);
     };
 
-    const email = async () => {
-        setSending(true);
-        try {
-            await BriefingApi.email(briefing.id);
-            toast.success('Sent to the address of your account.');
-        } catch (err) {
-            toast.error(`Not sent: ${err.message}`);
-        } finally {
-            setSending(false);
-        }
-    };
+    const ticked = ticks.briefingId === briefing?.id ? ticks.storyIds : [];
+    const tick = (storyIds) => setTicks({briefingId: briefing.id, storyIds});
+    const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
 
     // shown at once, taken back if the server refuses it
     const vote = async (storyId, value) => {
@@ -157,17 +148,20 @@ export const BriefingPage = () => {
                             <Button variant="primary" onClick={start} loading={running} disabled={running}>
                                 New briefing
                             </Button>
-                            {mail && ready && (
-                                <Button onClick={email} loading={sending} disabled={sending} title="Sends this briefing to the address of your account">
-                                    Send it to me
-                                </Button>
-                            )}
                         </div>
+                        {ready && count > 0 && (
+                            <p className="caption max-w-[32ch]">
+                                Tick the stories to send them by e-mail from your mail app, or{' '}
+                                <button type="button" onClick={() => tick(briefing.items.map(item => item.storyId))}
+                                        className="cursor-pointer underline underline-offset-4 hover:text-ink">tick them all</button>.
+                            </p>
+                        )}
                     </div>
                 )}
             />
 
-            <div className="page mt-12 space-y-8 md:mt-16">
+            {/* room under the last card for the bar of the e-mail */}
+            <div className={`page mt-12 space-y-8 md:mt-16${ticked.length > 0 ? ' pb-20' : ''}`}>
                 <div className="grid-12">
                     <div className="col-span-12 space-y-8 md:col-span-7 md:col-start-3">
                         {error && <Notice type="error" onClose={() => setError(null)}>{error}</Notice>}
@@ -201,10 +195,29 @@ export const BriefingPage = () => {
                         {briefing.items.map((item, index) => (
                             <li key={item.storyId}>
                                 <BriefingCard item={item} number={index + 1} lede={index === 0}
-                                              onVote={value => vote(item.storyId, value)}/>
+                                              onVote={value => vote(item.storyId, value)}
+                                              onSelect={checked => tickOne(item.storyId, checked)}
+                                              selected={ticked.includes(item.storyId)}/>
                             </li>
                         ))}
                     </ol>
+                )}
+
+                {ready && ticked.length > 0 && (
+                    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink bg-paper">
+                        <div className="page flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+                            <p className="folio !text-ink">
+                                {ticked.length} {ticked.length === 1 ? 'story' : 'stories'} ticked
+                                <span className="text-ink-mute"> · written in your mail app, to the address you choose</span>
+                            </p>
+                            <div className="flex gap-2">
+                                <Button variant="subtle" size="sm" onClick={() => tick([])}>Untick all</Button>
+                                {/* the mail app opens with the e-mail written: the reader adds the address and sends it */}
+                                <a href={mailtoOf(briefing.items.filter(item => ticked.includes(item.storyId)))}
+                                   className={buttonClass({variant: "primary", size: "sm"})}>Send email</a>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {ready && briefing.watched?.length > 0 && (
