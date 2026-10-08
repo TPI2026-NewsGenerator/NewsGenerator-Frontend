@@ -16,8 +16,8 @@ import {cn} from "@/lib/utils.js";
 
 const itemClass = 'flex cursor-pointer items-center gap-2 px-3 py-2 text-[0.9375rem] text-ink outline-none data-[highlighted]:bg-paper-deep';
 
-// onChoose: called once a profile is chosen (the mobile menu closes)
-export const ProfileSwitcher = ({onChoose}) => {
+// onChoose: called once a profile is chosen (the mobile menu closes). className: of the trigger
+export const ProfileSwitcher = ({onChoose, className}) => {
     const active = useActiveProfile();
     const navigate = useNavigate();
     const [profiles, setProfiles] = useState([]);
@@ -46,11 +46,13 @@ export const ProfileSwitcher = ({onChoose}) => {
 
     return (
         <DropdownMenu.Root>
+            {/* said a profile, not only its name: next to the name of the reader it read as a second name */}
             <DropdownMenu.Trigger
-                className="inline-flex max-w-[14rem] cursor-pointer items-center gap-1 text-[0.9375rem] font-semibold tracking-[0.08em] text-ink [font-variant-caps:all-small-caps] hover:text-accent-ink"
+                className={cn('inline-flex min-w-0 max-w-[14rem] cursor-pointer items-baseline gap-1.5 text-[0.9375rem] font-semibold tracking-[0.08em] text-ink [font-variant-caps:all-small-caps] hover:text-accent-ink', className)}
                 aria-label={`Profile read: ${current.name}. Choose another`}>
+                <span className="folio shrink-0 font-normal">Profile</span>
                 <span className="truncate">{current.name}</span>
-                <ChevronDown aria-hidden className="size-3.5 shrink-0"/>
+                <ChevronDown aria-hidden className="size-3.5 shrink-0 self-center"/>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
                 <DropdownMenu.Content align="end" sideOffset={8}

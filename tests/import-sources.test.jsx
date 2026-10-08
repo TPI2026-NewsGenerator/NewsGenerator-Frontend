@@ -107,6 +107,38 @@ describe('ImportSources', () => {
         expect(screen.getByRole('checkbox', {name: /www.kicker.de/})).not.toBeChecked();
     });
 
+    it('should keep the sites checked when the server checks no more this hour, say when, and check the others then', async () => {
+        const server = api();
+        const others = Array.from({length: 30}, (_, i) => `https://site${i}.example`);
+        let full = true;
+        server.checkSites.mockImplementation(async (sites) => sites.includes('https://www.kicker.de') || !full
+            ? {sites: sites.map(site => checked[site] ? {site, ...checked[site]} : {site, status: 'none', reason: 'No feed found'})}
+            : {error: 'You checked 2000 sites in the last hour, the most the server checks for you.', retryAfter: 600});
+        const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+        pick(container, ['https://www.kicker.de', ...others]);
+
+        expect(await screen.findByText('25 of 31 addresses checked')).toBeInTheDocument();
+        expect(screen.getByText(/You checked 2000 sites in the last hour.*The 6 others can be checked from/)).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', {name: /www.kicker.de/})).toBeChecked();
+
+        full = false;
+        fireEvent.click(screen.getByRole('button', {name: 'Check the 6 others'}));
+        await waitFor(() => expect(server.checkSites).toHaveBeenLastCalledWith(others.slice(24), 'en'));
+        await waitFor(() => expect(screen.queryByText(/addresses checked/)).toBeNull());
+        expect(screen.getByRole('checkbox', {name: /www.kicker.de/})).toBeChecked();
+        expect(screen.getByText(/30 without a feed or page to read/)).toBeInTheDocument();
+    });
+
+    it('should check the feed of a line of the list rather than its site, and say so', async () => {
+        const server = api();
+        const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+        pick(container, ['nom,url_site,flux_rss', 'Kicker,https://www.kicker.de/news,https://www.kicker.de', 'Irish FA,https://www.irishfa.com/news,https://www.irishfa.com/rss']);
+
+        await screen.findByText('www.kicker.de');
+        expect(server.checkSites).toHaveBeenCalledWith(['https://www.kicker.de/news', 'https://www.kicker.de', 'https://www.irishfa.com/rss'], 'en');
+        expect(screen.getByText('1 site of your list left out: the feed given on the same line is checked instead.')).toBeInTheDocument();
+    });
+
     it('should add nothing without a category', async () => {
         const server = api();
         const {container} = render(<ImportSources api={server} language="en" category="" needCategory={() => false}/>);

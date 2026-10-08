@@ -36,11 +36,12 @@ export const Masthead = ({user, onSignOut}) => {
         return () => document.removeEventListener('keydown', close);
     }, [menu]);
 
-    const account = user
+    // the profile read is in the line of the date on a phone (see below): not again in its menu
+    const account = (inMenu) => user
         ? (
             <>
                 <span className="folio">Read by <span className="text-ink">{user.username}</span></span>
-                <ProfileSwitcher onChoose={() => setMenu(false)}/>
+                {!inMenu && <ProfileSwitcher/>}
                 <NavLink to="/settings" onClick={() => setMenu(false)} className={sectionClass}>Settings</NavLink>
                 <button type="button" onClick={() => { setMenu(false); onSignOut?.(); }}
                         className="cursor-pointer text-[0.9375rem] font-semibold tracking-[0.08em] text-ink-mute [font-variant-caps:all-small-caps] hover:text-accent-ink">
@@ -59,8 +60,9 @@ export const Masthead = ({user, onSignOut}) => {
         <header className="border-b-[3px] border-double border-ink">
             <div className="page">
                 <div className="flex items-center justify-between gap-6 border-b border-rule py-2">
-                    <p className="folio">{today()}</p>
-                    <p className="folio hidden sm:block">The news of the last days, chosen for one reader</p>
+                    <p className="folio shrink-0 whitespace-nowrap">{today()}</p>
+                    <p className="folio hidden md:block">The news of the last days, chosen for one reader</p>
+                    {user && <div className="flex min-w-0 justify-end md:hidden"><ProfileSwitcher/></div>}
                 </div>
                 <div className="flex items-end justify-between gap-6 pt-5 pb-4">
                     <Link to="/briefing" className="min-w-0 font-display text-[clamp(1.4rem,7.5vw,2rem)] leading-none font-medium tracking-[-0.015em] text-ink no-underline md:text-[2.6rem]">
@@ -71,7 +73,7 @@ export const Masthead = ({user, onSignOut}) => {
                             <NavLink key={section.to} to={section.to} className={sectionClass}>{section.label}</NavLink>
                         ))}
                         <span aria-hidden className="h-4 w-px self-center bg-rule"/>
-                        {account}
+                        {account(false)}
                     </nav>
                     <button type="button" onClick={() => setMenu(true)} aria-expanded={menu} aria-controls="index-menu"
                             className="kicker cursor-pointer text-ink md:hidden">
@@ -95,7 +97,7 @@ export const Masthead = ({user, onSignOut}) => {
                                 {section.label}
                             </NavLink>
                         ))}
-                        <div className="flex items-baseline justify-between gap-4 py-6">{account}</div>
+                        <div className="flex items-baseline justify-between gap-4 py-6">{account(true)}</div>
                     </nav>
                 </div>
             )}

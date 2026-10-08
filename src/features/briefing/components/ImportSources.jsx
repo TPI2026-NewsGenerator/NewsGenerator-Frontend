@@ -50,8 +50,42 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
     const [isChecking, setIsChecking] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [failed, setFailed] = useState([]);
+    const [besideFeed, setBesideFeed] = useState(0);
+    const [checked, setChecked] = useState(0);          // addresses of the file checked
+    const [paused, setPaused] = useState(null);         // {error, until}: the server checks no more for now
     const input = useRef(null);
     const run = useRef(0);      // a file picked meanwhile, or a stop, ends the check of this one
+    const list = useRef({addresses: [], collected: []});
+
+    // the addresses of the file from 'from' on, after the lines of the ones checked before
+    const check = async (from) => {
+        const current = ++run.current;
+        const {addresses} = list.current;
+        setPaused(null);
+        setIsChecking(true);
+
+        for (let start = from; start < addresses.length; start += CHECKED_AT_ONCE) {
+            const data = await api.checkSites(addresses.slice(start, start + CHECKED_AT_ONCE), language).catch(() => null);
+            if (current !== run.current) return;
+            if (data?.retryAfter) {
+                // past the sites the server checks per hour: the ones checked stay, the others wait
+                setPaused({error: data.error, until: new Date(Date.now() + data.retryAfter * 1000)});
+                break;
+            }
+            if (!data || data.error) {
+                toast.error(data?.error ?? 'The sites could not be checked.');
+                break;
+            }
+            // a feed met before keeps its line, and its tick as the reader left it
+            const collected = list.current.collected;
+            const fresh = data.sites.filter(site => STATUS[site.status]?.ticked && !collected.some(other => other.key === site.key));
+            list.current.collected = joined(collected, data.sites);
+            setResults(list.current.collected);
+            setChecked(Math.min(addresses.length, start + CHECKED_AT_ONCE));
+            setSelected(previous => [...new Set([...previous, ...fresh.map(site => site.key)])]);
+        }
+        setIsChecking(false);
+    };
 
     const handleFile = async (event) => {
         const file = event.target.files?.[0];
@@ -73,29 +107,15 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
             toast.error(`${read.more} more addresses were left out: ${read.addresses.length} at most at once.`);
         }
 
-        const current = ++run.current;
+        list.current = {addresses: read.addresses, collected: []};
         setFileName(file.name);
         setTotal(read.addresses.length);
+        setBesideFeed(read.besideFeed ?? 0);
+        setChecked(0);
         setResults([]);
         setSelected([]);
         setFailed([]);
-        setIsChecking(true);
-
-        let collected = [];
-        for (let start = 0; start < read.addresses.length; start += CHECKED_AT_ONCE) {
-            const data = await api.checkSites(read.addresses.slice(start, start + CHECKED_AT_ONCE), language).catch(() => null);
-            if (current !== run.current) return;
-            if (!data || data.error) {
-                toast.error(data?.error ?? 'The sites could not be checked.');
-                break;
-            }
-            // a feed met before keeps its line, and its tick as the reader left it
-            const fresh = data.sites.filter(site => STATUS[site.status]?.ticked && !collected.some(other => other.key === site.key));
-            collected = joined(collected, data.sites);
-            setResults(collected);
-            setSelected(previous => [...new Set([...previous, ...fresh.map(site => site.key)])]);
-        }
-        setIsChecking(false);
+        await check(0);
     };
 
     const stop = () => {
@@ -136,6 +156,7 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         // builds its feed again), the refused ones stay, with why
         const refused = new Set(errors.map(error => error.site));
         const done = new Set(answered.filter(source => !refused.has(source.site)).map(source => source.key));
+        list.current.collected = list.current.collected.filter(result => !done.has(result.key));
         setResults(results.filter(result => !done.has(result.key)));
         setSelected(selected.filter(key => !done.has(key)));
         setFailed(errors);
@@ -161,9 +182,29 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
 
             {isChecking && (
                 <div className="mt-4 flex flex-wrap items-end gap-4">
-                    <Working>Finding the feeds of {fileName}: {results.length} of {total} sites…</Working>
+                    <Working>Finding the feeds of {fileName}: {checked} of {total} addresses…</Working>
                     <Button size="sm" variant="subtle" onClick={stop}>Stop</Button>
                 </div>
+            )}
+            {besideFeed > 0 && total > 0 && (
+                <p className="caption mt-2">
+                    {besideFeed} site{besideFeed > 1 ? 's' : ''} of your list left out: the feed given on the same line is checked instead.
+                </p>
+            )}
+
+            {paused && (
+                <Notice type="error" title={`${checked} of ${total} addresses checked`} className="mt-4">
+                    <p>
+                        {paused.error} The {total - checked} others can be checked
+                        from {paused.until.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}: the ones below stay.
+                    </p>
+                    <Button size="sm" className="mt-2" onClick={() => check(checked)}>Check the {total - checked} others</Button>
+                </Notice>
+            )}
+            {!isChecking && !paused && checked > 0 && checked < total && (
+                <Button size="sm" variant="link" className="mt-2" onClick={() => check(checked)}>
+                    Check the {total - checked} other addresses of {fileName}
+                </Button>
             )}
 
             {results.length > 0 && (

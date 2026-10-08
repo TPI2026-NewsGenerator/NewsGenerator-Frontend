@@ -23,6 +23,28 @@ describe('addressesIn', () => {
         ]);
     });
 
+    it('should take the feed of a line rather than its site, the site of a line without a feed', () => {
+        const csv = 'nom,url_site,categorie,flux_rss\r\n'
+            + '24chasa,https://www.24chasa.bg/sport,sport,https://www.24chasa.bg/rss\r\n'
+            + 'BBC,https://www.bbc.com/sport/football,sport,https://feeds.bbci.co.uk/sport/football/rss.xml\r\n'
+            + '20min,https://www.20min.ch/sport,sport,\r\n'
+            + 'Observatory,https://football-observatory.com,sport,https://football-observatory.com/spip.php?page=backend\r\n'
+            + 'Two sites,https://www.a.example,https://www.b.example,\r\n';
+        expect(addressesIn(csv)).toEqual([
+            'https://www.24chasa.bg/rss',
+            'https://feeds.bbci.co.uk/sport/football/rss.xml',
+            'https://www.20min.ch/sport',
+            'https://football-observatory.com/spip.php?page=backend',
+            'https://www.a.example',
+            'https://www.b.example',
+        ]);
+    });
+
+    it('should keep every address of a line naming many sites', () => {
+        expect(addressesIn('See https://a.example, https://b.example, https://c.example, https://d.example and https://e.example/rss'))
+            .toHaveLength(5);
+    });
+
     it('should leave the punctuation of a sentence out of the address', () => {
         expect(addressesIn('Read https://www.uefa.com. And (https://sofoot.com)!')).toEqual(['https://www.uefa.com', 'https://sofoot.com']);
     });
@@ -52,6 +74,18 @@ describe('addressesOfXlsx', () => {
         ]));
         expect(addressesOfXlsx(xlsx())).toHaveLength(3);
     });
+
+    it('should read a sheet row by row: the feed of a row rather than its site, the link of a cell on its row', () => {
+        const bytes = zipSync({
+            'xl/sharedStrings.xml': strToU8('<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>https://www.24chasa.bg/sport</t></si><si><t>https://www.24chasa.bg/rss</t></si><si><t>Kicker</t></si></sst>'),
+            'xl/worksheets/sheet1.xml': strToU8('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetData>'
+                + '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>'
+                + '<row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="inlineStr"><is><t>https://newsfeed.kicker.de/news/aktuell</t></is></c></row>'
+                + '</sheetData><hyperlinks><hyperlink ref="A2" r:id="rId1"/></hyperlinks></worksheet>'),
+            'xl/worksheets/_rels/sheet1.xml.rels': strToU8('<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://www.kicker.de/" TargetMode="External"/></Relationships>'),
+        });
+        expect(addressesOfXlsx(bytes)).toEqual(['https://www.24chasa.bg/rss', 'https://newsfeed.kicker.de/news/aktuell']);
+    });
 });
 
 describe('addressesOfFile', () => {
@@ -61,6 +95,6 @@ describe('addressesOfFile', () => {
 
     it('should read a text file', async () => {
         const file = new File(['https://www.ft.com/sport\nhttps://www.reuters.com'], 'list.txt');
-        expect(await addressesOfFile(file)).toEqual({addresses: ['https://www.ft.com/sport', 'https://www.reuters.com'], more: 0});
+        expect(await addressesOfFile(file)).toEqual({addresses: ['https://www.ft.com/sport', 'https://www.reuters.com'], more: 0, besideFeed: 0});
     });
 });

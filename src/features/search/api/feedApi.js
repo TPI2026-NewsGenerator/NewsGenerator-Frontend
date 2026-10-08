@@ -46,7 +46,8 @@ export const FeedApi = {
         return await response.json();
     },
     // {sites}: the feed found for each address of a list the reader imports (25 at most), with its
-    // status: ready, bridge, asleep, flood, added or none. Nothing is added
+    // status: ready, bridge, asleep, flood, added or none. Nothing is added. {error, retryAfter} past
+    // the sites the server checks per hour: the seconds until it checks these
     checkSites: async (sites, language = 'en') => {
         const response = await fetch(`${API_URL}/feeds/check`, {
             method: 'POST',
