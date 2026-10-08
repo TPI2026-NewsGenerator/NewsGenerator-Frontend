@@ -7,7 +7,8 @@
 //
 
 import {useCallback, useEffect, useState} from "react";
-import {Link} from "react-router-dom";
+import {Link, useLocation, useNavigate} from "react-router-dom";
+import {Tabs} from "radix-ui";
 import {PageShell, Opening} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
@@ -35,6 +36,9 @@ const steps = (span) => ({
     angles: 'Looking for other angles on each story…',
 });
 
+// a tab of the page, larger than the ones of the terms inside it (see WatchedNews)
+const PAGE_TAB = '-mb-px cursor-pointer border-b-2 border-transparent pt-2 pb-3 font-display text-[1.6rem] leading-tight text-ink-mute transition-colors hover:text-ink data-[state=active]:border-ink data-[state=active]:text-ink';
+
 const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});
 
 export const BriefingPage = () => {
@@ -56,6 +60,8 @@ export const BriefingPage = () => {
     const [foundView, setFoundView] = useState(null);
     // the profile read: its briefing is shown, asked again when another one is chosen
     const active = useActiveProfile();
+    const location = useLocation();
+    const navigate = useNavigate();
 
     const load = useCallback(async () => {
         try {
@@ -151,6 +157,72 @@ export const BriefingPage = () => {
     const found = ready ? briefing.items.filter(item => item.found?.length > 0).length : 0;
     const onlyFound = found > 0 && foundView === briefing.id;
 
+    // the news of the terms the profile follows, in a tab of their own (#terms in the address, kept when
+    // the page is opened again); none followed, the page has the briefing only
+    const hasTerms = ready && briefing.watched?.length > 0;
+    const watchedCount = hasTerms ? briefing.watched.reduce((sum, group) => sum + group.count, 0) : 0;
+    const tab = hasTerms && location.hash === '#terms' ? 'terms' : 'briefing';
+    const chooseTab = (value) => navigate({pathname: location.pathname, search: location.search, hash: value === 'terms' ? '#terms' : ''}, {replace: true});
+    // the stories of the briefing naming a term, shown alone in the tab of the briefing
+    const showFound = () => {
+        setFoundView(briefing.id);
+        chooseTab('briefing');
+    };
+
+    const cards = (
+        <>
+            {found > 0 && (
+                <div className="grid-12">
+                    <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-7 md:col-start-3">
+                        <Button size="sm" variant={onlyFound ? 'primary' : 'quiet'} aria-pressed={onlyFound}
+                                onClick={() => setFoundView(onlyFound ? null : briefing.id)}>
+                            {onlyFound ? 'Show the whole briefing' : `Names and terms found · ${found} ${found === 1 ? 'story' : 'stories'}`}
+                        </Button>
+                        <p className="caption">
+                            {onlyFound
+                                ? 'Only the stories that name a name or a term you follow, marked where they are.'
+                                : 'The stories that name a name or a term you follow.'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {ready && count > 0 && (
+                <ol className="list-none p-0">
+                    {/* the stories of the terms followed keep their place in the briefing */}
+                    {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
+                        <li key={item.storyId}>
+                            <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound}
+                                          onVote={value => vote(item.storyId, value)}
+                                          onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
+                                          selected={ticked.includes(item.storyId)}/>
+                        </li>
+                    ))}
+                </ol>
+            )}
+        </>
+    );
+
+    const terms = hasTerms && (
+        <div className="grid-12">
+            <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
+                <h2 id="watched-head" className="section-head">The names and terms you follow</h2>
+                <p className="caption mt-2">
+                    Every news of your sources of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one,
+                    whatever its relevance, not chosen by the AI. <Link className="link" to="/profile#terms">Change them</Link>.
+                </p>
+                {found > 0 && (
+                    <p className="caption mt-1">
+                        <button type="button" onClick={showFound} className="cursor-pointer text-accent-ink underline underline-offset-4 hover:text-ink">
+                            {found === 1 ? '1 story of your briefing names them' : `${found} stories of your briefing name them`}
+                        </button>
+                    </p>
+                )}
+                <div className="mt-6"><WatchedNews watched={briefing.watched}/></div>
+            </section>
+        </div>
+    );
+
     return (
         <PageShell user={user} onSignOut={logout}>
             <Opening
@@ -216,53 +288,27 @@ export const BriefingPage = () => {
                     </div>
                 </div>
 
-                {found > 0 && (
-                    <div className="grid-12">
-                        <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-7 md:col-start-3">
-                            <Button size="sm" variant={onlyFound ? 'primary' : 'quiet'} aria-pressed={onlyFound}
-                                    onClick={() => setFoundView(onlyFound ? null : briefing.id)}>
-                                {onlyFound ? 'Show the whole briefing' : `Names and terms found · ${found} ${found === 1 ? 'story' : 'stories'}`}
-                            </Button>
-                            <p className="caption">
-                                {onlyFound
-                                    ? 'Only the stories that name a name or a term you follow, marked where they are.'
-                                    : 'The stories that name a name or a term you follow.'}
-                            </p>
+                {hasTerms ? (
+                    // the briefing and the news of the terms followed, one tab each, the briefing first
+                    <Tabs.Root value={tab} onValueChange={chooseTab} className="space-y-8">
+                        <div className="grid-12">
+                            <Tabs.List aria-label="Your briefing and the names and terms you follow"
+                                       className="col-span-12 flex flex-wrap gap-x-8 gap-y-1 border-b border-ink md:col-span-7 md:col-start-3">
+                                <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
+                                <Tabs.Trigger value="terms" className={PAGE_TAB}>
+                                    Names and terms <span className="folio align-middle">{watchedCount}</span>
+                                </Tabs.Trigger>
+                            </Tabs.List>
                         </div>
-                    </div>
-                )}
+                        <Tabs.Content value="briefing" className="space-y-8 outline-none">{cards}</Tabs.Content>
+                        <Tabs.Content value="terms" className="outline-none">{terms}</Tabs.Content>
+                    </Tabs.Root>
+                ) : cards}
 
-                {ready && count > 0 && (
-                    <ol className="list-none p-0">
-                        {/* the stories of the terms followed keep their place in the briefing */}
-                        {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
-                            <li key={item.storyId}>
-                                <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound}
-                                              onVote={value => vote(item.storyId, value)}
-                                              onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
-                                              selected={ticked.includes(item.storyId)}/>
-                            </li>
-                        ))}
-                    </ol>
-                )}
-
-                {mail && ready && ticked.length > 0 && (
+                {/* the cards ticked are sent from the tab of the briefing */}
+                {mail && ready && ticked.length > 0 && tab === 'briefing' && (
                     <MailBar count={ticked.length} accountEmail={user?.email} sending={sending}
                              onSend={email} onClear={() => tick([])}/>
-                )}
-
-                {ready && briefing.watched?.length > 0 && (
-                    <div className="grid-12">
-                        <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
-                            <p className="kicker">Always shown</p>
-                            <h2 id="watched-head" className="section-head mt-2">The names and terms you follow</h2>
-                            <p className="caption mt-2 mb-6">
-                                Every news of your sources of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one,
-                                not chosen by the AI. <Link className="link" to="/profile#terms">Change them</Link>.
-                            </p>
-                            <WatchedNews watched={briefing.watched}/>
-                        </section>
-                    </div>
                 )}
             </div>
         </PageShell>
