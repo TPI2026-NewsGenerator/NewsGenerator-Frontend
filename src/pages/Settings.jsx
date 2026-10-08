@@ -2,8 +2,8 @@
 //  Author: Fabian Rostello
 //  Date: 02.10.2026
 //  File: Settings.jsx
-//  Description: The settings of the account: its username and its password, each changed with the
-//               password of now
+//  Description: The settings of the account: its username, its email and its password, each changed
+//               with the password of now
 //
 
 import {useEffect, useState} from "react";
@@ -18,6 +18,8 @@ import {toast} from "@/lib/toast.js";
 // the rules of the server, checked here first
 const USERNAME = /^[\p{L}\p{N}._-]{3,30}$/u;
 const MIN_PASSWORD = 10;
+// one address: no comma, semicolon or bracket that would make it several
+const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
 
 // a password field with its button to show what is typed
 const PasswordField = ({id, label, value, onChange, autoComplete, error, help}) => {
@@ -43,10 +45,11 @@ const PasswordField = ({id, label, value, onChange, autoComplete, error, help}) 
 export const SettingsPage = () => {
     const {user, refresh, logout, expired} = useAuth();
     const [name, setName] = useState({username: user?.username ?? '', password: ''});
+    const [mail, setMail] = useState({email: user?.email ?? '', password: ''});
     const [secret, setSecret] = useState({password: '', newPassword: '', again: ''});
     const [errors, setErrors] = useState({});
     const [error, setError] = useState(null);
-    const [sending, setSending] = useState(null);       // 'username' or 'password'
+    const [sending, setSending] = useState(null);       // 'username', 'email' or 'password'
 
     useEffect(() => {
         if (!user) logout();
@@ -87,6 +90,21 @@ export const SettingsPage = () => {
         });
     };
 
+    const changeEmail = (event) => {
+        event.preventDefault();
+        const email = mail.email.trim();
+        const found = {
+            email: EMAIL.test(email) ? null : 'An email, like name@example.org',
+            emailPassword: mail.password ? null : 'Your current password',
+        };
+        setErrors(found);
+        if (Object.values(found).some(Boolean)) return;
+        send('email', () => AccountApi.changeEmail({email, password: mail.password}), () => {
+            setMail({email, password: ''});
+            toast.success(`Your email is now ${email}: the briefings you send yourself go there.`);
+        });
+    };
+
     const changePassword = (event) => {
         event.preventDefault();
         const found = {
@@ -105,7 +123,7 @@ export const SettingsPage = () => {
     return (
         <PageShell user={user} onSignOut={logout}>
             <Opening kicker="Your account" title="Settings"
-                     standfirst="Your username and your password. Each change asks your current password, so a session left open elsewhere is not enough to take your account."/>
+                     standfirst="Your username, your email and your password. Each change asks your current password, so a session left open elsewhere is not enough to take your account."/>
 
             {error && (
                 <div className="page mt-10">
@@ -116,7 +134,7 @@ export const SettingsPage = () => {
             )}
 
             <Section kicker="Sign in" title="Your username"
-                     intro={<>You sign in with it, and it is shown at the top of the pages. Your email, {user?.email}, does not change.</>}>
+                     intro="You sign in with it, and it is shown at the top of the pages.">
                 <form className="grid-12 gap-y-7" onSubmit={rename} noValidate>
                     <div className="col-span-12 md:col-span-6">
                         <Label htmlFor="settings-username">Username</Label>
@@ -134,6 +152,30 @@ export const SettingsPage = () => {
                         <Button type="submit" variant="primary" loading={sending === 'username'}
                                 disabled={sending !== null || name.username.trim() === user?.username}>
                             Change my username
+                        </Button>
+                    </div>
+                </form>
+            </Section>
+
+            <Section kicker="E-mail" title="Your email"
+                     intro="The stories of your briefing you send by e-mail go to it, unless you write another address when you send them.">
+                <form className="grid-12 gap-y-7" onSubmit={changeEmail} noValidate>
+                    <div className="col-span-12 md:col-span-6">
+                        <Label htmlFor="settings-email">Email</Label>
+                        <Input id="settings-email" type="email" autoComplete="email" value={mail.email}
+                               onChange={event => setMail({...mail, email: event.target.value})}
+                               invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'settings-email-error' : undefined}/>
+                        <FieldError id="settings-email-error">{errors.email}</FieldError>
+                    </div>
+                    <div className="col-span-12 md:col-span-6">
+                        <PasswordField id="email-password" label="Current password" autoComplete="current-password"
+                                       value={mail.password} onChange={password => setMail({...mail, password})}
+                                       error={errors.emailPassword}/>
+                    </div>
+                    <div className="col-span-12">
+                        <Button type="submit" variant="primary" loading={sending === 'email'}
+                                disabled={sending !== null || mail.email.trim() === user?.email}>
+                            Change my email
                         </Button>
                     </div>
                 </form>

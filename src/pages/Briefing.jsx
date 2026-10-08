@@ -17,6 +17,7 @@ import {DEFAULT_HOURS, spanOf} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {BriefingSize, keepSize, keptSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
+import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
@@ -108,15 +109,17 @@ export const BriefingPage = () => {
     const tick = (storyIds) => setTicks({briefingId: briefing.id, storyIds});
     const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
 
-    // the cards ticked, in the order of the briefing, sent to the address of the account
-    const email = async () => {
+    // the cards ticked, in the order of the briefing, sent to the address 'to': true when sent
+    const email = async (to) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, ticked);
-            toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to the address of your account.`);
+            await BriefingApi.email(briefing.id, ticked, to);
+            toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}.`);
             tick([]);
+            return true;
         } catch (err) {
             toast.error(`Not sent: ${err.message}`);
+            return false;
         } finally {
             setSending(false);
         }
@@ -168,7 +171,7 @@ export const BriefingPage = () => {
                         </div>
                         {mail && ready && count > 0 && (
                             <p className="caption max-w-[32ch]">
-                                Tick the stories to send them to the address of your account, or{' '}
+                                Tick the stories to send them by e-mail, or{' '}
                                 <button type="button" onClick={() => tick(briefing.items.map(item => item.storyId))}
                                         className="cursor-pointer underline underline-offset-4 hover:text-ink">tick them all</button>.
                             </p>
@@ -221,18 +224,8 @@ export const BriefingPage = () => {
                 )}
 
                 {mail && ready && ticked.length > 0 && (
-                    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink bg-paper">
-                        <div className="page flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-                            <p className="folio !text-ink">
-                                {ticked.length} {ticked.length === 1 ? 'story' : 'stories'} ticked
-                                <span className="text-ink-mute"> · to the address of your account</span>
-                            </p>
-                            <div className="flex gap-2">
-                                <Button variant="subtle" size="sm" onClick={() => tick([])} disabled={sending}>Untick all</Button>
-                                <Button variant="primary" size="sm" onClick={email} loading={sending}>Send email</Button>
-                            </div>
-                        </div>
-                    </div>
+                    <MailBar count={ticked.length} accountEmail={user?.email} sending={sending}
+                             onSend={email} onClear={() => tick([])}/>
                 )}
 
                 {ready && briefing.watched?.length > 0 && (

@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 02.10.2026
 //  File: accountApi.js
-//  Description: Calls of the settings of an account: its username and its password
+//  Description: Calls of the settings of an account: its username, its email and its password
 //
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -20,5 +20,6 @@ const put = async (path, body) => {
 export const AccountApi = {
     // {id, username, email, role}, or {error}
     rename: ({username, password}) => put('/account/username', {username, password}),
+    changeEmail: ({email, password}) => put('/account/email', {email, password}),
     changePassword: ({password, newPassword}) => put('/account/password', {password, newPassword}),
 };
