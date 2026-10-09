@@ -62,6 +62,11 @@ export const ProfileApi = {
         const response = await fetch(`${API_URL}/profile/options`);
         return await response.json();
     },
+    // A profile written with the AI, before the account too, nothing saved. {start, rounds, language},
+    // rounds: [[{question, options, chosen, free}]] answered so far -> {enough, questions: [{question,
+    // options}]}, the next round; then -> {text}, the profile written from the answers
+    funnelQuestions: (funnel) => send('/profile/funnel/questions', {method: 'POST', body: funnel}),
+    funnelText: (funnel) => send('/profile/funnel/text', {method: 'POST', body: funnel}),
     // {text, language}: the AI splits it into interests, the sources are found in background
     save: (profile) => send('/profile', {method: 'PUT', body: profile}),
     updateInterest: (id, changes) => send(`/profile/interests/${id}`, {method: 'PATCH', body: changes}),

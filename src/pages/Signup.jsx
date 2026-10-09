@@ -11,8 +11,9 @@ import {Link, useNavigate} from "react-router-dom";
 import {LoginApi} from "@/features/login/api/loginApi.js";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {AuthShell} from "@/features/login/components/AuthShell.jsx";
+import {ProfileFunnel} from "@/features/profiles/ProfileFunnel.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
-import {LANGUAGES, MIN_PROFILE_TEXT, PLACEHOLDER, likelyLanguage} from "@/features/briefing/profileWords.js";
+import {LANGUAGES, MIN_PROFILE_TEXT, likelyLanguage} from "@/features/briefing/profileWords.js";
 import {Button} from "@/components/ui/button.jsx";
 import {FieldError, Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
@@ -30,6 +31,10 @@ export const SignupPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
     const [sending, setSending] = useState(false);
+    // the profile is written by the AI from the answers to its questions; written: it gave one, shown to
+    // be read and changed; guided: its questions are shown, at first and when asked again
+    const [guided, setGuided] = useState(true);
+    const [written, setWritten] = useState(false);
     const navigate = useNavigate();
     const {refresh} = useAuth();
 
@@ -58,7 +63,8 @@ export const SignupPage = () => {
             username: USERNAME.test(form.username.trim()) ? null : '3 to 30 letters, digits, dots, dashes or underscores',
             email: EMAIL.test(form.email.trim()) ? null : 'Enter a valid email',
             password: form.password.length >= MIN_PASSWORD ? null : `At least ${MIN_PASSWORD} characters`,
-            text: form.text.trim().length >= MIN_PROFILE_TEXT ? null : `Say a little more: at least ${MIN_PROFILE_TEXT} characters`,
+            text: guided ? 'Answer the questions first: the AI writes your profile from your answers.'
+                : form.text.trim().length >= MIN_PROFILE_TEXT ? null : `Say a little more: at least ${MIN_PROFILE_TEXT} characters`,
             language: form.language ? null : 'Choose your language',
         };
         setFormError(errors);
@@ -97,8 +103,9 @@ export const SignupPage = () => {
                     <p className="kicker kicker-rule mb-6">Your daily briefing</p>
                     <h1 className="display text-balance">Tell us what you follow.</h1>
                     <p className="standfirst mt-6">
-                        Your briefing is built from your own words: the AI reads them, finds the sources that
-                        publish on your subjects and chooses the stories of the last two days for you.
+                        Your briefing is built from your answers: the AI asks you a few questions, writes your
+                        profile, finds the sources that publish on your subjects and chooses the stories of the last
+                        two days for you.
                     </p>
                 </div>
 
@@ -139,17 +146,7 @@ export const SignupPage = () => {
 
                     <fieldset className="min-w-0 space-y-7 border-0 p-0">
                         <legend className="section-head mb-8">What you want to read</legend>
-                        <div>
-                            <Label htmlFor="profile-text">In your own words</Label>
-                            <Textarea id="profile-text" rows={6} className="mt-3" value={form.text} placeholder={PLACEHOLDER}
-                                      onChange={change('text')} invalid={Boolean(formError.text)}
-                                      aria-describedby={described('text', 'profile-text-help')}/>
-                            <Help id="profile-text-help">
-                                The subjects you follow, how closely, and what you don't want. You can change it later in
-                                your profile.
-                            </Help>
-                            <FieldError id="text-error">{formError.text}</FieldError>
-                        </div>
+                        {/* first: the questions are asked in it */}
                         <div>
                             <Label htmlFor="signup-language">Your language</Label>
                             <Select id="signup-language" className="mt-2" invalid={Boolean(formError.language)}
@@ -161,6 +158,33 @@ export const SignupPage = () => {
                             </Help>
                             <FieldError id="language-error">{formError.language}</FieldError>
                         </div>
+                        {guided ? (
+                            <div>
+                                <ProfileFunnel idPrefix="signup-funnel" language={form.language || 'en'}
+                                               onCancel={written ? () => setGuided(false) : undefined} cancelLabel="Keep my profile"
+                                               onWritten={text => {
+                                                   set('text', text);
+                                                   setGuided(false);
+                                                   setWritten(true);
+                                               }}/>
+                                <FieldError id="text-error">{formError.text}</FieldError>
+                            </div>
+                        ) : (
+                            <div>
+                                <Label htmlFor="profile-text">Your profile</Label>
+                                <p className="caption mt-2">
+                                    The AI wrote it from your answers: read it and change what you want.{' '}
+                                    <button type="button" className="link cursor-pointer" onClick={() => setGuided(true)}>
+                                        Answer the questions again
+                                    </button>
+                                </p>
+                                <Textarea id="profile-text" rows={10} className="mt-3" value={form.text}
+                                          onChange={change('text')} invalid={Boolean(formError.text)}
+                                          aria-describedby={described('text', 'profile-text-help')}/>
+                                <Help id="profile-text-help">You can change it later in your profile.</Help>
+                                <FieldError id="text-error">{formError.text}</FieldError>
+                            </div>
+                        )}
                     </fieldset>
 
                     {error && <Notice type="error">{error}</Notice>}

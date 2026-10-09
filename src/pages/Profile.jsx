@@ -14,6 +14,7 @@ import {Button} from "@/components/ui/button.jsx";
 import {Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Dialog} from "@/components/ui/overlay.jsx";
 import {WatchTerms} from "@/features/profiles/WatchTerms.jsx";
+import {ProfileFunnel} from "@/features/profiles/ProfileFunnel.jsx";
 import {profilesChanged, setActiveProfile, useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {Meta, Notice, Working} from "@/components/ui/text.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -71,6 +72,8 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
 // profile shown, the new one
 const NewProfile = ({languages, defaultLanguage, onCreated, onCancel}) => {
     const [form, setForm] = useState({name: '', text: '', language: defaultLanguage});
+    // its text is written by the AI from the answers to its questions, then read and changed here
+    const [guided, setGuided] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
 
@@ -98,20 +101,34 @@ const NewProfile = ({languages, defaultLanguage, onCreated, onCancel}) => {
                     <Input id="new-profile-name" className="mt-2" maxLength={40} value={form.name} placeholder="Work"
                            onChange={event => setForm({...form, name: event.target.value})}/>
                 </div>
-                <div className="col-span-12 md:col-span-8">
-                    <Label htmlFor="new-profile-text">What do you want to read in it?</Label>
-                    <Textarea id="new-profile-text" rows={6} className="mt-3" value={form.text} placeholder={PLACEHOLDER}
-                              onChange={event => setForm({...form, text: event.target.value})}/>
-                </div>
-                <div className="col-span-12 md:col-span-5">
+                {/* before the questions: they are asked in it */}
+                <div className="col-span-12 md:col-span-5 md:col-start-1">
                     <Label htmlFor="new-profile-language">Its language</Label>
                     <Select id="new-profile-language" className="mt-2" value={form.language}
                             options={languages.map(value => ({value, label: languageLabel(value)}))}
                             onChange={event => setForm({...form, language: event.target.value})}/>
                 </div>
+                <div className="col-span-12 md:col-span-8">
+                    {guided ? (
+                        <ProfileFunnel idPrefix="new-profile-funnel" language={form.language}
+                                       onCancel={form.text ? () => setGuided(false) : undefined} cancelLabel="Keep its text"
+                                       onWritten={text => {
+                                           setForm(current => ({...current, text}));
+                                           setGuided(false);
+                                       }}/>
+                    ) : (<>
+                        <Label htmlFor="new-profile-text">What you will read in it</Label>
+                        <p className="caption mt-2">
+                            The AI wrote it from your answers: read it and change what you want.{' '}
+                            <button type="button" className="link cursor-pointer" onClick={() => setGuided(true)}>Answer the questions again</button>
+                        </p>
+                        <Textarea id="new-profile-text" rows={10} className="mt-3" value={form.text}
+                                  onChange={event => setForm({...form, text: event.target.value})}/>
+                    </>)}
+                </div>
                 <div className="col-span-12 flex flex-wrap gap-3 md:col-span-8">
                     <Button variant="primary" onClick={create} loading={saving}
-                            disabled={!form.name.trim() || form.text.trim().length < MIN_PROFILE_TEXT || !form.language}>
+                            disabled={guided || !form.name.trim() || form.text.trim().length < MIN_PROFILE_TEXT || !form.language}>
                         Create this profile
                     </Button>
                     <Button variant="subtle" onClick={onCancel} disabled={saving}>Cancel</Button>
@@ -132,11 +149,17 @@ export const ProfilePage = () => {
     // the profile read: its data is asked again when another one is chosen
     const active = useActiveProfile();
     const [name, setName] = useState('');
+    // the language of the profile, changed on its own, under its name: its interests are read again in it
+    const [readIn, setReadIn] = useState('');
+    const [changingLanguage, setChangingLanguage] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [options, setOptions] = useState({languages: []});
     const [data, setData] = useState(null);         // {profile, interests, sources}
     const [form, setForm] = useState({text: '', language: likelyLanguage(LANGUAGE_OPTIONS.map(option => option.value))});
     const [saving, setSaving] = useState(false);
+    // the profile written with the AI asking questions; before: the text it replaced, to put it back
+    const [guided, setGuided] = useState(false);
+    const [before, setBefore] = useState(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     // the sources added by hand, the language of the next one and its categories, and a count
@@ -159,6 +182,7 @@ export const ProfilePage = () => {
         if (fillForm && answer.profile) {
             setForm({text: answer.profile.text, language: answer.profile.language});
             setName(answer.profile.name ?? '');
+            setReadIn(answer.profile.language);
         }
         return true;
     }, [expired]);
@@ -252,6 +276,7 @@ export const ProfilePage = () => {
             if (apply(answer)) {
                 // the first profile of a reader: the switcher shows it
                 if (!data?.profile) profilesChanged();
+                setBefore(null);
                 toast.success('Profile saved, its sources are being found.');
             }
         } finally {
@@ -271,6 +296,22 @@ export const ProfilePage = () => {
     const rename = async () => {
         if (await change(() => ProfileApi.rename(data.profile.id, name))) profilesChanged();
     };
+
+    // the profile saved again with its saved text in the other language: the AI chooses the languages of
+    // the searches of each interest from it (the text being written below is left as it is)
+    const changeLanguage = async () => {
+        setChangingLanguage(true);
+        try {
+            if (await change(() => ProfileApi.save({text: data.profile.text, language: readIn}))) {
+                setForm(current => ({...current, language: readIn}));
+                toast.success(`Your news are now translated into ${languageLabel(readIn)}.`);
+            }
+        } finally {
+            setChangingLanguage(false);
+        }
+    };
+    const languageChoices = (options.languages.length > 0 ? options.languages : LANGUAGE_OPTIONS.map(option => option.value))
+        .map(value => ({value, label: languageLabel(value)}));
 
     // the profile deleted with its interests, sources and briefings: the first one left is read
     const removeProfile = async () => {
@@ -384,6 +425,20 @@ export const ProfilePage = () => {
                                 <Button onClick={rename} disabled={busy || !name.trim() || name.trim() === data.profile.name}>Rename</Button>
                             </div>
                         </div>
+                        <div className="col-span-12 md:col-span-5 md:col-start-1 md:row-start-2">
+                            <Label htmlFor="profile-language">Its language</Label>
+                            <div className="mt-2 flex gap-2">
+                                <Select id="profile-language" className="flex-1" aria-describedby="profile-language-help"
+                                        options={languageChoices} value={readIn} onChange={event => setReadIn(event.target.value)}/>
+                                <Button onClick={changeLanguage} loading={changingLanguage}
+                                        disabled={busy || !readIn || readIn === data.profile.language}>Change</Button>
+                            </div>
+                            <Help id="profile-language-help">
+                                Its briefing and its searches read the news of every language and translate them into
+                                this one. The AI asks its questions in it.
+                            </Help>
+                            {changingLanguage && <p className="caption mt-2 italic">The AI reads your profile again, this takes a few seconds…</p>}
+                        </div>
                         <div className="col-span-12 flex flex-wrap items-end gap-3 md:col-span-6 md:col-start-7 md:justify-end">
                             {user?.admin && (
                                 <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 15)}>
@@ -408,29 +463,55 @@ export const ProfilePage = () => {
                      intro="The subjects you follow, how closely, and what you don't want. The more precise, the better the briefing.">
                 <div className="grid-12 gap-y-8">
                     <div className="col-span-12 md:col-span-8">
-                        <Label htmlFor="profile-text">What do you want to read?</Label>
-                        <Textarea id="profile-text" rows={7} className="mt-3" value={form.text} placeholder={PLACEHOLDER}
-                                  onChange={event => setForm({...form, text: event.target.value})}/>
+                        {guided ? (
+                            <ProfileFunnel idPrefix="profile-funnel" language={form.language} onCancel={() => setGuided(false)}
+                                           onWritten={text => {
+                                               setBefore(current => current ?? form.text);
+                                               setForm(current => ({...current, text}));
+                                               setGuided(false);
+                                           }}/>
+                        ) : (<>
+                            <Label htmlFor="profile-text">What do you want to read?</Label>
+                            <p className="caption mt-2">
+                                {before !== null
+                                    ? 'The AI wrote it from your answers: read it, change what you want, then save it.'
+                                    : 'Rather answer a few questions?'}
+                                {' '}
+                                <button type="button" className="link cursor-pointer" onClick={() => setGuided(true)}>
+                                    {before !== null ? 'Answer the questions again' : 'Let the AI ask you questions'}
+                                </button>
+                                {before !== null && before.trim() && (<>
+                                    {' · '}
+                                    <button type="button" className="link cursor-pointer" onClick={() => {
+                                        setForm(current => ({...current, text: before}));
+                                        setBefore(null);
+                                    }}>Put back my text</button>
+                                </>)}
+                            </p>
+                            <Textarea id="profile-text" rows={before !== null ? 10 : 7} className="mt-3" value={form.text} placeholder={PLACEHOLDER}
+                                      onChange={event => setForm({...form, text: event.target.value})}/>
+                        </>)}
                     </div>
                     <aside className="col-span-12 md:col-span-3 md:col-start-10 md:mt-8 md:border-l md:border-rule md:pl-5">
                         <p className="kicker">For example</p>
                         <p className="caption mt-2 max-w-[30ch] italic">“{PLACEHOLDER}”</p>
                     </aside>
 
-                    <div className="col-span-12 md:col-span-5">
-                        <Label htmlFor="profile-language">Your language</Label>
-                        <Select id="profile-language" className="mt-2" aria-describedby="profile-language-help"
-                                options={(options.languages.length > 0 ? options.languages : LANGUAGE_OPTIONS.map(option => option.value))
-                                    .map(value => ({value, label: languageLabel(value)}))}
-                                value={form.language} onChange={event => setForm({...form, language: event.target.value})}/>
-                        <Help id="profile-language-help">
-                            Your briefing and your searches read the news of every language, and translate them into this one.
-                        </Help>
-                    </div>
+                    {/* a profile saved has its language under its name, above */}
+                    {!data?.profile && (
+                        <div className="col-span-12 md:col-span-5">
+                            <Label htmlFor="new-language">Your language</Label>
+                            <Select id="new-language" className="mt-2" aria-describedby="new-language-help" options={languageChoices}
+                                    value={form.language} onChange={event => setForm({...form, language: event.target.value})}/>
+                            <Help id="new-language-help">
+                                Your briefing and your searches read the news of every language, and translate them into this one.
+                            </Help>
+                        </div>
+                    )}
 
                     <div className="col-span-12 md:col-span-8">
                         <Button variant="primary" onClick={save} loading={saving}
-                                disabled={form.text.trim().length < MIN_PROFILE_TEXT || !form.language}>
+                                disabled={guided || form.text.trim().length < MIN_PROFILE_TEXT || !form.language}>
                             {data?.profile ? 'Save my profile' : 'Create my profile'}
                         </Button>
                         {saving && <p className="caption mt-3 italic">The AI reads your profile, this takes a few seconds…</p>}
