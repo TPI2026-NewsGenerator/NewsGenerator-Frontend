@@ -5,9 +5,10 @@
 //  Description: Login Page for frontend
 //
 
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {LoginApi} from '@/features/login/api/loginApi.js'
+import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {Button} from "@/components/ui/button.jsx";
 import {FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
@@ -23,8 +24,14 @@ export const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
     const [sending, setSending] = useState(false);
+    // accounts are made only when the server lets them (SIGNUP_OPEN): the link shown then only
+    const [signup, setSignup] = useState(false);
     const navigate = useNavigate();
     const {refresh} = useAuth();
+
+    useEffect(() => {
+        ProfileApi.getOptions().then(answer => setSignup(answer?.signup === true)).catch(() => setSignup(false));
+    }, []);
 
     const change = (name) => (event) => {
         setFormValue({...formValue, [name]: event.target.value});
@@ -110,9 +117,11 @@ export const LoginPage = () => {
                         {error && <Notice type="error">{error}</Notice>}
 
                         <Button variant="primary" type="submit" className="w-full" loading={sending}>Login</Button>
-                        <p className="caption">
-                            Don't have an account? <Link className="link" to="/register">Sign up</Link>
-                        </p>
+                        {signup && (
+                            <p className="caption">
+                                Don't have an account? <Link className="link" to="/register">Sign up</Link>
+                            </p>
+                        )}
                     </form>
                 </div>
             </div>

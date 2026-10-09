@@ -119,4 +119,14 @@ describe('SignupPage', () => {
         expect(await screen.findByText('This username or this email is already used.')).toBeInTheDocument();
         expect(refresh).not.toHaveBeenCalled();
     });
+
+    it('should say account creation is closed when the server says so, with no form', async () => {
+        ProfileApi.getOptions.mockResolvedValueOnce({languages: ['en', 'fr'], signup: false});
+        renderPage();
+
+        expect(await screen.findByRole('heading', {name: 'Account creation is closed.'})).toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: 'Create my account'})).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Username')).not.toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'Log in'})).toHaveAttribute('href', '/login');
+    });
 });

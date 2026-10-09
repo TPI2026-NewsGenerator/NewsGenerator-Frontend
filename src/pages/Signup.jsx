@@ -96,6 +96,26 @@ export const SignupPage = () => {
 
     const described = (name, help = null) => [help, formError[name] ? `${name}-error` : null].filter(Boolean).join(' ') || undefined;
 
+    // no account is made unless the server lets it (SIGNUP_OPEN): the questions of the AI would be refused too
+    if (options.signup === false) {
+        return (
+            <AuthShell>
+                <div className="grid-12 gap-y-14">
+                    <div className="col-span-12 md:col-span-6">
+                        <p className="kicker kicker-rule mb-6">Your daily briefing</p>
+                        <h1 className="display text-balance">Account creation is closed.</h1>
+                        <p className="standfirst mt-6">
+                            New accounts cannot be made for now. If you already have one, log in.
+                        </p>
+                        <p className="mt-8">
+                            <Link className="link" to="/login">Log in</Link>
+                        </p>
+                    </div>
+                </div>
+            </AuthShell>
+        );
+    }
+
     return (
         <AuthShell>
             <div className="grid-12 gap-y-14">
