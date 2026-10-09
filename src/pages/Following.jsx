@@ -98,7 +98,7 @@ export const FollowingPage = () => {
                 <div className="grid-12">
                     <div className="col-span-12 md:col-span-7 md:col-start-3">
                         <Label htmlFor="entity-search">A club, a person, an organisation</Label>
-                        <Input id="entity-search" type="search" autoComplete="off" placeholder="Paris Saint-Germain, Aleksander Čeferin, UEFA…"
+                        <Input id="entity-search" type="search" autoComplete="off" placeholder="Roger Federer, Tesla, the World Health Organization…"
                                value={query} onChange={event => setQuery(event.target.value)}/>
                         {searching && <Working className="mt-3">Asking Wikidata…</Working>}
                         {shown && !searching && shown.length === 0 && <p className="caption mt-3">Wikidata knows nothing of that name.</p>}

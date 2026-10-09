@@ -423,7 +423,7 @@ export const SearchPage = () => {
                         <div>
                             <Label htmlFor="keyword">What are you looking for?</Label>
                             <Input id="keyword" name="keyword" value={formValue.keyword}
-                                   placeholder="e.g., the decisions of the referees in the Champions League"
+                                   placeholder="e.g., the new rules on electric cars in Europe"
                                    onChange={event => setField('keyword', event.target.value)} invalid={Boolean(formError.keyword)}
                                    aria-describedby="keyword-help"/>
                             <Help id="keyword-help">

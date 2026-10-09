@@ -52,7 +52,7 @@ export const WatchTerms = ({terms, max = 20, busy, onSave}) => {
                 </div>
                 <Help>
                     Found as a whole word in the titles and descriptions, accents and case aside. A short word in
-                    capitals (VAR, UEFA) is found only in capitals. Up to {max}. Saved as soon as you add or remove one.
+                    capitals (NASA, WHO) is found only in capitals. Up to {max}. Saved as soon as you add or remove one.
                 </Help>
             </div>
 
