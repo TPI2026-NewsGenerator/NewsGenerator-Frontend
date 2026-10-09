@@ -370,7 +370,7 @@ export const ProfilePage = () => {
             <Opening
                 kicker="Your profile"
                 title="What you want to read"
-                standfirst="In your own words: the subjects you follow, how closely, and what you don't want. The AI splits it into interests, and sources are found for each of them."
+                standfirst="The subjects you follow, how closely, and what you don't want: written by the AI from your answers, or in your own words. The AI splits it into interests, and sources are found for each of them."
                 aside={data?.profile && (
                     <div className="space-y-3">
                         <div>
