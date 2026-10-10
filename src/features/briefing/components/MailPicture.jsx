@@ -12,7 +12,7 @@ import {Button} from "@/components/ui/button.jsx";
 import {FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {Working} from "@/components/ui/text.jsx";
 import {cn} from "@/lib/utils.js";
-import {MAX_PICTURE_BYTES, PICTURE_TYPES, shownPicture} from "@/features/briefing/mailPictures.js";
+import {MAX_PICTURE_BYTES, PICTURE_TYPES, sharp, shownPicture, usePictureSizes} from "@/features/briefing/mailPictures.js";
 
 // the file as base64, without the "data:image/png;base64," before it, and as an address to show it
 const readFile = (file) => new Promise((resolve, reject) => {
@@ -29,12 +29,17 @@ export const Thumbnail = ({src}) => src
 
 // story: {storyId, title, thumbnail, thumbnailSource}; choice: undefined (its own), {kind: 'none'},
 // {kind: 'url', url}, {kind: 'file', data, preview, name}; onChoose(choice | undefined);
-// pictures: [{url, source}], the pictures of the story, null while they are asked
+// pictures: [{url, source}], the pictures of the story, null while they are asked. Only the ones wide
+// enough for the e-mail are offered, the others left out once the browser has loaded them
 export const MailPicture = ({story, choice, pictures, onChoose, onClose}) => {
     const [address, setAddress] = useState(choice?.kind === 'url' ? choice.url : '');
     const [error, setError] = useState(null);
     const file = useRef(null);
     const current = shownPicture(story, choice);
+    const sizes = usePictureSizes((pictures ?? []).map(picture => picture.url));
+    const offered = (pictures ?? []).filter(picture => sharp(sizes, picture.url));
+    const measuring = (pictures ?? []).some(picture => sizes[picture.url] === undefined);
+    const leftOut = (pictures ?? []).filter(picture => sizes[picture.url] !== undefined).length - offered.length;
 
     // a picture of the story: its own one is its own again
     const pick = (url) => onChoose(url === story.thumbnail ? undefined : {kind: 'url', url});
@@ -68,11 +73,11 @@ export const MailPicture = ({story, choice, pictures, onChoose, onClose}) => {
     return (
         <div role="group" aria-label={`The picture of “${story.title}”`} className="mt-2 border border-rule p-3">
             <p className="kicker">Its picture in the e-mail</p>
-            {pictures === null
+            {pictures === null || (measuring && offered.length === 0)
                 ? <Working>Finding the pictures of the story…</Working>
                 : (
                     <div className="mt-2 flex flex-wrap gap-2">
-                        {pictures.map(picture => (
+                        {offered.map(picture => (
                             <button key={picture.url} type="button" onClick={() => pick(picture.url)} aria-pressed={current === picture.url}
                                     aria-label={`The picture of ${picture.source}`} title={picture.source}
                                     className={cn('cursor-pointer border p-0.5', current === picture.url ? 'border-ink' : 'border-transparent hover:border-rule')}>
@@ -87,6 +92,13 @@ export const MailPicture = ({story, choice, pictures, onChoose, onClose}) => {
                         </button>
                     </div>
                 )}
+            {pictures !== null && !measuring && leftOut > 0 && (
+                <p className="caption mt-2">
+                    {offered.length === 0
+                        ? 'No picture of the story is wide enough to stay sharp in the e-mail.'
+                        : `Left out: ${leftOut} ${leftOut === 1 ? 'picture' : 'pictures'} too small to stay sharp in the e-mail.`}
+                </p>
+            )}
             {choice?.kind === 'file' && <p className="caption mt-2">Your image: {choice.name}, joined to the e-mail.</p>}
 
             <div className="mt-3 flex flex-wrap items-end gap-2">
@@ -104,7 +116,7 @@ export const MailPicture = ({story, choice, pictures, onChoose, onClose}) => {
             {error && <FieldError>{error}</FieldError>}
 
             <div className="mt-3 flex flex-wrap gap-2">
-                {choice !== undefined && <Button size="sm" variant="subtle" onClick={() => onChoose(undefined)}>Back to its own</Button>}
+                {choice !== undefined && !choice.small && !choice.auto && <Button size="sm" variant="subtle" onClick={() => onChoose(undefined)}>Back to its own</Button>}
                 <Button size="sm" variant="primary" onClick={onClose}>Done</Button>
             </div>
         </div>

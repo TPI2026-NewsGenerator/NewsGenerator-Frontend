@@ -7,13 +7,13 @@
 //               written in already
 //
 
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {ArrowDown, ArrowUp} from "lucide-react";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {MailAside} from "@/features/briefing/components/MailAside.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
-import {fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture} from "@/features/briefing/mailPictures.js";
+import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooSmall, usePictureSizes} from "@/features/briefing/mailPictures.js";
 
 // one address, as the server checks it (server/services/utils/account-rules.js)
 const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
@@ -45,6 +45,15 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
     const byId = new Map(stories.map(story => [story.storyId, story]));
     // a story unticked meanwhile leaves the e-mail
     const ordered = order.filter(storyId => byId.has(storyId)).map(storyId => byId.get(storyId));
+    // the picture of a story the reader did not change is put aside when it is too small (see
+    // MIN_PICTURE_WIDTH): the best other of the story instead, else none
+    const sizes = usePictureSizes([...ordered.map(story => story.thumbnail), ...Object.values(galleries).flatMap(found => (found ?? []).map(picture => picture.url))]);
+    const choiceOf = (story) => {
+        if (choices[story.storyId] !== undefined) return choices[story.storyId];
+        if (!tooSmall(sizes, story.thumbnail)) return undefined;
+        const best = bestPicture(galleries[story.storyId] ?? [], sizes);
+        return best ? {kind: 'url', url: best, auto: true} : {kind: 'none', small: true};
+    };
 
     const open = () => {
         setOrder(stories.map(story => story.storyId));
@@ -63,8 +72,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
     };
 
     // the pictures of the story asked once, its own among them even when the server did not answer
-    const edit = async (story) => {
-        setEditing(editing === story.storyId ? null : story.storyId);
+    const loadGallery = async (story) => {
         if (story.storyId in galleries) return;
         setGalleries(current => ({...current, [story.storyId]: null}));
         const answer = await Promise.resolve().then(() => onPictures?.(story.storyId)).catch(() => null);
@@ -73,6 +81,18 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
             ? [{url: story.thumbnail, source: story.thumbnailSource ?? ''}] : [];
         setGalleries(current => ({...current, [story.storyId]: [...own, ...found]}));
     };
+
+    const edit = (story) => {
+        setEditing(editing === story.storyId ? null : story.storyId);
+        loadGallery(story);
+    };
+
+    // the pictures of a story whose own is too small, to find a better one
+    const small = ordered.filter(story => tooSmall(sizes, story.thumbnail) && !(story.storyId in galleries)).map(story => story.storyId).join(',');
+    useEffect(() => {
+        if (small) small.split(',').forEach(storyId => loadGallery(byId.get(Number(storyId))));
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once per story found too small
+    }, [small]);
 
     // the title the reader wrote, when it is not the one of the card
     const ownTitle = (story) => {
@@ -94,15 +114,15 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
             setError('An email, like name@example.org');
             return;
         }
-        const sent = ordered.filter(story => choices[story.storyId] !== undefined);
-        const files = sent.reduce((sum, story) => sum + fileBytes(choices[story.storyId]), 0);
+        const sent = ordered.filter(story => choiceOf(story) !== undefined);
+        const files = sent.reduce((sum, story) => sum + fileBytes(choiceOf(story)), 0);
         if (files > MAX_FILES_BYTES) {
             setPicturesError(`Your images weigh ${MAX_FILES_BYTES / 1024 / 1024} MB at most together: take one out, or use its address.`);
             return;
         }
         setError(null);
         setPicturesError(null);
-        const pictures = Object.fromEntries(sent.map(story => [story.storyId, sentPicture(choices[story.storyId])]));
+        const pictures = Object.fromEntries(sent.map(story => [story.storyId, sentPicture(choiceOf(story))]));
         const retitled = Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title));
         const left = Object.fromEntries(ordered.filter(story => takenOut(removed[story.storyId]))
             .map(story => [story.storyId, removed[story.storyId]]));
@@ -126,7 +146,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                         <ol aria-label={ordered.length > 1 ? 'The stories of the e-mail, in their order' : 'The story of the e-mail'}
                             className="mt-1 max-h-[45vh] list-none overflow-y-auto border-y border-rule p-0">
                             {ordered.map((story, at) => {
-                                const choice = choices[story.storyId];
+                                const choice = choiceOf(story);
                                 return (
                                     <li key={story.storyId} className="border-b border-rule py-1.5 last:border-b-0">
                                         <div className="flex items-center gap-3">
@@ -137,8 +157,9 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                                                 <span className="caption block">
                                                     {two(story.number)} in the briefing
                                                     {ownTitle(story) && ' · title changed'}
-                                                    {choice?.kind === 'none' && ' · no picture'}
-                                                    {choice && choice.kind !== 'none' && ' · picture changed'}
+                                                    {choice?.kind === 'none' && (choice.small ? ' · its picture too small, left out' : ' · no picture')}
+                                                    {choice?.auto && ' · its picture too small, a sharper one of the story instead'}
+                                                    {choice && choice.kind !== 'none' && !choice.auto && ' · picture changed'}
                                                     {takenOut(removed[story.storyId]) && ` · ${takenOut(removed[story.storyId])}`}
                                                 </span>
                                             </span>

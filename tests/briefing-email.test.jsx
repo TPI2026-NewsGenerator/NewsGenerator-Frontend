@@ -19,6 +19,16 @@ vi.mock('@/features/briefing/api/briefingApi.js', () => ({
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},
 }));
 
+// the pictures load at once: the ones named "small" narrower than the e-mail, "w2000" wider than the
+// others, "standing" taller than wide, "broken" not at all
+vi.stubGlobal('Image', class {
+    set src(url) {
+        this.naturalWidth = url.includes('small') ? 240 : url.includes('w2000') ? 2000 : 1200;
+        this.naturalHeight = this.naturalWidth * (url.includes('standing') ? 1.5 : 0.5625);
+        queueMicrotask(() => (url.includes('broken') ? this.onerror : this.onload)?.());
+    }
+});
+
 const {BriefingApi} = await import('@/features/briefing/api/briefingApi.js');
 const {BriefingPage} = await import('@/pages/Briefing.jsx');
 
@@ -158,6 +168,52 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2, 3], 'reader@example.org', {
             1: {url: 'https://cdn.example/other.jpg'}, 2: null,
         }, {3: 'The third, told my way'}, {}));
+    });
+
+    it('should offer only the pictures wide enough for the e-mail, and put the best of the story instead of an own too small', async () => {
+        const offered = BriefingApi.pictures.getMockImplementation();
+        BriefingApi.pictures.mockImplementation(async (briefingId, storyId) => ({pictures: storyId === 1 ? [
+            {url: 'https://cdn.example/small-thumb.jpg', source: 'record.pt'}, {url: 'https://cdn.example/broken.jpg', source: 'klix.ba'},
+            {url: 'https://cdn.example/standing-w2000.jpg', source: 'afp.com'}, {url: 'https://cdn.example/wide.jpg', source: 'kicker.de'},
+            {url: 'https://cdn.example/lying-w2000.jpg', source: 'lequipe.fr'},
+        ] : [{url: 'https://cdn.example/small-other.jpg', source: 'bbc.co.uk'}]}));
+        BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items: [
+            {...card(1, 'First story'), thumbnail: 'https://cdn.example/small-own.jpg', thumbnailSource: 'media1.fr'},
+            {...card(2, 'Second story'), thumbnail: 'https://cdn.example/big-own.jpg', thumbnailSource: 'media2.fr'},
+            {...card(3, 'Third story'), thumbnail: 'https://cdn.example/small-3.jpg', thumbnailSource: 'media3.fr'},
+        ]}});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+
+        // the first: the widest lying picture of the story; the third has none wide enough
+        expect(await screen.findByText(/its picture too small, a sharper one of the story instead/)).toBeInTheDocument();
+        expect(BriefingApi.pictures).toHaveBeenCalledWith(9, 1);
+        expect(BriefingApi.pictures).toHaveBeenCalledWith(9, 3);
+        expect(BriefingApi.pictures).not.toHaveBeenCalledWith(9, 2);
+        expect(await screen.findByText(/its picture too small, left out/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        expect(await screen.findByRole('button', {name: 'The picture of lequipe.fr'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: 'The picture of afp.com'})).toHaveAttribute('aria-pressed', 'false');
+        // its own, the small one and the one that does not load are not offered
+        for (const source of ['media1.fr', 'record.pt', 'klix.ba']) expect(screen.queryByRole('button', {name: `The picture of ${source}`})).toBeNull();
+        expect(screen.getByText('Left out: 3 pictures too small to stay sharp in the e-mail.')).toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: 'Back to its own'})).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Done'}));
+
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Third story” in the e-mail'}));
+        expect(await screen.findByText('No picture of the story is wide enough to stay sharp in the e-mail.')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'No picture'})).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(screen.getByRole('button', {name: 'Done'}));
+
+        // the second keeps its own, wide enough
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2, 3], 'reader@example.org',
+            {1: {url: 'https://cdn.example/lying-w2000.jpg'}, 3: null}, {}, {}));
+        BriefingApi.pictures.mockImplementation(offered);
+
     });
 
     it('should leave out of the e-mail the denials and the other angles the reader unticks', async () => {
