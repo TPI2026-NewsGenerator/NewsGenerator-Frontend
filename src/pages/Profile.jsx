@@ -459,6 +459,28 @@ export const ProfilePage = () => {
                 </Section>
             )}
 
+            {/* the account is not of one profile: changed in the settings (the user, 12.10.2026: from here too) */}
+            {user && (
+                <Section kicker="Your account" title="Username, email and password"
+                         intro="You sign in with your username and password; the stories of your briefing you send by e-mail go to your email."
+                         aside={<Button onClick={() => navigate('/settings')}>Change them</Button>}>
+                    <dl className="grid-12 gap-y-4">
+                        <div className="col-span-12 md:col-span-4">
+                            <dt className="kicker">Username</dt>
+                            <dd className="body-text mt-1 break-words">{user.username}</dd>
+                        </div>
+                        <div className="col-span-12 md:col-span-5">
+                            <dt className="kicker">Email</dt>
+                            <dd className="body-text mt-1 break-words">{user.email || 'none'}</dd>
+                        </div>
+                        <div className="col-span-12 md:col-span-3">
+                            <dt className="kicker">Password</dt>
+                            <dd className="body-text mt-1"><span aria-hidden>••••••••••</span><span className="sr-only">hidden</span></dd>
+                        </div>
+                    </dl>
+                </Section>
+            )}
+
             <Section kicker="Your words" title="In your own words"
                      intro="The subjects you follow, how closely, and what you don't want. The more precise, the better the briefing.">
                 <div className="grid-12 gap-y-8">
