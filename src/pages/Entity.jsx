@@ -11,7 +11,7 @@ import {useEffect, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 import {Opening, PageShell} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
-import {Input, Label} from "@/components/ui/field.jsx";
+import {Checkbox, Input, Label} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {Term} from "@/features/briefing/components/WatchedNews.jsx";
@@ -71,6 +71,67 @@ const Names = ({entity, onChange, busy}) => {
                 </div>
                 <Button size="sm" onClick={add} disabled={busy || name.trim().length < 2}>Add</Button>
             </div>
+        </div>
+    );
+};
+
+// Its names as terms of the profile, the ones the reader ticks: every news naming one is then in the
+// briefing, in the section of the terms (the user, 12.10.2026). Ticked at first: the names that found
+// news in the window, the most found first, as many as the terms left. The UEFA has 18 names in
+// Wikidata, its own in a dozen languages, and a profile 20 terms. The page stays its own, with its links
+const InBriefing = ({entity, hours, onAdd, busy}) => {
+    const inTerms = entity.inTerms ?? [];
+    const counts = entity.nameCounts ?? {};
+    const left = entity.termsLeft ?? 0;
+    const missing = entity.names.filter(name => !inTerms.includes(name)).sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0));
+    const heard = missing.filter(name => counts[name] > 0);
+    const quiet = missing.filter(name => !(counts[name] > 0));
+    const [chosen, setChosen] = useState(() => heard.slice(0, left));
+    const toggle = (name, on) => setChosen(current => on ? [...current, name] : current.filter(other => other !== name));
+    const box = (name) => (
+        <li key={name}>
+            <Checkbox checked={chosen.includes(name)} disabled={busy} onChange={event => toggle(name, event.target.checked)}>
+                {name} <span className="folio tabular">{stories(counts[name] ?? 0)}</span>
+            </Checkbox>
+        </li>
+    );
+    const already = inTerms.length > 0 && (
+        <p className="caption mt-2">Terms already: {inTerms.join(', ')}. <Link className="link" to="/profile#terms">Your terms</Link></p>
+    );
+
+    return (
+        <div>
+            <p className="kicker">In your briefing</p>
+            {missing.length === 0 ? (
+                <p className="caption mt-2">
+                    Its names are terms of your profile: every news naming one is listed in your briefing.{' '}
+                    <Link className="link" to="/profile#terms">Your terms</Link>
+                </p>
+            ) : left === 0 ? (<>
+                <p className="caption mt-2">
+                    Your profile follows 20 terms, the most: remove some to add its names.{' '}
+                    <Link className="link" to="/profile#terms">Your terms</Link>
+                </p>
+                {already}
+            </>) : (<>
+                <p className="caption mt-2">
+                    Tick the names to add to the terms of your profile: every news naming one is then listed in your
+                    briefing, in the section of the terms. What it is linked to is not added. Next to each name, its
+                    stories of the last {spanOf(hours)}; {left} {left === 1 ? 'term' : 'terms'} left.
+                </p>
+                {already}
+                {heard.length > 0 && <ul aria-label="Its names that name news" className="mt-3 list-none p-0">{heard.map(box)}</ul>}
+                {quiet.length > 0 && (
+                    <details className="mt-2" open={heard.length === 0}>
+                        <summary className="caption cursor-pointer">{quiet.length} {quiet.length === 1 ? 'name' : 'names'} with no news of the last {spanOf(hours)}</summary>
+                        <ul aria-label="Its names with no news" className="mt-2 list-none p-0">{quiet.map(box)}</ul>
+                    </details>
+                )}
+                {chosen.length > left && <p className="caption mt-2">Only the first {left} ticked fit.</p>}
+                <Button size="sm" className="mt-3" onClick={() => onAdd(chosen)} loading={busy} disabled={busy || chosen.length === 0}>
+                    {chosen.length === 0 ? 'Tick a name to add it' : chosen.length === 1 ? 'Add this name to my briefing' : `Add these ${chosen.length} names to my briefing`}
+                </Button>
+            </>)}
         </div>
     );
 };
@@ -141,6 +202,28 @@ export const EntityPage = () => {
         }
     };
 
+    // its names added to the terms: the page says which are terms now
+    const toTerms = async (names) => {
+        setBusy(true);
+        try {
+            const data = await EntityApi.toTerms(qid, names);
+            if (expired(data)) return;
+            if (data.error) {
+                toast.error(data.error);
+                return;
+            }
+            setPage(current => ({...current, entity: {...current.entity,
+                inTerms: [...new Set([...(current.entity.inTerms ?? []), ...data.already, ...data.added])],
+                termsLeft: Math.max(0, (current.entity.termsLeft ?? 0) - data.added.length)}}));
+            if (data.added.length > 0) toast.success(`In your briefing from the next one: ${data.added.join(', ')}.`);
+            if (data.left.length > 0) toast.error(`Not added, ${data.terms.length} terms at most: ${data.left.join(', ')}. Remove some on your profile.`);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const entity = page?.entity;
     const link = page?.links?.find(other => other.qid === chosen) ?? null;
     const named = page?.links?.filter(other => other.count > 0) ?? [];
@@ -203,6 +286,10 @@ export const EntityPage = () => {
                                         <p className="caption mt-1">Follow it to change them.</p>
                                     </div>
                                 )}
+                            {entity.names.length > 0 && (
+                                <InBriefing key={`${page.hours} ${entity.names.join('|')} ${(entity.inTerms ?? []).join('|')}`}
+                                            entity={entity} hours={page.hours} onAdd={toTerms} busy={busy}/>
+                            )}
                             {page.links.length > 0 && (
                                 <div>
                                     <p className="kicker">Linked to it, by Wikidata</p>

@@ -30,4 +30,7 @@ export const EntityApi = {
     page: (qid, hours) => send(`/entities/${encodeURIComponent(qid)}?hours=${hours}`),
     // added: names of the reader; removed: names of Wikidata taken out. {entity}
     setNames: (qid, added, removed) => send(`/entities/${encodeURIComponent(qid)}/names`, {method: 'PUT', body: {added, removed}}),
+    // names chosen among its names added to the terms of the profile, shown in the briefing:
+    // {terms, added, already, left}
+    toTerms: (qid, names) => send(`/entities/${encodeURIComponent(qid)}/terms`, {method: 'POST', body: {names}}),
 };
