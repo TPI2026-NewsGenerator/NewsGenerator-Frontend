@@ -40,10 +40,12 @@ const Address = () => {
     shownAt = useLocation();
     return null;
 };
+// the page loaded, on the tab the address opens: the briefing shows its first story, the tab of the
+// terms its first news (waiting for the story there took the whole time of the test)
 const renderPage = async (briefing, entry = '/briefing') => {
     BriefingApi.getLatest.mockResolvedValue({briefing, mail: true});
     render(<MemoryRouter initialEntries={[entry]}><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/><Address/></WithSession></MemoryRouter>);
-    await screen.findByText('First story', {}, {timeout: 5000}).catch(() => null);
+    await screen.findByText(entry.endsWith('#terms') ? 'A VAR news' : 'First story');
 };
 
 describe('BriefingPage tabs', () => {
