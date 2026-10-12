@@ -164,6 +164,43 @@ describe('BriefingCard passages', () => {
     });
 });
 
+describe('BriefingCard ways of reading', () => {
+    const ways = {
+        summary: 'Le club a été sanctionné mardi.\n\nLe président fera appel.\n\nLa décision tombera en mai.',
+        points: 'Le président fera appel.\n\nLe club a été sanctionné mardi.\n\nLa décision tombera en mai.',
+        digest: 'Le club a été sanctionné mardi.\n\nLa décision tombera en mai.',
+    };
+
+    it('should show the most important sentences as bullet points, the most important first', () => {
+        render(<BriefingCard item={item(ways)} format="points"/>);
+        expect(screen.getAllByRole('listitem').map(point => point.textContent))
+            .toEqual(['Le président fera appel.', 'Le club a été sanctionné mardi.', 'La décision tombera en mai.']);
+        expect(screen.queryByText('[…]')).toBeNull();
+    });
+
+    it('should show the summary in one paragraph, its gaps marked inside it', () => {
+        render(<BriefingCard item={item(ways)} format="digest"/>);
+        const digest = screen.getByText(/Le club a été sanctionné mardi\./);
+        expect(digest.tagName).toBe('P');
+        expect(digest).toHaveTextContent('Le club a été sanctionné mardi. […] La décision tombera en mai.');
+        expect(screen.queryByText('Le président fera appel.')).toBeNull();
+    });
+
+    it('should show the translated points, and the points as written once the original is shown', () => {
+        render(<BriefingCard item={item({...ways, language: 'en', points: 'The president will appeal.\n\nThe club was sanctioned.',
+            pointsTranslation: 'Le président fera appel.\n\nLe club a été sanctionné.', translation: 'Traduit.'})} format="points"/>);
+        expect(screen.getAllByRole('listitem').map(point => point.textContent)).toEqual(['Le président fera appel.', 'Le club a été sanctionné.']);
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(screen.getByText('The president will appeal.').tagName).toBe('LI');
+    });
+
+    it('should show the key passages of a briefing made before the other ways', () => {
+        render(<BriefingCard item={item({summary: ways.summary})} format="points"/>);
+        expect(screen.queryByRole('listitem')).toBeNull();
+        expect(screen.getAllByText('[…]')).toHaveLength(2);
+    });
+});
+
 describe('BriefingCard contested', () => {
     const denial = {by: 'Manchester City', sentence: 'Manchester City denies any wrongdoing.', language: 'en', translation: null,
         source: 'bbc.com', url: 'https://bbc.com/city', publishedAt: '2026-09-24T09:00:00.000Z'};

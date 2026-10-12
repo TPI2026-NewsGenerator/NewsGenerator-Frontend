@@ -18,6 +18,8 @@ import {DEFAULT_HOURS, spanOf} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {keepSize, keptSize} from "@/features/briefing/sizes.js";
+import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
+import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
 import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
@@ -52,6 +54,8 @@ export const BriefingPage = () => {
     const hours = chosen ?? briefing?.hours ?? DEFAULT_HOURS;
     // the cards of the next briefing, the last choice of the reader
     const [size, setSize] = useState(keptSize);
+    // the way the cards are read, the last choice of the reader
+    const [format, setFormat] = useState(keptFormat);
     // the server can send the cards ticked by e-mail
     const [mail, setMail] = useState(false);
     const [sending, setSending] = useState(false);
@@ -114,6 +118,11 @@ export const BriefingPage = () => {
         keepSize(value);
     };
 
+    const chooseFormat = (value) => {
+        setFormat(value);
+        keepFormat(value);
+    };
+
     const ticked = ticks.briefingId === briefing?.id ? ticks.storyIds : [];
     const tick = (storyIds) => setTicks({briefingId: briefing.id, storyIds});
     const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
@@ -158,6 +167,8 @@ export const BriefingPage = () => {
     // written otherwise
     const found = ready ? briefing.items.filter(item => item.found?.length > 0).length : 0;
     const onlyFound = found > 0 && foundView === briefing.id;
+    // a briefing written before the shorter ways (12.10.2026) has its key passages only
+    const shorter = ready && briefing.items.some(item => item.digest);
 
     // the news of the terms the profile follows, in a tab of their own (#terms in the address, kept when
     // the page is opened again); none followed, the page has the briefing only
@@ -173,6 +184,16 @@ export const BriefingPage = () => {
 
     const cards = (
         <>
+            {ready && count > 0 && (
+                <div className="grid-12">
+                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                        {shorter
+                            ? <BriefingFormat format={format} onChange={chooseFormat}/>
+                            : <p className="caption">Bullet points and a short summary come with your next briefing: this one has its key passages only.</p>}
+                    </div>
+                </div>
+            )}
+
             {found > 0 && (
                 <div className="grid-12">
                     <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-7 md:col-start-3">
@@ -194,7 +215,7 @@ export const BriefingPage = () => {
                     {/* the stories of the terms followed keep their place in the briefing */}
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId}>
-                            <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound}
+                            <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format}
                                           onVote={value => vote(item.storyId, value)}
                                           onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
                                           selected={ticked.includes(item.storyId)}/>

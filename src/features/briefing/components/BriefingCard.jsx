@@ -18,6 +18,7 @@ import {paragraphsWithMarks} from "@/features/briefing/marks.js";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
+import {fieldsOf} from "@/features/briefing/formats.js";
 import {cn} from "@/lib/utils.js";
 
 // Who the article credits for what it reports, read by the AI while it summarizes. It describes the
@@ -37,6 +38,28 @@ const Passages = ({paragraphs, lede, className}) => paragraphs.map((paragraph, i
         <p className={cn(lede && i === 0 && 'lede', className)}><Marked text={paragraph.text} marks={paragraph.marks}/></p>
     </Fragment>
 ));
+
+// The summary of 5 to 6 lines: the same, in one paragraph, the gaps marked inside it
+const Digest = ({paragraphs, lede}) => (
+    <p className={cn(lede && 'lede')}>
+        {paragraphs.map((paragraph, i) => (
+            <Fragment key={i}>
+                {i > 0 && <span aria-hidden className="text-ink-mute"> […] </span>}
+                <Marked text={paragraph.text} marks={paragraph.marks}/>
+            </Fragment>
+        ))}
+    </p>
+);
+
+// The bullet points: a sentence each, the most important first
+const Points = ({paragraphs}) => (
+    <ul className="list-disc space-y-2 pl-5 marker:text-ink-mute">
+        {paragraphs.map((paragraph, i) => <li key={i}><Marked text={paragraph.text} marks={paragraph.marks}/></li>)}
+    </ul>
+);
+
+// the sentences of a card in the way the reader chose (see formats.js)
+const WAYS = {passages: Passages, digest: Digest, points: Points};
 
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
@@ -138,15 +161,19 @@ const Margin = ({kicker, tone, children}) => (
 // of its other angles does. marked: they are shown, with the terms found; else the card is as written
 // item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones).
 // onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
+// format: the way the sentences are shown, 'passages', 'digest' or 'points' (see formats.js); item.points,
+// item.digest and their translations are of the same sentences as published, absent from the older ones
 const unmarked = (entry) => ({...entry, marks: undefined});
-export const BriefingCard = ({item: given, onVote, onSelect, selected = false, number, lede = false, marked = false}) => {
+export const BriefingCard = ({item: given, onVote, onSelect, selected = false, number, lede = false, marked = false, format = 'passages'}) => {
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
     // the terms the profile follows, marked where they are (see marks.js)
     const marks = item.marks ?? {};
-    const paragraphs = paragraphsWithMarks(item.summary, marks.summary);
-    const translation = paragraphsWithMarks(item.translation, marks.translation);
+    const fields = fieldsOf(item, format);
+    const Way = WAYS[fields.text === 'summary' ? 'passages' : format];
+    const paragraphs = paragraphsWithMarks(item[fields.text], marks[fields.text]);
+    const translation = paragraphsWithMarks(item[fields.translation], marks[fields.translation]);
     // the translation is shown, the original only when the reader opens it
     const translated = Boolean(item.titleTranslation) || translation.length > 0;
     const [original, setOriginal] = useState(false);
@@ -203,14 +230,14 @@ export const BriefingCard = ({item: given, onVote, onSelect, selected = false, n
                 ) : translation.length > 0 ? (
                     <div className="mt-6">
                         <p className="kicker">In the article's words, translated</p>
-                        <div className="body-text mt-3"><Passages paragraphs={translation} lede={lede}/></div>
+                        <div className="body-text mt-3"><Way paragraphs={translation} lede={lede}/></div>
                         <p className="caption mt-3">
                             Sentences chosen by the AI in the article {lead && <>of {lead.source} </>}and translated by it: it may contain errors, the original is the reference.
                         </p>
                         {original && (
                             <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
                                 <p className="kicker">Original, {languageLabel(item.language)}</p>
-                                <div lang={item.language ?? undefined} className="body-text mt-3 text-ink/85"><Passages paragraphs={paragraphs}/></div>
+                                <div lang={item.language ?? undefined} className="body-text mt-3 text-ink/85"><Way paragraphs={paragraphs}/></div>
                                 <p className="caption mt-3">As the article published them.</p>
                             </div>
                         )}
@@ -218,7 +245,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, selected = false, n
                 ) : (
                     <div className="mt-6">
                         <p className="kicker">In the article's words</p>
-                        <div className="body-text mt-3"><Passages paragraphs={paragraphs} lede={lede}/></div>
+                        <div className="body-text mt-3"><Way paragraphs={paragraphs} lede={lede}/></div>
                         <p className="caption mt-3">
                             Sentences chosen by the AI, shown as the article {lead && <>of {lead.source} </>}published them.
                         </p>
