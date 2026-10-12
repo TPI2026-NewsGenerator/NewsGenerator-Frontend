@@ -31,13 +31,15 @@ export const BriefingApi = {
     // when not given (204, no body). pictures: {storyId: null | {url} | {data}}, the picture of the
     // cards the reader changed: taken out, an image of the web, a file of theirs in base64. titles:
     // {storyId: title}, the ones the reader wrote for the e-mail; removed: {storyId: {contested: [index],
-    // angles: [index]}}, the denials and other angles they took out
-    email: async (briefingId, storyIds, to, pictures, titles, removed) => {
+    // angles: [index]}}, the denials and other angles they took out; format: the way their sentences are
+    // shown, 'points', 'digest' or 'passages' (see formats.js), the key passages when not given
+    email: async (briefingId, storyIds, to, pictures, titles, removed, format) => {
         const some = (map) => map && Object.keys(map).length > 0;
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
-            body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {})}),
+            body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
+                ...(format ? {format} : {})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },

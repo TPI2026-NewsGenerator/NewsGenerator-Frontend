@@ -3,8 +3,8 @@
 //  Date: 08.10.2026
 //  File: MailBar.jsx
 //  Description: The bar of the cards ticked in the briefing: how many, then their order and their
-//               picture in the e-mail, and the address they are sent to, the one of the account
-//               written in already
+//               picture in the e-mail, the way their sentences are shown, and the address they are
+//               sent to, the one of the account written in already
 //
 
 import {useEffect, useState} from "react";
@@ -13,6 +13,7 @@ import {Button, IconButton} from "@/components/ui/button.jsx";
 import {FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {MailAside} from "@/features/briefing/components/MailAside.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
+import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooSmall, usePictureSizes} from "@/features/briefing/mailPictures.js";
 
 // one address, as the server checks it (server/services/utils/account-rules.js)
@@ -28,11 +29,15 @@ const takenOut = (removed = {}) => [
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
 // thumbnailSource, contested, angles}] (number: their place in the briefing); accountEmail: the address
-// of the account; onSend(to, storyIds, pictures, titles, removed): sends them in this order with the
-// pictures and the titles the reader changed, without the denials and angles they took out, true when
-// sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks them all
-export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onClear}) => {
+// of the account; format: the way the page shows the sentences of the cards (see formats.js), the one of
+// the e-mail until the reader chooses another, null for a briefing that has the key passages only;
+// onSend(to, storyIds, pictures, titles, removed, format): sends them in this order with the pictures
+// and the titles the reader changed, without the denials and angles they took out, their sentences in
+// the way chosen, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks
+// them all
+export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onClear}) => {
     const [to, setTo] = useState(null);         // null: the address is not asked yet
+    const [way, setWay] = useState(format);     // the way the sentences are shown in the e-mail
     const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
     const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
     const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
@@ -61,6 +66,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
         setTitles({});
         setRemoved({});
         setEditing(null);
+        setWay(format);
         setTo(accountEmail ?? '');
     };
 
@@ -126,7 +132,7 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
         const retitled = Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title));
         const left = Object.fromEntries(ordered.filter(story => takenOut(removed[story.storyId]))
             .map(story => [story.storyId, removed[story.storyId]]));
-        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left)) setTo(null);
+        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left, way ?? undefined)) setTo(null);
     };
 
     return (
@@ -205,6 +211,11 @@ export const MailBar = ({stories, accountEmail, sending, onSend, onPictures, onC
                         </ol>
                         {picturesError && <FieldError>{picturesError}</FieldError>}
                     </div>
+                    {way && (
+                        <div className="mb-3">
+                            <BriefingFormat label="In the e-mail, as" format={way} onChange={setWay} disabled={sending}/>
+                        </div>
+                    )}
                     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
                         <div className="min-w-0 flex-1 basis-64">
                             <Label htmlFor="mail-to">Send the {count === 1 ? 'story' : `${count} stories`} to</Label>
