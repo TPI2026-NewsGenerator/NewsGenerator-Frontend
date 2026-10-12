@@ -3,7 +3,8 @@
 //  Date: 08.10.2026
 //  File: MailAside.jsx
 //  Description: What a story tells beside its key points in the e-mail of the briefing, who denies it
-//               ("Contested") and its other angles, each kept or taken out by the reader before sending
+//               ("Contested"), its other angles and its official sources, each kept or taken out by
+//               the reader before sending
 //
 
 import {Checkbox} from "@/components/ui/field.jsx";
@@ -11,13 +12,15 @@ import {Checkbox} from "@/components/ui/field.jsx";
 // the places of the ones taken out, in the order of the card
 const toggled = (list, index, kept) => kept ? list.filter(other => other !== index) : [...list, index].sort((a, b) => a - b);
 
-// story: {storyId, title, contested: [{by, sentence, translation, source}], angles: [{title, source}]}
-// (the title translated); removed: {contested: [index], angles: [index]}, the ones taken out;
+// story: {storyId, title, contested: [{by, sentence, translation, source}], angles: [{title, source}],
+// official: [{party, title}]} (the title translated); removed: {contested: [index], angles: [index],
+// official: [index]}, the ones taken out;
 // onChange(removed)
 export const MailAside = ({story, removed = {}, onChange}) => {
     const contested = story.contested ?? [];
     const angles = story.angles ?? [];
-    if (contested.length === 0 && angles.length === 0) return null;
+    const official = story.official ?? [];
+    if (contested.length === 0 && angles.length === 0 && official.length === 0) return null;
     const out = (part) => removed[part] ?? [];
     const change = (part, index, kept) => onChange({...removed, [part]: toggled(out(part), index, kept)});
 
@@ -47,6 +50,19 @@ export const MailAside = ({story, removed = {}, onChange}) => {
                                       onChange={event => change('angles', index, event.target.checked)}>
                                 <span className="text-[0.9375rem]">{angle.title}</span>
                                 <span className="caption block">{angle.source}</span>
+                            </Checkbox>
+                        ))}
+                    </div>
+                </fieldset>
+            )}
+            {official.length > 0 && (
+                <fieldset className="mt-2 min-w-0 border-0 p-0">
+                    <legend className="kicker">Official source</legend>
+                    <div className="flex flex-col">
+                        {official.map((post, index) => (
+                            <Checkbox key={index} checked={!out('official').includes(index)}
+                                      onChange={event => change('official', index, event.target.checked)}>
+                                <span className="text-[0.9375rem]"><b>{post.party}</b> said it: {post.title}</span>
                             </Checkbox>
                         ))}
                     </div>

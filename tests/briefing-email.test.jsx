@@ -278,6 +278,26 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {1: {contested: [], angles: [1]}}, undefined));
     });
 
+    it('should leave out of the e-mail the official source the reader unticks', async () => {
+        const items = [{...card(1, 'First story'),
+            official: [{party: 'UEFA', title: 'Čeferin seeks final term', url: 'https://www.uefa.com/n', channel: 'site', publishedAt: null}],
+        }];
+        BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const aside = screen.getByRole('group', {name: 'What “First story” tells beside it in the e-mail'});
+        expect(aside).toHaveTextContent('UEFA said it: Čeferin seeks final term');
+        fireEvent.click(aside.querySelector('input[type=checkbox]'));
+        expect(screen.getByText(/1 official source taken out/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {1: {official: [0]}}, undefined));
+    });
+
     it('should join an image of the reader, and refuse a file that is not one', async () => {
         await renderPage();
         fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);

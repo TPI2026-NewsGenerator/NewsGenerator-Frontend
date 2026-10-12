@@ -3,7 +3,8 @@
 //  Date: 24.09.2026
 //  File: BriefingCard.jsx
 //  Description: One story of the briefing: why it was chosen, its summary, who tells it and how
-//               many of them wrote it themselves, who denies it, and its other angles
+//               many of them wrote it themselves, who denies it, its other angles, and the post where
+//               a party of the news said it itself
 //
 
 import {Fragment, useState} from "react";
@@ -126,6 +127,24 @@ const OtherAngles = ({angles, original}) => (
     </div>
 );
 
+// The posts where a party the news is about (a club, a body, a company) said it itself, on its website
+// or an open account of its own, found and read by the AI (see server/services/utils/official-sources.js).
+// Its title is the party's own, in the party's language
+const OFFICIAL_NOTE = 'A party this news is about published it itself, on its own website or account, as Wikidata lists them. Found and read by the AI, which may be wrong: the link is the reference. X and Instagram can’t be read, so most news have none.';
+const OfficialSource = ({posts}) => (
+    <Margin kicker={<>Official source <InfoTip label="Official source">{OFFICIAL_NOTE}</InfoTip></>}>
+        <ul className="space-y-2">
+            {posts.map(post => (
+                <li key={post.url}>
+                    <span className="font-semibold">{post.party}</span> said it:{' '}
+                    <a href={post.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink-mute">{post.title}</a>
+                    {post.publishedAt && <span className="text-ink-mute">, <time dateTime={post.publishedAt}>{when(post.publishedAt)}</time></span>}
+                </li>
+            ))}
+        </ul>
+    </Margin>
+);
+
 // The picture of one of its articles, the site it is of under it. Asked without the address of the page
 // (some sites refuse their pictures to other sites), and left out when it can't be loaded
 const Picture = ({src, source}) => {
@@ -156,6 +175,7 @@ const Margin = ({kicker, tone, children}) => (
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
 // item.angles: news of the same affair telling something else, absent from the older ones.
+// item.official: [{party, title, url, channel, publishedAt}] the posts where a party said it itself, absent from the older ones.
 // item.marks (and the marks of its angles and denials): {field: [[start, end]]}, the places of the terms
 // the profile follows in its texts; item.found: [{term, angle}] the terms it names, angle when only one
 // of its other angles does. marked: they are shown, with the terms found; else the card is as written
@@ -259,6 +279,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, selected = false, n
             </div>
 
             <aside className="col-span-12 mt-8 space-y-5 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-1 md:border-t-0 md:border-l md:pt-0 md:pl-5">
+                {item.official?.length > 0 && <OfficialSource posts={item.official}/>}
                 {coverage && (
                     <Margin kicker="Who tells it">
                         {coverage.text}
