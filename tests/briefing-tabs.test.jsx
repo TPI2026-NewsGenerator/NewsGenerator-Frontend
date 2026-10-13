@@ -54,10 +54,10 @@ describe('BriefingPage tabs', () => {
     it('should open on the briefing, and show the news of the terms in their own tab, kept in the address', async () => {
         await renderPage(briefingWith());
         expect(screen.getByRole('tab', {name: 'Briefing'})).toHaveAttribute('aria-selected', 'true');
-        expect(screen.getByRole('tab', {name: 'Names and terms 3'})).toBeInTheDocument();
+        expect(screen.getByRole('tab', {name: 'Following 3'})).toBeInTheDocument();
         expect(screen.queryByText('A VAR news')).toBeNull();
 
-        fireEvent.mouseDown(screen.getByRole('tab', {name: 'Names and terms 3'}));
+        fireEvent.mouseDown(screen.getByRole('tab', {name: 'Following 3'}));
         expect(screen.getByText('A VAR news')).toBeInTheDocument();
         expect(screen.queryByText('First story')).toBeNull();
         expect(shownAt.hash).toBe('#terms');
@@ -66,7 +66,7 @@ describe('BriefingPage tabs', () => {
     it('should open on the tab of the terms from the address', async () => {
         await renderPage(briefingWith(), '/briefing#terms');
         expect(await screen.findByText('A VAR news')).toBeInTheDocument();
-        expect(screen.getByRole('tab', {name: 'Names and terms 3'})).toHaveAttribute('aria-selected', 'true');
+        expect(screen.getByRole('tab', {name: 'Following 3'})).toHaveAttribute('aria-selected', 'true');
     });
 
     it('should send from the tab of the terms to the stories of the briefing naming them, alone and marked', async () => {
@@ -85,7 +85,7 @@ describe('BriefingPage tabs', () => {
         fireEvent.click(screen.getAllByRole('checkbox', {name: 'Add to the e-mail'})[0]);
         expect(screen.getByRole('button', {name: 'Send email'})).toBeInTheDocument();
 
-        fireEvent.mouseDown(screen.getByRole('tab', {name: 'Names and terms 3'}));
+        fireEvent.mouseDown(screen.getByRole('tab', {name: 'Following 3'}));
         expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull();
     });
 

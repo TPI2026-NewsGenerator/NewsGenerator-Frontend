@@ -8,12 +8,11 @@
 //
 
 import {useCallback, useEffect, useState} from "react";
-import {useLocation, useNavigate, useSearchParams} from "react-router-dom";
+import {Link, useLocation, useNavigate, useSearchParams} from "react-router-dom";
 import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Dialog} from "@/components/ui/overlay.jsx";
-import {WatchTerms} from "@/features/profiles/WatchTerms.jsx";
 import {ProfileFunnel} from "@/features/profiles/ProfileFunnel.jsx";
 import {Projects} from "@/features/profiles/Projects.jsx";
 import {profilesChanged, setActiveProfile, useActiveProfile} from "@/features/profiles/activeProfile.js";
@@ -333,7 +332,6 @@ export const ProfilePage = () => {
         }
     };
 
-    const saveTerms = (terms) => change(() => ProfileApi.setWatchTerms(terms));
 
     // a change of an interest, then the profile as the server answers it
     const change = useCallback(async (call) => {
@@ -569,9 +567,12 @@ export const ProfilePage = () => {
             )}
 
             {data?.profile && (
-                <Section id="terms" kicker="Always shown" title="Names and terms you follow"
-                         intro="A person, a club, an organisation, a word: every news of your sources that names one is listed in your briefing, in a section of its own, whatever the AI chose for the cards.">
-                    <WatchTerms terms={data.profile.watchTerms ?? []} max={data.limits?.watchTerms ?? 20} busy={busy} onSave={saveTerms}/>
+                <Section id="terms" kicker="Always shown" title="What you follow"
+                         intro="A person, a club, an organisation, a word: every news of your sources that names one is listed in your briefing, in a tab of its own, whatever the AI chose for the cards.">
+                    <p className="body-text">
+                        {data.profile.watchTerms?.length > 0 && <>Names and words as written: {data.profile.watchTerms.join(', ')}. </>}
+                        <Link className="link" to="/following">Follow a club, a person, an organisation or a word</Link>
+                    </p>
                 </Section>
             )}
 

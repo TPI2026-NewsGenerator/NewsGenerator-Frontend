@@ -8,6 +8,7 @@
 //
 
 import {Fragment, useState} from "react";
+import {Link} from "react-router-dom";
 import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-icons/fa";
 import {IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
@@ -21,6 +22,7 @@ import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
 import {cn} from "@/lib/utils.js";
+import {pageOf} from "@/features/entities/entityApi.js";
 
 // Who the article credits for what it reports, read by the AI while it summarizes. It describes the
 // article, never whether the news is true: said under each one, in the "i" next to it
@@ -187,6 +189,8 @@ const Margin = ({kicker, tone, children}) => (
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
 // item.angles: news of the same affair telling something else, absent from the older ones.
 // item.official: [{party, title, url, channel, publishedAt}] the posts where a party said it itself, absent from the older ones.
+// item.names: [{name, qid, kind}] the people and organisations most of its articles name, each opening its page (the one
+// of its item of Wikidata, else the one of the name as written), absent from the briefings before 13.10.2026.
 // item.marks (and the marks of its angles and denials): {field: [[start, end]]}, the places of the terms
 // the profile follows in its texts; item.found: [{term, angle}] the terms it names, angle when only one
 // of its other angles does. marked: they are shown, with the terms found; else the card is as written
@@ -305,6 +309,19 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {item.project && <Margin kicker="For your project">{item.project}</Margin>}
                 {item.followUp && <FollowUp followUp={item.followUp}/>}
                 {item.official?.length > 0 && <OfficialSource posts={item.official}/>}
+                {item.names?.length > 0 && (
+                    <Margin kicker="Who it is about">
+                        <ul aria-label="Who it is about" className="flex list-none flex-wrap gap-x-3 gap-y-0.5 p-0">
+                            {item.names.map(name => (
+                                <li key={`${name.qid ?? ''} ${name.name}`}>
+                                    <Link to={pageOf(name)} className="underline decoration-rule underline-offset-4 hover:text-accent-ink hover:decoration-accent-ink">
+                                        {name.name}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </Margin>
+                )}
                 {coverage && (
                     <Margin kicker="Who tells it">
                         {coverage.text}

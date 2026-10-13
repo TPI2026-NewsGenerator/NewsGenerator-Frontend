@@ -225,12 +225,12 @@ export const BriefingPage = () => {
                     <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-7 md:col-start-3">
                         <Button size="sm" variant={onlyFound ? 'primary' : 'quiet'} aria-pressed={onlyFound}
                                 onClick={() => setFoundView(onlyFound ? null : briefing.id)}>
-                            {onlyFound ? 'Show the whole briefing' : `Names and terms found · ${found} ${found === 1 ? 'story' : 'stories'}`}
+                            {onlyFound ? 'Show the whole briefing' : `What you follow, found · ${found} ${found === 1 ? 'story' : 'stories'}`}
                         </Button>
                         <p className="caption">
                             {onlyFound
-                                ? 'Only the stories that name a name or a term you follow, marked where they are.'
-                                : 'The stories that name a name or a term you follow.'}
+                                ? 'Only the stories that name something you follow, marked where they are.'
+                                : 'The stories that name something you follow.'}
                         </p>
                     </div>
                 </div>
@@ -256,10 +256,10 @@ export const BriefingPage = () => {
     const terms = hasTerms && (
         <div className="grid-12">
             <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
-                <h2 id="watched-head" className="section-head">The names and terms you follow</h2>
+                <h2 id="watched-head" className="section-head">What you follow</h2>
                 <p className="caption mt-2">
                     Every news of your sources of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one,
-                    whatever its relevance, not chosen by the AI. <Link className="link" to="/profile#terms">Change them</Link>.
+                    whatever its relevance, not chosen by the AI. <Link className="link" to="/following">Change them</Link>.
                 </p>
                 {found > 0 && (
                     <p className="caption mt-1">
@@ -343,11 +343,11 @@ export const BriefingPage = () => {
                     // the briefing and the news of the terms followed, one tab each, the briefing first
                     <Tabs.Root value={tab} onValueChange={chooseTab} className="space-y-8">
                         <div className="grid-12">
-                            <Tabs.List aria-label="Your briefing and the names and terms you follow"
+                            <Tabs.List aria-label="Your briefing and what you follow"
                                        className="col-span-12 flex flex-wrap gap-x-8 gap-y-1 border-b border-ink md:col-span-7 md:col-start-3">
                                 <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
                                 <Tabs.Trigger value="terms" className={PAGE_TAB}>
-                                    Names and terms <span className="folio align-middle">{watchedCount}</span>
+                                    Following <span className="folio align-middle">{watchedCount}</span>
                                 </Tabs.Trigger>
                             </Tabs.List>
                         </div>

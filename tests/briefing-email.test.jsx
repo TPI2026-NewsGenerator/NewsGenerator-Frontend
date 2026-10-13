@@ -344,7 +344,7 @@ describe('BriefingPage stories of the terms followed', () => {
         await screen.findByText('First story');
         expect(container.querySelectorAll('mark')).toHaveLength(0);
 
-        fireEvent.click(screen.getByRole('button', {name: 'Names and terms found · 2 stories'}));
+        fireEvent.click(screen.getByRole('button', {name: 'What you follow, found · 2 stories'}));
         expect(screen.queryByText('First story')).toBeNull();
         expect(container.querySelectorAll('article')).toHaveLength(2);
         expect([...container.querySelectorAll('mark')].map(mark => mark.textContent)).toEqual(['VAR']);
@@ -358,6 +358,6 @@ describe('BriefingPage stories of the terms followed', () => {
 
     it('should show no button when no story names a term followed', async () => {
         await renderPage();
-        expect(screen.queryByRole('button', {name: /Names and terms found/})).toBeNull();
+        expect(screen.queryByRole('button', {name: /What you follow, found/})).toBeNull();
     });
 });

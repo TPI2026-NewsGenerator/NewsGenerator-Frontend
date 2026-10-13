@@ -12,6 +12,7 @@ import {fireEvent, render} from '@testing-library/react';
 import {paragraphsWithMarks, segmentsOf} from '@/features/briefing/marks.js';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {WatchedNews} from '@/features/briefing/components/WatchedNews.jsx';
+import {MemoryRouter} from 'react-router-dom';
 
 const marked = (container) => [...container.querySelectorAll('mark')].map(mark => mark.textContent);
 
@@ -74,7 +75,7 @@ describe('WatchedNews tabs', () => {
     ];
 
     it('should give each term a tab, the news of the one chosen only', async () => {
-        const {getByRole, queryByText, getByText} = render(<WatchedNews watched={watched}/>);
+        const {getByRole, queryByText, getByText} = render(<MemoryRouter><WatchedNews watched={watched}/></MemoryRouter>);
         expect(getByRole('tab', {name: 'VAR 2'})).toHaveAttribute('aria-selected', 'true');
         expect(getByText('A VAR news')).toBeInTheDocument();
         expect(queryByText('Dario Amodei speaks')).toBeNull();
@@ -85,7 +86,7 @@ describe('WatchedNews tabs', () => {
     });
 
     it('should show the news of a single term without a tab', () => {
-        const {queryByRole, getByText} = render(<WatchedNews watched={[watched[1]]}/>);
+        const {queryByRole, getByText} = render(<MemoryRouter><WatchedNews watched={[watched[1]]}/></MemoryRouter>);
         expect(queryByRole('tab')).toBeNull();
         expect(getByText('Dario Amodei speaks')).toBeInTheDocument();
     });

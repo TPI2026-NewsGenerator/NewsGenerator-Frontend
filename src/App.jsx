@@ -14,6 +14,7 @@ import {ProfilePage} from "@/pages/Profile.jsx";
 import {SettingsPage} from "@/pages/Settings.jsx";
 import {FollowingPage} from "@/pages/Following.jsx";
 import {EntityPage} from "@/pages/Entity.jsx";
+import {NamePage} from "@/pages/Name.jsx";
 import {Toaster} from "@/components/ui/overlay.jsx";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/search" element={<SearchPage/>}/>
                 <Route path="/following" element={<FollowingPage/>}/>
                 <Route path="/following/:qid" element={<EntityPage/>}/>
+                <Route path="/following/name/:name" element={<NamePage/>}/>
                 <Route path="/settings" element={<SettingsPage/>}/>
                 <Route path="/login" element={<LoginPage/>}/>
                 <Route path="/register" element={<SignupPage/>}/>
