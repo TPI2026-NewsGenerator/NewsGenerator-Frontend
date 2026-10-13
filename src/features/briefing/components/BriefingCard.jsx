@@ -131,12 +131,20 @@ const OtherAngles = ({angles, original}) => (
 
 // The posts where a party the news is about (a club, a body, a company) said it itself, on its website
 // or an open account of its own, found and read by the AI (see server/services/utils/official-sources.js).
-// Its title is the party's own, in the party's language
-const OFFICIAL_NOTE = 'A party this news is about published it itself, on its own website or account, as Wikidata lists them. Found and read by the AI, which may be wrong: the link is the reference. X and Instagram can’t be read, so most news have none.';
+// Its title is the party's own, in the party's language. Or its statement one of the card's articles
+// reports (channel 'reported', see statements.js): the sentence quoted, its translation under it
+const OFFICIAL_NOTE = 'A party this news is about said it itself: published on its own website or account, as Wikidata lists them, or in a statement one of the articles reports, quoted as written. Found and read by the AI, which may be wrong: the link is the reference. X and Instagram can’t be read, so most news have none.';
 const OfficialSource = ({posts}) => (
     <Margin kicker={<>Official source <InfoTip label="Official source">{OFFICIAL_NOTE}</InfoTip></>}>
         <ul className="space-y-2">
-            {posts.map(post => (
+            {posts.map(post => post.channel === 'reported' ? (
+                <li key={post.url + post.party}>
+                    <span className="font-semibold">{post.party}</span> said it, reported by{' '}
+                    <a href={post.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink-mute">{post.source}</a>:{' '}
+                    <span lang={post.language ?? undefined}>“{post.title}”</span>
+                    {post.translation && <span className="mt-1 block italic text-ink-mute">Machine translation: “{post.translation}”</span>}
+                </li>
+            ) : (
                 <li key={post.url}>
                     <span className="font-semibold">{post.party}</span> said it:{' '}
                     <a href={post.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink-mute">{post.title}</a>
@@ -188,7 +196,8 @@ const Margin = ({kicker, tone, children}) => (
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
 // item.angles: news of the same affair telling something else, absent from the older ones.
-// item.official: [{party, title, url, channel, publishedAt}] the posts where a party said it itself, absent from the older ones.
+// item.official: [{party, title, url, channel, publishedAt}] the posts where a party said it itself, then
+// its statements an article reports (channel 'reported', with source, translation, language), absent from the older ones.
 // item.names: [{name, qid, kind}] the people and organisations most of its articles name, each opening its page (the one
 // of its item of Wikidata, else the one of the name as written), absent from the briefings before 13.10.2026.
 // item.marks (and the marks of its angles and denials): {field: [[start, end]]}, the places of the terms

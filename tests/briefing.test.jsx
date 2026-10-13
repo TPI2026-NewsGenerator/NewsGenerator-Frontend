@@ -221,6 +221,17 @@ describe('BriefingCard contested', () => {
     });
 });
 
+describe('BriefingCard official source', () => {
+    it('should quote a statement an article reports, with the medium and a machine translation', () => {
+        render(<BriefingCard item={item({official: [{party: 'FPF', title: 'A FPF publicou um comunicado.', translation: 'La FPF a publié un communiqué.',
+            language: 'pt', url: 'https://www.abola.pt/1', source: 'abola.pt', channel: 'reported', publishedAt: null}]})}/>);
+        expect(screen.getByText('FPF')).toBeInTheDocument();
+        expect(screen.getByText('“A FPF publicou um comunicado.”')).toBeInTheDocument();
+        expect(screen.getByText('Machine translation: “La FPF a publié un communiqué.”')).toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'abola.pt'})).toHaveAttribute('href', 'https://www.abola.pt/1');
+    });
+});
+
 describe('BriefingCard other angles', () => {
     const angle = {title: 'Infantino tiene por ahora el camino despejado', titleTranslation: 'Infantino a pour l’instant le chemin dégagé',
         url: 'https://si.com/infantino', source: 'si.com', language: 'es', publishedAt: '2026-10-08T07:00:00.000Z', media: 3};

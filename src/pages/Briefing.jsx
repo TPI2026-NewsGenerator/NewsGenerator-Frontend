@@ -366,7 +366,7 @@ export const BriefingPage = () => {
                                      thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                      contested: item.contested ?? [],
                                      angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source})),
-                                     official: (item.official ?? []).map(post => ({party: post.party, title: post.title}))}] : [])}/>
+                                     official: (item.official ?? []).map(post => ({party: post.party, title: post.translation ?? post.title}))}] : [])}/>
                 )}
             </div>
         </PageShell>
