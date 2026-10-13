@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 03.10.2026
 //  File: BriefingWindow.jsx
-//  Description: The choice of the news a briefing is written from: the last 24 hours, 2 days or 7 days
+//  Description: The choice of the news a briefing is written from: the last 24 hours, 3 days or 7 days
 //
 
 import {ToggleGroup} from "radix-ui";

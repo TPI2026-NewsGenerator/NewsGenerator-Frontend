@@ -125,7 +125,7 @@ export const SignupPage = () => {
                     <p className="standfirst mt-6">
                         Your briefing is built from your answers: the AI asks you a few questions, writes your
                         profile, finds the sources that publish on your subjects and chooses the stories of the last
-                        two days for you.
+                        days for you.
                     </p>
                 </div>
 

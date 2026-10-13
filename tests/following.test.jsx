@@ -42,7 +42,7 @@ const news = (id, title) => ({storyId: id, title, url: `https://m.example/${id}`
 const PAGE = {
     entity: {qid: 'Q483020', label: 'Paris Saint-Germain FC', description: 'club de football français', kind: 'club', followed: true, inBriefing: true,
         names: ['Paris Saint-Germain', 'PSG'], wikidataNames: ['Paris Saint-Germain', 'PSG', 'Paris'], addedNames: [], removedNames: ['Paris']},
-    hours: 48, count: 2, news: [news(1, 'Le PSG gagne'), news(2, 'Paris Saint-Germain en Ligue 1')],
+    hours: 72, count: 2, news: [news(1, 'Le PSG gagne'), news(2, 'Paris Saint-Germain en Ligue 1')],
     links: [
         {qid: 'Q1', label: 'Ousmane Dembélé', kind: 'person', relation: 'player', count: 1, news: [news(3, 'Dembélé au repos')]},
         {qid: 'Q2', label: 'Luis Enrique', kind: 'person', relation: 'coach', count: 0, news: []},
@@ -113,13 +113,13 @@ describe('EntityPage', () => {
 
     it('should show the news naming it, and the ones of the first link named', async () => {
         await renderPage();
-        expect(EntityApi.page).toHaveBeenCalledWith('Q483020', 48);
+        expect(EntityApi.page).toHaveBeenCalledWith('Q483020', 72);
         expect(screen.getByText('Le PSG gagne')).toBeInTheDocument();
         expect(screen.getByRole('button', {name: /Ousmane Dembélé/})).toHaveAttribute('aria-pressed', 'true');
         expect(screen.getByText('Dembélé au repos')).toBeInTheDocument();
         // a link no news named is not one to choose
         expect(screen.queryByRole('button', {name: /Luis Enrique/})).toBeNull();
-        expect(screen.getByText('1 named by no news of the last 2 days')).toBeInTheDocument();
+        expect(screen.getByText('1 named by no news of the last 3 days')).toBeInTheDocument();
     });
 
     it('should put its news in the briefing or take them out', async () => {
@@ -153,11 +153,11 @@ describe('NamePage', () => {
     </WithSession></MemoryRouter>);
 
     it('should show the news of a name as written, and follow it', async () => {
-        EntityApi.namePage.mockResolvedValue({name: 'Vadims Ļašenko', qid: null, followed: false, wordsLeft: 19, hours: 48, count: 1,
+        EntityApi.namePage.mockResolvedValue({name: 'Vadims Ļašenko', qid: null, followed: false, wordsLeft: 19, hours: 72, count: 1,
             news: [news(4, 'Ļašenko says third place remains the target')]});
         renderName('/following/name/Vadims%20%C4%BBa%C5%A1enko');
         expect(await screen.findByText('1 story name it')).toBeInTheDocument();
-        expect(EntityApi.namePage).toHaveBeenCalledWith('Vadims Ļašenko', 48);
+        expect(EntityApi.namePage).toHaveBeenCalledWith('Vadims Ļašenko', 72);
         expect(screen.getByText('Ļašenko says third place remains the target')).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', {name: 'Follow'}));
@@ -166,7 +166,7 @@ describe('NamePage', () => {
     });
 
     it('should open the page of the item the tagger linked the name to', async () => {
-        EntityApi.namePage.mockResolvedValue({name: 'UEFA', qid: 'Q35572', followed: false, wordsLeft: 20, hours: 48, count: 0, news: []});
+        EntityApi.namePage.mockResolvedValue({name: 'UEFA', qid: 'Q35572', followed: false, wordsLeft: 20, hours: 72, count: 0, news: []});
         renderName('/following/name/UEFA');
         expect(await screen.findByText('Page of the item')).toBeInTheDocument();
     });

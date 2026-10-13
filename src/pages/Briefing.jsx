@@ -3,7 +3,7 @@
 //  Date: 24.09.2026
 //  File: Briefing.jsx
 //  Description: The daily briefing: the stories of the last hours chosen for the profile of the user,
-//               of the last 24 hours, 2 days or 7 days as they choose
+//               of the last 24 hours, 3 days or 7 days as they choose
 //
 
 import {useCallback, useEffect, useState} from "react";
@@ -14,7 +14,7 @@ import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
-import {DEFAULT_HOURS, spanOf} from "@/features/briefing/windows.js";
+import {DEFAULT_HOURS, spanOf, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {keepSize, keptSize} from "@/features/briefing/sizes.js";
@@ -50,9 +50,10 @@ export const BriefingPage = () => {
     const [profile, setProfile] = useState(undefined);      // undefined: not loaded yet
     const [briefing, setBriefing] = useState(undefined);
     const [error, setError] = useState(null);
-    // the hours of news of the next briefing: the ones of the last until the reader chooses
+    // the hours of news of the next briefing: the ones of the last until the reader chooses (the default
+    // after one of a window no longer offered)
     const [chosen, setChosen] = useState(null);
-    const hours = chosen ?? briefing?.hours ?? DEFAULT_HOURS;
+    const hours = chosen ?? windowAfter(briefing?.hours ?? DEFAULT_HOURS);
     // the cards of the next briefing, the last choice of the reader
     const [size, setSize] = useState(keptSize);
     // the way the cards are read, the last choice of the reader
@@ -278,7 +279,7 @@ export const BriefingPage = () => {
             <Opening
                 kicker="The briefing"
                 title="Your briefing"
-                standfirst="The stories of the last 24 hours, 2 days or 7 days closest to your interests, chosen by the AI. A story shown in the last two days comes back only when something new happened."
+                standfirst="The stories of the last 24 hours, 3 days or 7 days closest to your interests, chosen by the AI. A story shown in the last two days comes back only when something new happened."
                 aside={profile && (
                     <div className="space-y-4">
                         {ready && (

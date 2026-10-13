@@ -85,7 +85,7 @@ export const LoginPage = () => {
                     <h1 className="display text-balance">The news you follow, read and chosen for you.</h1>
                     <p className="standfirst mt-6">
                         Say in your own words what you follow. The AI finds the sources, chooses the stories
-                        of the last two days and tells you who reports them.
+                        of the last days and tells you who reports them.
                     </p>
                 </div>
 

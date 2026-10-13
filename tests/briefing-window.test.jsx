@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 03.10.2026
 //  File: briefing-window.test.jsx
-//  Description: The news a briefing is written from: the last 24 hours, 2 days or 7 days, the ones of
+//  Description: The news a briefing is written from: the last 24 hours, 3 days or 7 days, the ones of
 //               the last briefing until the reader chooses
 //
 
@@ -41,11 +41,11 @@ describe('BriefingPage and the news it is written from', () => {
     });
 
     it('should write the next briefing from the news the reader chose', async () => {
-        BriefingApi.getLatest.mockResolvedValue({briefing: ready(48)});
+        BriefingApi.getLatest.mockResolvedValue({briefing: ready(72)});
         BriefingApi.start.mockResolvedValue({briefing: {id: 10, status: 'running', step: 'ranking', hours: 24, items: []}});
         renderPage();
 
-        await waitFor(() => expect(choice('2 days')).toHaveAttribute('aria-checked', 'true'));
+        await waitFor(() => expect(choice('3 days')).toHaveAttribute('aria-checked', 'true'));
         fireEvent.click(choice('24 hours'));
         fireEvent.click(screen.getByRole('button', {name: 'New briefing'}));
 
@@ -54,10 +54,21 @@ describe('BriefingPage and the news it is written from', () => {
         expect(await screen.findByText(/stories of the last 24 hours closest to your interests/)).toBeInTheDocument();
     });
 
-    it('should ask the news of 2 days before any briefing', async () => {
+    it('should ask the news of 3 days before any briefing', async () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: null});
         renderPage();
 
-        await waitFor(() => expect(choice('2 days')).toHaveAttribute('aria-checked', 'true'));
+        await waitFor(() => expect(choice('3 days')).toHaveAttribute('aria-checked', 'true'));
+    });
+
+    it('should ask 3 days after a briefing of 2 days, no longer offered, and still say what it read', async () => {
+        BriefingApi.getLatest.mockResolvedValue({briefing: ready(48)});
+        BriefingApi.start.mockResolvedValue({briefing: {id: 10, status: 'running', step: 'ranking', hours: 72, items: []}});
+        renderPage();
+
+        await waitFor(() => expect(choice('3 days')).toHaveAttribute('aria-checked', 'true'));
+        expect(screen.getByText(/The news of the last 2 days/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'New briefing'}));
+        await waitFor(() => expect(BriefingApi.start).toHaveBeenCalledWith(72, 10));
     });
 });
