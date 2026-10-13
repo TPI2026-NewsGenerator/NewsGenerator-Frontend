@@ -2,35 +2,42 @@
 //  Author: Fabian Rostello
 //  Date: 03.10.2026
 //  File: BriefingWindow.jsx
-//  Description: The choice of the news a briefing is written from: the last 24 hours, 3 days or 7 days
+//  Description: The choice of the news a briefing is written from: the last 1 to 7 days, on a bar
 //
 
-import {ToggleGroup} from "radix-ui";
+import {useEffect, useState} from "react";
+import {Slider} from "radix-ui";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
-import {cn} from "@/lib/utils.js";
-import {WINDOWS} from "@/features/briefing/windows.js";
+import {MAX_DAYS, MIN_DAYS, spanOf} from "@/features/briefing/windows.js";
 
-// hours: the one chosen; onChange(hours); tip: what the window is for, the next briefing by default
-export const BriefingWindow = ({hours, onChange, disabled = false, tip}) => (
-    <div>
-        <p className="kicker">
-            The news of the last
-            <InfoTip label="The news of the last">
-                {tip ?? 'What the next briefing is chosen from. Over 7 days, an affair followed for several days is one card, and the news told by several media come first.'}
-            </InfoTip>
-        </p>
-        {/* the radix group of the ToggleGroup of shadcn: one of them always chosen */}
-        <ToggleGroup.Root type="single" value={String(hours)} disabled={disabled}
-                          onValueChange={value => value && onChange(Number(value))}
-                          aria-label="The news of the last" className="mt-2 flex flex-wrap gap-2">
-            {WINDOWS.map(window => (
-                <ToggleGroup.Item key={window.hours} value={String(window.hours)}
-                                  className={cn('inline-flex h-8 cursor-pointer items-center border px-3 text-[0.9375rem] font-semibold tracking-[0.06em] [font-variant-caps:all-small-caps] transition-colors',
-                                      'border-rule text-ink-mute hover:border-ink hover:text-ink data-[state=on]:border-ink data-[state=on]:text-ink',
-                                      'disabled:cursor-not-allowed disabled:opacity-50')}>
-                    {window.label}
-                </ToggleGroup.Item>
-            ))}
-        </ToggleGroup.Root>
-    </div>
-);
+// hours: the one chosen; onChange(hours), once the bar is let go (the page of a name reads its news
+// again for each window: not for every day passed while dragging); tip: what the window is for, the
+// next briefing by default
+export const BriefingWindow = ({hours, onChange, disabled = false, tip}) => {
+    const [days, setDays] = useState(hours / 24);
+    useEffect(() => setDays(hours / 24), [hours]);
+    return (
+        <div>
+            <p className="kicker">
+                The news of the last
+                <InfoTip label="The news of the last">
+                    {tip ?? 'What the next briefing is chosen from. From 3 days, an affair followed for several days is one card, and the news told by several media come first.'}
+                </InfoTip>
+            </p>
+            {/* the radix bar of the Slider of shadcn */}
+            <div className="mt-2 flex h-8 items-center gap-4">
+                <Slider.Root min={MIN_DAYS} max={MAX_DAYS} step={1} value={[days]} disabled={disabled}
+                             onValueChange={([value]) => setDays(value)}
+                             onValueCommit={([value]) => value * 24 !== hours && onChange(value * 24)}
+                             className="relative flex w-44 cursor-pointer touch-none items-center select-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50">
+                    <Slider.Track className="relative h-px grow bg-rule">
+                        <Slider.Range className="absolute h-full bg-ink"/>
+                    </Slider.Track>
+                    <Slider.Thumb aria-label="The news of the last" aria-valuetext={spanOf(days * 24)}
+                                  className="block size-4 rounded-full border border-ink bg-paper outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"/>
+                </Slider.Root>
+                <span className="text-[0.9375rem] font-semibold tracking-[0.06em] text-ink [font-variant-caps:all-small-caps]">{spanOf(days * 24)}</span>
+            </div>
+        </div>
+    );
+};

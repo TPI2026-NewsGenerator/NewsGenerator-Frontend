@@ -3,7 +3,7 @@
 //  Date: 24.09.2026
 //  File: Briefing.jsx
 //  Description: The daily briefing: the stories of the last hours chosen for the profile of the user,
-//               of the last 24 hours, 3 days or 7 days as they choose
+//               of the last 1 to 7 days as they choose
 //
 
 import {useCallback, useEffect, useState} from "react";
@@ -136,7 +136,8 @@ export const BriefingPage = () => {
         setSending(true);
         try {
             await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way);
-            toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}.`);
+            // sent, they count as read: the next briefings leave them out unless something new happens
+            toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}, read now for your next briefings.`);
             tick([]);
             return true;
         } catch (err) {
@@ -279,7 +280,7 @@ export const BriefingPage = () => {
             <Opening
                 kicker="The briefing"
                 title="Your briefing"
-                standfirst="The stories of the last 24 hours, 3 days or 7 days closest to your interests, chosen by the AI. A story shown in the last two days comes back only when something new happened."
+                standfirst="The stories of the last 1 to 7 days closest to your interests, chosen by the AI. A story you sent by e-mail in the last two days counts as read: it comes back only when something new happened."
                 aside={profile && (
                     <div className="space-y-4">
                         {ready && (

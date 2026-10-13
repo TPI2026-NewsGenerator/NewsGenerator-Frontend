@@ -169,13 +169,13 @@ const Picture = ({src, source}) => {
     );
 };
 
-// A card of a briefing of the last two days it follows (see server/services/utils/repeats.js): the same
+// A card sent by e-mail in the last two days it follows (see server/services/utils/repeats.js): the same
 // story with news since, read from them, or a new step of its affair. followUp: {title, shownAt, evolved}
-const FOLLOW_UP_NOTE = 'A story you were shown in the last two days is not shown again, unless news published since tell something new. Judged by the AI from their titles.';
+const FOLLOW_UP_NOTE = 'A story you sent by e-mail in the last two days counts as read: it is not shown again, unless news published since tell something new. Judged by the AI from their titles.';
 const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 const FollowUp = ({followUp}) => (
     <Margin kicker={<>Follow-up <InfoTip label="Follow-up">{FOLLOW_UP_NOTE}</InfoTip></>}>
-        {followUp.evolved ? 'New since you read it' : 'A new step of the affair you read'} on {day(followUp.shownAt)}:{' '}
+        {followUp.evolved ? 'New since you read it' : 'A new step of the affair you read'}, sent on {day(followUp.shownAt)}:{' '}
         <span className="italic">“{followUp.title}”</span>
     </Margin>
 );

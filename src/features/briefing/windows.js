@@ -6,17 +6,14 @@
 //               briefing-service.js on the server)
 //
 
-// 3 days instead of 2 since 14.10.2026
-export const WINDOWS = [
-    {hours: 24, label: '24 hours'},
-    {hours: 72, label: '3 days'},
-    {hours: 168, label: '7 days'},
-];
-export const DEFAULT_HOURS = 72;
+// 1 to 7 days, chosen on a bar since 14.10.2026 (24 hours, 2 or 7 days before), 2 days by default
+export const MIN_DAYS = 1;
+export const MAX_DAYS = 7;
+export const DEFAULT_HOURS = 48;
 
-// the window to ask for, after a briefing of these hours: the default for one no longer offered (2 days)
-export const windowAfter = (hours) => WINDOWS.some(window => window.hours === hours) ? hours : DEFAULT_HOURS;
+// the window to ask for after a briefing of these hours: the default for one the bar does not give
+export const windowAfter = (hours) =>
+    Number.isInteger(hours) && hours % 24 === 0 && hours >= MIN_DAYS * 24 && hours <= MAX_DAYS * 24 ? hours : DEFAULT_HOURS;
 
-// "3 days": what the reader chose, said in the texts of the page; "2 days" for a briefing of before
-export const spanOf = (hours) => WINDOWS.find(window => window.hours === hours)?.label
-    ?? (hours > 24 && hours % 24 === 0 ? `${hours / 24} days` : `${hours} hours`);
+// "24 hours", "3 days": what the reader chose, said in the texts of the page
+export const spanOf = (hours) => hours > 24 && hours % 24 === 0 ? `${hours / 24} days` : `${hours} hours`;
