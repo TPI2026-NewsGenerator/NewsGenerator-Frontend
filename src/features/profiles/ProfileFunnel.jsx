@@ -20,11 +20,23 @@ const MAX_FREE = 400;
 // the questions of a round with nothing answered yet
 const unanswered = (questions) => questions.map(question => ({...question, chosen: [], free: ''}));
 
+// What the funnel asks and says for a profile; a project of a profile asks its own (see Projects.jsx)
+const PROFILE_FUNNEL = {
+    questions: (funnel) => ProfileApi.funnelQuestions(funnel),
+    text: (funnel) => ProfileApi.funnelText(funnel),
+    start: 'In a few words, what do you want to follow?',
+    placeholder: 'Tennis, or: I work in renewable energy',
+    help: 'Press Enter or Continue: the AI then asks you a few questions, with choices to tick and room for your own words, and writes your profile from your answers. You read it before it is saved.',
+    writing: 'The AI writes your profile from your answers…',
+    write: 'Write my profile',
+    writeNow: 'Write my profile now',
+};
+
 // It may sit in the form of the signup: no form of its own, its buttons do not submit, and Enter in
 // its fields does not create the account.
 // language: the one the news are translated into. onWritten(text): the profile the AI wrote. onCancel: back
-// to the text, left out when there is none to go back to
-export const ProfileFunnel = ({language, onWritten, onCancel, cancelLabel = 'Write it myself', idPrefix = 'funnel'}) => {
+// to the text, left out when there is none to go back to. words: what it asks and says (PROFILE_FUNNEL)
+export const ProfileFunnel = ({language, onWritten, onCancel, cancelLabel = 'Write it myself', idPrefix = 'funnel', words = PROFILE_FUNNEL}) => {
     const [start, setStart] = useState('');
     const [rounds, setRounds] = useState([]);        // the rounds answered, sent back each time
     const [current, setCurrent] = useState(null);    // the questions of this round, being answered
@@ -57,15 +69,14 @@ export const ProfileFunnel = ({language, onWritten, onCancel, cancelLabel = 'Wri
     };
 
     const write = async (answered) => {
-        const answer = await call('The AI writes your profile from your answers…',
-            () => ProfileApi.funnelText({start: start.trim(), rounds: answered, language}));
+        const answer = await call(words.writing, () => words.text({start: start.trim(), rounds: answered, language}));
         if (answer?.text) onWritten(answer.text);
     };
 
     // the next round of questions, or the profile when the AI has enough
     const ask = async (answered) => {
         const answer = await call(answered.length === 0 ? 'The AI prepares its questions…' : 'The AI reads your answers…',
-            () => ProfileApi.funnelQuestions({start: start.trim(), rounds: answered, language}));
+            () => words.questions({start: start.trim(), rounds: answered, language}));
         if (!answer) return;
         setRounds(answered);
         if (answer.maxRounds) setMaxRounds(answer.maxRounds);
@@ -96,16 +107,12 @@ export const ProfileFunnel = ({language, onWritten, onCancel, cancelLabel = 'Wri
             {current === null ? (
                 <div className="space-y-5">
                     <div>
-                        <Label htmlFor={`${idPrefix}-start`}>In a few words, what do you want to follow?</Label>
+                        <Label htmlFor={`${idPrefix}-start`}>{words.start}</Label>
                         <Input id={`${idPrefix}-start`} className="mt-2" maxLength={MAX_START} value={start}
-                               placeholder="Tennis, or: I work in renewable energy"
+                               placeholder={words.placeholder}
                                onChange={event => setStart(event.target.value)} aria-describedby={`${idPrefix}-start-help`}
                                onKeyDown={noSubmit(() => canStart && ask([]))}/>
-                        <Help id={`${idPrefix}-start-help`}>
-                            Press Enter or Continue: the AI then asks you a few questions, with choices to tick and
-                            room for your own words, and writes your profile from your answers. You read it before
-                            it is saved.
-                        </Help>
+                        <Help id={`${idPrefix}-start-help`}>{words.help}</Help>
                     </div>
                     <div className="flex flex-wrap gap-3">
                         <Button variant="primary" onClick={() => ask([])} disabled={!canStart}>Continue</Button>
@@ -138,9 +145,9 @@ export const ProfileFunnel = ({language, onWritten, onCancel, cancelLabel = 'Wri
                     ))}
                     <div className="flex flex-wrap gap-3">
                         <Button variant="primary" onClick={() => lastRound ? write(answeredNow()) : ask(answeredNow())}>
-                            {lastRound ? 'Write my profile' : 'Next questions'}
+                            {lastRound ? words.write : 'Next questions'}
                         </Button>
-                        {!lastRound && <Button onClick={() => write(answeredNow())}>Write my profile now</Button>}
+                        {!lastRound && <Button onClick={() => write(answeredNow())}>{words.writeNow}</Button>}
                         {onCancel && <Button variant="subtle" onClick={onCancel}>{cancelLabel}</Button>}
                     </div>
                 </div>

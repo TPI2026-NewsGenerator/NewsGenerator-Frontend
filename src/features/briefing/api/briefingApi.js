@@ -43,6 +43,22 @@ export const BriefingApi = {
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },
+    // a news added at the end of the briefing by its link: answers its card (see importNews on the server)
+    addNews: async (briefingId, url) => {
+        const response = await fetch(`${API_URL}/briefing/${briefingId}/news`, {
+            method: 'POST',
+            headers: withProfile(HEADERS),
+            body: JSON.stringify({url}),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
+        return data.item;
+    },
+    // a news added taken out again (204, no body)
+    removeNews: async (briefingId, storyId) => {
+        const response = await fetch(`${API_URL}/briefing/${briefingId}/news/${storyId}`, {method: 'DELETE', headers: withProfile(HEADERS)});
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
+    },
     // {pictures: [{url, source}]}: the pictures of a card the reader can put in the e-mail instead
     pictures: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/pictures`),
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
@@ -82,6 +98,14 @@ export const ProfileApi = {
     restoreSource: (key) => send('/profile/removed-sources/restore', {method: 'POST', body: {key}}),
     // the names or words whose news are always shown. Answers the profile
     setWatchTerms: (terms) => send('/profile/watch-terms', {method: 'PUT', body: {terms}}),
+    // The projects of the profile, written with the AI as a profile is ({start, rounds} -> {enough,
+    // questions}, then -> {text}); saved ({name, text, endsOn}), their last day changed, deleted. Each
+    // answers the profile
+    projectQuestions: (funnel) => send('/profile/projects/funnel/questions', {method: 'POST', body: funnel}),
+    projectText: (funnel) => send('/profile/projects/funnel/text', {method: 'POST', body: funnel}),
+    createProject: (project) => send('/profile/projects', {method: 'POST', body: project}),
+    setProjectEnd: (id, endsOn) => send(`/profile/projects/${id}`, {method: 'PATCH', body: {endsOn}}),
+    removeProject: (id) => send(`/profile/projects/${id}`, {method: 'DELETE'}),
     // the profiles of the reader: {profiles: [{id, name}]}
     list: () => send('/profile/profiles'),
     // {name, text, language}: another profile, answered as the profile shown

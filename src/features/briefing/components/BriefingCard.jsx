@@ -159,6 +159,17 @@ const Picture = ({src, source}) => {
     );
 };
 
+// A card of a briefing of the last two days it follows (see server/services/utils/repeats.js): the same
+// story with news since, read from them, or a new step of its affair. followUp: {title, shownAt, evolved}
+const FOLLOW_UP_NOTE = 'A story you were shown in the last two days is not shown again, unless news published since tell something new. Judged by the AI from their titles.';
+const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
+const FollowUp = ({followUp}) => (
+    <Margin kicker={<>Follow-up <InfoTip label="Follow-up">{FOLLOW_UP_NOTE}</InfoTip></>}>
+        {followUp.evolved ? 'New since you read it' : 'A new step of the affair you read'} on {day(followUp.shownAt)}:{' '}
+        <span className="italic">“{followUp.title}”</span>
+    </Margin>
+);
+
 // a note of the outer column: its kicker and what it says
 const Margin = ({kicker, tone, children}) => (
     <div>
@@ -183,8 +194,11 @@ const Margin = ({kicker, tone, children}) => (
 // onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
 // format: the way the sentences are shown, 'passages', 'digest' or 'points' (see formats.js); item.points,
 // item.digest and their translations are of the same sentences as published, absent from the older ones
+// item.followUp: the card of the last days it follows (see FollowUp); item.imported: a news the reader
+// added by its link, for the e-mail
 const unmarked = (entry) => ({...entry, marks: undefined});
-export const BriefingCard = ({item: given, onVote, onSelect, selected = false, number, lede = false, marked = false, format = 'passages'}) => {
+// onRemove: a news the reader added taken out of the briefing
+export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages'}) => {
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
@@ -279,6 +293,17 @@ export const BriefingCard = ({item: given, onVote, onSelect, selected = false, n
             </div>
 
             <aside className="col-span-12 mt-8 space-y-5 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-1 md:border-t-0 md:border-l md:pt-0 md:pl-5">
+                {item.imported && (
+                    <Margin kicker="Added by you">
+                        From its link: not chosen nor checked against other media.
+                        {onRemove && (
+                            <button type="button" onClick={onRemove}
+                                    className="mt-1 block cursor-pointer text-ink-mute underline underline-offset-4 hover:text-ink">Take it out</button>
+                        )}
+                    </Margin>
+                )}
+                {item.project && <Margin kicker="For your project">{item.project}</Margin>}
+                {item.followUp && <FollowUp followUp={item.followUp}/>}
                 {item.official?.length > 0 && <OfficialSource posts={item.official}/>}
                 {coverage && (
                     <Margin kicker="Who tells it">

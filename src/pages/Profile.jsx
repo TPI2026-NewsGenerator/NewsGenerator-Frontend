@@ -15,6 +15,7 @@ import {Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Dialog} from "@/components/ui/overlay.jsx";
 import {WatchTerms} from "@/features/profiles/WatchTerms.jsx";
 import {ProfileFunnel} from "@/features/profiles/ProfileFunnel.jsx";
+import {Projects} from "@/features/profiles/Projects.jsx";
 import {profilesChanged, setActiveProfile, useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {Meta, Notice, Working} from "@/components/ui/text.jsx";
 import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -571,6 +572,14 @@ export const ProfilePage = () => {
                 <Section id="terms" kicker="Always shown" title="Names and terms you follow"
                          intro="A person, a club, an organisation, a word: every news of your sources that names one is listed in your briefing, in a section of its own, whatever the AI chose for the cards.">
                     <WatchTerms terms={data.profile.watchTerms ?? []} max={data.limits?.watchTerms ?? 20} busy={busy} onSave={saveTerms}/>
+                </Section>
+            )}
+
+            {data?.profile && (
+                <Section id="projects" kicker="For a time" title="Your projects"
+                         intro="Something you prepare for a while: a trip, a purchase, a move, a report. Your briefing looks for its news in the sources of this profile, with your interests, until its last day.">
+                    <Projects projects={data.projects ?? []} max={data.limits?.projects ?? 5} language={data.profile.language}
+                              busy={busy} change={change}/>
                 </Section>
             )}
 

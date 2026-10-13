@@ -22,6 +22,7 @@ import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx"
 import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
 import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
+import {AddNews} from "@/features/briefing/components/AddNews.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
@@ -145,6 +146,30 @@ export const BriefingPage = () => {
         }
     };
 
+    // a news added by its link: at the end of the briefing, ticked for the e-mail; true when added
+    const addNews = async (url) => {
+        try {
+            const item = await BriefingApi.addNews(briefing.id, url);
+            setBriefing(current => current && current.id === briefing.id ? {...current, items: [...current.items, item]} : current);
+            tick([...ticked, item.storyId]);
+            toast.success('The news was added at the end of the briefing, ticked for the e-mail.');
+            return true;
+        } catch (err) {
+            toast.error(`Not added: ${err.message}`);
+            return false;
+        }
+    };
+
+    const removeNews = async (storyId) => {
+        try {
+            await BriefingApi.removeNews(briefing.id, storyId);
+            setBriefing(current => current && ({...current, items: current.items.filter(item => item.storyId !== storyId)}));
+            tick(ticked.filter(other => other !== storyId));
+        } catch (err) {
+            toast.error(`Not taken out: ${err.message}`);
+        }
+    };
+
     // shown at once, taken back if the server refuses it
     const vote = async (storyId, value) => {
         const setVote = (to) => setBriefing(current => current && ({
@@ -217,7 +242,8 @@ export const BriefingPage = () => {
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId}>
                             <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format}
-                                          onVote={value => vote(item.storyId, value)}
+                                          onVote={item.imported ? undefined : value => vote(item.storyId, value)}
+                                          onRemove={item.imported && mail ? () => removeNews(item.storyId) : undefined}
                                           onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
                                           selected={ticked.includes(item.storyId)}/>
                         </li>
@@ -252,7 +278,7 @@ export const BriefingPage = () => {
             <Opening
                 kicker="The briefing"
                 title="Your briefing"
-                standfirst="The stories of the last 24 hours, 2 days or 7 days closest to your interests, chosen by the AI. A story already shown can come back in the next edition: pass it."
+                standfirst="The stories of the last 24 hours, 2 days or 7 days closest to your interests, chosen by the AI. A story shown in the last two days comes back only when something new happened."
                 aside={profile && (
                     <div className="space-y-4">
                         {ready && (
@@ -278,6 +304,7 @@ export const BriefingPage = () => {
                                         className="cursor-pointer underline underline-offset-4 hover:text-ink">tick them all</button>.
                             </p>
                         )}
+                        {mail && ready && <AddNews key={briefing.id} onAdd={addNews}/>}
                     </div>
                 )}
             />
