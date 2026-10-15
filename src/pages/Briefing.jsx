@@ -398,6 +398,7 @@ export const BriefingPage = () => {
                                  ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
                                      thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                      contested: item.contested ?? [],
+                                     analysis: briefing.analysis?.status === 'ready' ? briefing.analysis.cards?.[item.storyId] ?? null : null,
                                      angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source})),
                                      official: (item.official ?? []).map(post => ({party: post.party, title: post.translation ?? post.title}))}] : [])}/>
                 )}

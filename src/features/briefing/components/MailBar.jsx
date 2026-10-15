@@ -21,19 +21,21 @@ const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
 
 const two = (number) => String(number).padStart(2, '0');
 
-// "2 angles taken out", "1 denial taken out", "1 official source taken out", or nothing (see MailAside)
+// "2 angles taken out", "1 denial taken out", "1 official source taken out", "2 analysis lines taken
+// out", or nothing (see MailAside)
 const takenOut = (removed = {}) => [
     [removed.contested?.length ?? 0, 'denial', 'denials'],
     [removed.angles?.length ?? 0, 'angle', 'angles'],
     [removed.official?.length ?? 0, 'official source', 'official sources'],
+    [(removed.why?.length ?? 0) + (removed.next?.length ?? 0) + (removed.timeline?.length ?? 0), 'analysis line', 'analysis lines'],
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
-// thumbnailSource, contested, angles, official}] (number: their place in the briefing); accountEmail: the address
+// thumbnailSource, analysis, contested, angles, official}] (number: their place in the briefing); accountEmail: the address
 // of the account; format: the way the page shows the sentences of the cards (see formats.js), the one of
 // the e-mail until the reader chooses another, null for a briefing that has the key passages only;
 // onSend(to, storyIds, pictures, titles, removed, format): sends them in this order with the pictures
-// and the titles the reader changed, without the denials, angles and official sources they took out, their sentences in
+// and the titles the reader changed, without the denials, angles, official sources and analysis lines they took out, their sentences in
 // the way chosen, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks
 // them all
 export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onClear}) => {
@@ -42,7 +44,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
     const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
     const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
     const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
-    const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official}: the places taken out
+    const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official, why, next, timeline}: the places taken out
     const [galleries, setGalleries] = useState({});     // storyId -> its pictures, null while asked
     const [editing, setEditing] = useState(null);       // the storyId whose title and picture are being changed
     const [error, setError] = useState(null);
