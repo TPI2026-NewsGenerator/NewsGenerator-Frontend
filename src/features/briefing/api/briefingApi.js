@@ -33,13 +33,13 @@ export const BriefingApi = {
     // {storyId: title}, the ones the reader wrote for the e-mail; removed: {storyId: {contested: [index],
     // angles: [index], official: [index]}}, the denials, other angles and official sources they took out; format: the way their sentences are
     // shown, 'points', 'digest' or 'passages' (see formats.js), the key passages when not given
-    email: async (briefingId, storyIds, to, pictures, titles, removed, format) => {
+    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai) => {
         const some = (map) => map && Object.keys(map).length > 0;
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
             body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
-                ...(format ? {format} : {})}),
+                ...(format ? {format} : {}), ...(ai?.length ? {ai} : {})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },

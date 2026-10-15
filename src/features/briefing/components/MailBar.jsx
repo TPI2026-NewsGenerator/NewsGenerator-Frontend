@@ -10,7 +10,7 @@
 import {useEffect, useState} from "react";
 import {ArrowDown, ArrowUp} from "lucide-react";
 import {Button, IconButton} from "@/components/ui/button.jsx";
-import {FieldError, Input, Label} from "@/components/ui/field.jsx";
+import {Checkbox, FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {MailAside} from "@/features/briefing/components/MailAside.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
@@ -20,6 +20,10 @@ import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooS
 const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
 
 const two = (number) => String(number).padStart(2, '0');
+
+// the AI version of a story in the way of the e-mail, null when it has none (the key passages have none)
+const aiTextOf = (story, way) => way === 'points' ? (story.ai?.points?.length ? story.ai.points : null)
+    : way === 'digest' ? story.ai?.summary ?? null : null;
 
 // "2 angles taken out", "1 denial taken out", "1 official source taken out", "2 analysis lines taken
 // out", or nothing (see MailAside)
@@ -31,12 +35,13 @@ const takenOut = (removed = {}) => [
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
-// thumbnailSource, analysis, contested, angles, official}] (number: their place in the briefing); accountEmail: the address
+// thumbnailSource, ai, analysis, contested, angles, official}] (number: their place in the briefing; ai: the points
+// and the summary written by the AI, see BriefingCard AiVersion); accountEmail: the address
 // of the account; format: the way the page shows the sentences of the cards (see formats.js), the one of
 // the e-mail until the reader chooses another, null for a briefing that has the key passages only;
-// onSend(to, storyIds, pictures, titles, removed, format): sends them in this order with the pictures
+// onSend(to, storyIds, pictures, titles, removed, format, ai): sends them in this order with the pictures
 // and the titles the reader changed, without the denials, angles, official sources and analysis lines they took out, their sentences in
-// the way chosen, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks
+// the way chosen, the ones of 'ai' (storyIds) in their AI version, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks
 // them all
 export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onClear}) => {
     const [to, setTo] = useState(null);         // null: the address is not asked yet
@@ -45,6 +50,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
     const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
     const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
     const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official, why, next, timeline}: the places taken out
+    const [inAi, setInAi] = useState({});       // storyId -> true: sent in its AI version
     const [galleries, setGalleries] = useState({});     // storyId -> its pictures, null while asked
     const [editing, setEditing] = useState(null);       // the storyId whose title and picture are being changed
     const [error, setError] = useState(null);
@@ -135,7 +141,8 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
         const retitled = Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title));
         const left = Object.fromEntries(ordered.filter(story => takenOut(removed[story.storyId]))
             .map(story => [story.storyId, removed[story.storyId]]));
-        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left, way ?? undefined)) setTo(null);
+        const ai = ordered.filter(story => inAi[story.storyId] && aiTextOf(story, way)).map(story => story.storyId);
+        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left, way ?? undefined, ai)) setTo(null);
     };
 
     return (
@@ -170,6 +177,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                     {choice?.auto && ' · its picture too small, a sharper one of the story instead'}
                                                     {choice && choice.kind !== 'none' && !choice.auto && ' · picture changed'}
                                                     {takenOut(removed[story.storyId]) && ` · ${takenOut(removed[story.storyId])}`}
+                                                    {inAi[story.storyId] && aiTextOf(story, way) && ' · AI version'}
                                                 </span>
                                             </span>
                                             <Button size="sm" variant="subtle" onClick={() => edit(story)} disabled={sending}
@@ -202,6 +210,20 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                         </Button>
                                                     )}
                                                 </div>
+                                                {aiTextOf(story, way) && (
+                                                    <div className="mt-2 border border-rule p-3">
+                                                        <Checkbox checked={Boolean(inAi[story.storyId])}
+                                                                  onChange={event => setInAi(current => ({...current, [story.storyId]: event.target.checked}))}>
+                                                            Send its {way === 'points' ? 'bullet points' : 'summary'} in the AI version
+                                                        </Checkbox>
+                                                        <p className="caption mt-1">
+                                                            {inAi[story.storyId] ? 'The AI version, as the e-mail sends it:' : 'Instead of the article\'s own sentences:'}
+                                                        </p>
+                                                        {way === 'points'
+                                                            ? <ul className="caption mt-1 list-disc pl-5 !text-ink">{story.ai.points.map((point, i) => <li key={i}>{point}</li>)}</ul>
+                                                            : <p className="caption mt-1 !text-ink">{story.ai.summary}</p>}
+                                                    </div>
+                                                )}
                                                 <MailAside story={story} removed={removed[story.storyId]}
                                                            onChange={next => setRemoved(current => ({...current, [story.storyId]: next}))}/>
                                                 <MailPicture story={story} choice={choice} pictures={galleries[story.storyId] ?? null}
