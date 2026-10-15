@@ -13,6 +13,7 @@ import {PageShell, Opening} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
+import {BriefingAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {DEFAULT_HOURS, spanOf, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -28,6 +29,8 @@ import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
 const POLL_MS = 3000;
+// the analysis takes minutes after the cards: asked less often
+const ANALYSIS_POLL_MS = 8000;
 
 // what the server is doing while it writes the briefing of the last 'span'
 const steps = (span) => ({
@@ -106,6 +109,23 @@ export const BriefingPage = () => {
         const timer = setTimeout(load, POLL_MS);
         return () => clearTimeout(timer);
     }, [briefing, load]);
+
+    // the analysis written after the cards: asked again until it is, only it taken from the answer (the
+    // reader may have voted or added a news meanwhile)
+    useEffect(() => {
+        if (briefing?.status !== 'ready' || briefing.analysis?.status !== 'running') return undefined;
+        const id = briefing.id;
+        const timer = setTimeout(async () => {
+            try {
+                const data = await BriefingApi.getLatest();
+                if (expired(data) || data.error || data.briefing?.id !== id) return;
+                setBriefing(current => current?.id === id ? {...current, analysis: data.briefing.analysis} : current);
+            } catch {
+                // asked again with the next change of the briefing
+            }
+        }, ANALYSIS_POLL_MS);
+        return () => clearTimeout(timer);
+    }, [briefing, expired]);
 
     const start = async () => {
         setError(null);
@@ -212,6 +232,14 @@ export const BriefingPage = () => {
 
     const cards = (
         <>
+            {ready && count > 0 && !onlyFound && briefing.analysis && (
+                <div className="grid-12">
+                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                        <BriefingAnalysis analysis={briefing.analysis} items={briefing.items} hours={briefing.hours ?? DEFAULT_HOURS}/>
+                    </div>
+                </div>
+            )}
+
             {ready && count > 0 && (
                 <div className="grid-12">
                     <div className="col-span-12 md:col-span-7 md:col-start-3">
@@ -242,7 +270,7 @@ export const BriefingPage = () => {
                 <ol className="list-none p-0">
                     {/* the stories of the terms followed keep their place in the briefing */}
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
-                        <li key={item.storyId}>
+                        <li key={item.storyId} id={`card-${item.storyId}`} className="scroll-mt-6">
                             <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format}
                                           onVote={item.imported ? undefined : value => vote(item.storyId, value)}
                                           onRemove={item.imported && mail ? () => removeNews(item.storyId) : undefined}
