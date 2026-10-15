@@ -64,6 +64,24 @@ const Points = ({paragraphs}) => (
 // the sentences of a card in the way the reader chose (see formats.js)
 const WAYS = {passages: Passages, digest: Digest, points: Points};
 
+// The points or the summary written by the AI (see server/services/utils/ai-ways.js), shown under the
+// article's own sentences when the reader asks for it, for the readers to compare the two. text: the
+// points ['...'] or the summary '...'; model: the model that wrote it
+const AiVersion = ({id, format, text, model, source}) => (
+    <div id={id} className="mt-6 border-l-2 border-accent-ink/60 pl-5">
+        <p className="kicker !text-accent-ink">Written by the AI</p>
+        <div className="body-text mt-3">
+            {format === 'points'
+                ? <Points paragraphs={text.map(point => ({text: point}))}/>
+                : <p>{text}</p>}
+        </div>
+        <p className="caption mt-3">
+            Written by the AI ({model.replace(/:.*$/, '')}) from the article {source && <>of {source} </>}in its own words: it can get a
+            fact wrong. The article's sentences above are the reference.
+        </p>
+    </div>
+);
+
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
 // Someone named who denies the news, in the words of one of its articles, a machine translation under
@@ -206,7 +224,8 @@ const Margin = ({kicker, tone, children}) => (
 // item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones).
 // onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
 // format: the way the sentences are shown, 'passages', 'digest' or 'points' (see formats.js); item.points,
-// item.digest and their translations are of the same sentences as published, absent from the older ones
+// item.digest and their translations are of the same sentences as published, absent from the older ones.
+// item.ai: {points, summary, model} the same ways written by the AI, shown on demand (see AiVersion)
 // item.followUp: the card of the last days it follows (see FollowUp); item.imported: a news the reader
 // added by its link, for the e-mail
 const unmarked = (entry) => ({...entry, marks: undefined});
@@ -224,6 +243,9 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     // the translation is shown, the original only when the reader opens it
     const translated = Boolean(item.titleTranslation) || translation.length > 0;
     const [original, setOriginal] = useState(false);
+    // the AI version of the points or the summary, absent from the key passages and the briefings before 15.10.2026
+    const aiText = format === 'points' ? item.ai?.points : format === 'digest' ? item.ai?.summary : null;
+    const [showAi, setShowAi] = useState(false);
 
     return (
         <article className="grid-12 border-t border-rule pt-7 pb-14">
@@ -297,6 +319,16 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                             Sentences chosen by the AI, shown as the article {lead && <>of {lead.source} </>}published them.
                         </p>
                     </div>
+                )}
+
+                {paragraphs.length > 0 && aiText && (
+                    <>
+                        <button type="button" onClick={() => setShowAi(!showAi)} aria-expanded={showAi} aria-controls={`ai-${item.storyId}`}
+                                className="caption mt-4 cursor-pointer font-semibold tracking-[0.06em] text-ink-mute [font-variant-caps:all-small-caps] underline underline-offset-4 hover:text-ink">
+                            {showAi ? 'Hide AI version' : 'Show AI version'}
+                        </button>
+                        {showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
+                    </>
                 )}
 
                 {item.contested?.length > 0 && <Contested denials={item.contested}/>}
