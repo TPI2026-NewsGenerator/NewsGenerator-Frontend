@@ -21,6 +21,7 @@ import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
+import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {cn} from "@/lib/utils.js";
 import {pageOf} from "@/features/entities/entityApi.js";
 
@@ -225,12 +226,15 @@ const Margin = ({kicker, tone, children}) => (
 // onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
 // format: the way the sentences are shown, 'passages', 'digest' or 'points' (see formats.js); item.points,
 // item.digest and their translations are of the same sentences as published, absent from the older ones.
-// item.ai: {points, summary, model} the same ways written by the AI, shown on demand (see AiVersion)
+// item.ai: {points, summary, model} the same ways written by the AI, shown on demand (see AiVersion).
+// analysis: the AI analysis of the card when it merits one (see CardAnalysis), analysisPending while it is
+// written, analysisModel the model writing it
 // item.followUp: the card of the last days it follows (see FollowUp); item.imported: a news the reader
 // added by its link, for the e-mail
 const unmarked = (entry) => ({...entry, marks: undefined});
 // onRemove: a news the reader added taken out of the briefing
-export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages'}) => {
+export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages',
+                                 analysis, analysisPending = false, analysisModel}) => {
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
@@ -329,6 +333,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                         </button>
                         {showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
                     </>
+                )}
+
+                {paragraphs.length > 0 && (analysis || analysisPending) && (
+                    <div><CardAnalysis id={`analysis-${item.storyId}`} analysis={analysis} pending={analysisPending && !analysis} model={analysisModel}/></div>
                 )}
 
                 {item.contested?.length > 0 && <Contested denials={item.contested}/>}

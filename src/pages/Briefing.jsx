@@ -13,7 +13,7 @@ import {PageShell, Opening} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
-import {BriefingAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
+import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {DEFAULT_HOURS, spanOf, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
@@ -235,7 +235,7 @@ export const BriefingPage = () => {
             {ready && count > 0 && !onlyFound && briefing.analysis && (
                 <div className="grid-12">
                     <div className="col-span-12 md:col-span-7 md:col-start-3">
-                        <BriefingAnalysis analysis={briefing.analysis} items={briefing.items} hours={briefing.hours ?? DEFAULT_HOURS}/>
+                        <AnalysisNote analysis={briefing.analysis} items={briefing.items}/>
                     </div>
                 </div>
             )}
@@ -272,6 +272,9 @@ export const BriefingPage = () => {
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId} id={`card-${item.storyId}`} className="scroll-mt-6">
                             <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format}
+                                          analysis={briefing.analysis?.cards?.[item.storyId]} analysisModel={briefing.analysis?.model}
+                                          analysisPending={briefing.analysis?.status === 'running'
+                                              && (briefing.analysis.picked ?? []).some(entry => entry.storyId === item.storyId)}
                                           onVote={item.imported ? undefined : value => vote(item.storyId, value)}
                                           onRemove={item.imported && mail ? () => removeNews(item.storyId) : undefined}
                                           onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
