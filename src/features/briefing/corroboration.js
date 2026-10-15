@@ -30,8 +30,10 @@ export const coverageLabel = ({media, read, independent, wordings, agencies = []
         if (independent <= 1) {
             return {text: `${told}, one single text republished${wire}`, title: 'Their texts are the same, most likely one wire republished: one report, not several'};
         }
-        return {text: `${told}, ${independent} texts written independently of ${read} read${wire}`, tone: 'ink',
-            title: `${independent} of the ${read} texts read were written apart from the others`};
+        // "different", not "independent": a wire reworded counts as another text, and two media can each
+        // write theirs from one statement (the user, 15.10.2026)
+        return {text: `${told}, ${independent} different texts of ${read} read${wire}`, tone: 'ink',
+            title: `${independent} of the ${read} texts read are not copies of one another: a text republished almost word for word counts once`};
     }
     // the headlines only. Identical ones are one wire whatever the size of the group, said first
     if (wordings <= 1) {

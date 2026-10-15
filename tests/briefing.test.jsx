@@ -33,8 +33,8 @@ describe('coverageLabel of the texts read', () => {
             .toBe('Told by 10 media, one single text republished · wire: AFP');
     });
 
-    it('should say how many texts were written apart among the ones read', () => {
-        expect(coverageLabel({media: 4, read: 3, independent: 3}).text).toBe('Told by 4 media, 3 texts written independently of 3 read');
+    it('should say how many different texts there are among the ones read', () => {
+        expect(coverageLabel({media: 4, read: 3, independent: 3}).text).toBe('Told by 4 media, 3 different texts of 3 read');
     });
 
     it('should not claim anything when too few texts could be read', () => {
@@ -49,7 +49,7 @@ describe('BriefingCard', () => {
         expect(screen.getByText('Du Top 14, que vous suivez.')).toBeInTheDocument();
         expect(screen.getByText('Second paragraphe.')).toBeInTheDocument();
         expect(screen.getByText('named sources')).toBeInTheDocument();
-        expect(screen.getByText(/2 texts written independently of 3 read/)).toBeInTheDocument();
+        expect(screen.getByText(/2 different texts of 3 read/)).toBeInTheDocument();
         expect(screen.getAllByRole('link')).toHaveLength(3);
     });
 
