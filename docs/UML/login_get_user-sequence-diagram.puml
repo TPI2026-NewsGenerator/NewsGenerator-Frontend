@@ -1,20 +1,37 @@
+' Mis à jour le 16.10.2026 d'après le code (features/auth/AuthContext.jsx, useAuth.js,
+' server/routes/session-router.js et services/utils/jwt.js).
 @startuml
 title Récupération de l'utilisateur connecté (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI (AuthProvider)" as UI
+participant "AuthProvider" as UI
+participant "Page\n(useAuth)" as Page
 participant "Backend" as BE
 
 User -> UI : Ouvre l'application
+UI -> UI : localStorage.removeItem('JWT')
+note right : le jeton gardé avant le cookie\nest effacé
 UI -> BE : GET /api/session (cookie "session" envoyé par le navigateur)
 alt session valide
-    BE --> UI : {id, username, email, role}
-    note right : renouvelée si elle date de plus d'un jour
-    UI --> User : affiche la page demandée
-else pas de session ou session expirée
+    BE --> UI : {id, username, email, role, admin}
+    note right : le cookie est renouvelé s'il date de plus\nd'un jour; admin est lu dans la base à chaque fois
+    UI -> Page : user
+    Page --> User : affiche la page demandée
+else pas de session, session expirée ou mot de passe changé depuis
     BE --> UI : 403
-    UI --> User : redirige /login
+    UI -> Page : user = null
+    alt Briefing, Profile, Following, Settings
+        Page -> Page : logout()
+        Page --> User : redirige /login
+    else Search
+        Page --> User : la page reste ouverte, la recherche\ndemande de se connecter
+    end
 end
+note over UI, Page
+    Rien n'est affiché tant que le serveur n'a pas répondu (user undefined).
+    Plus tard, une réponse "Forbidden, invalid or expired" à n'importe quel
+    appel déconnecte aussi le lecteur (useAuth.expired)
+end note
 
 @enduml

@@ -1,0 +1,133 @@
+@startuml client-06-following
+!include _style.iuml
+title Client — following: Wikidata items, names and words, the page of a name
+
+class Reader
+package "Pages" {
+    class FollowingPage {
+        followed: {entities, words, limits}
+        query, found, suggested
+        + run(key, call, apply)
+        + followItem(qid)
+        + unfollowItem(qid)
+        + followWord(word)
+        + unfollowWord(word)
+        + inBriefing(qid, on)
+        + followSuggested(name)
+    }
+    class EntityPage {
+        /following/:qid
+        hours, page, chosen
+        + follow(yes)
+        + setNames(added, removed)
+        + inBriefing(on)
+    }
+    class Names {
+        entity, onChange(added, removed)
+        + add()
+        + remove(text)
+    }
+    class NamePage {
+        /following/name/:name
+        hours, page
+        + follow(yes)
+    }
+    class BriefingPage <<other feature>> {
+        tab "Following" (#terms)
+    }
+    note right of FollowingPage
+        Wikidata is asked 400 ms after the reader
+        stops typing (2 letters at least). 30 items
+        and 20 names or words at most. The names met
+        on several cards are suggested
+    end note
+    note bottom of NamePage
+        A name the tagger linked to an item
+        opens the page of that item instead
+    end note
+}
+package "Components" {
+    class BriefingCard <<other feature>> {
+        item.names: "Who it is about"
+    }
+    class WatchedNews {
+        watched
+    }
+    class Term {
+        group
+    }
+    class BriefingWindow <<other feature>> {
+        hours, onChange(hours), tip
+    }
+}
+package "State" {
+    class kinds {
+        KIND_LABELS
+    }
+    class activeProfile <<other feature>> {
+        + useActiveProfile()
+        + withProfile(headers)
+    }
+    class useAuth <<other feature>>
+}
+package "API" {
+    class EntityApi {
+        + search(q)
+        + list()
+        + follow(qid)
+        + unfollow(qid)
+        + setInBriefing(qid, on)
+        + page(qid, hours)
+        + setNames(qid, added, removed)
+        + addWord(word)
+        + removeWord(word)
+        + namePage(name, hours)
+        + suggestions()
+        --
+        + pageOf({name, qid})
+    }
+}
+class "server /api" as Server <<external>> {
+    + GET /entities
+    + GET /entities/search?q
+    + GET /entities/suggestions
+    + GET /entities/name?name&hours
+    + POST /entities/words
+    + DELETE /entities/words/:word
+    + POST /entities
+    + GET /entities/:qid?hours
+    + PUT /entities/:qid/names
+    + PUT /entities/:qid/briefing
+    + DELETE /entities/:qid
+}
+note right of Server
+    Every route but the list and the search
+    needs a profile (needsProfile). The page of
+    an item gives its news and the ones of its
+    links (the players of a club, the club of
+    a player): up to half a minute
+end note
+
+Reader --> FollowingPage
+Reader --> BriefingPage
+BriefingPage --> BriefingCard
+BriefingPage --> WatchedNews
+WatchedNews --> Term
+BriefingCard ..> EntityPage : link pageOf(name)
+BriefingCard ..> NamePage : link pageOf(name)
+FollowingPage ..> EntityPage : link
+EntityPage --> Names
+EntityPage --> BriefingWindow
+EntityPage --> Term
+NamePage --> BriefingWindow
+NamePage --> Term
+FollowingPage --> kinds
+EntityPage --> kinds
+FollowingPage --> EntityApi
+EntityPage --> EntityApi
+NamePage --> EntityApi
+FollowingPage --> activeProfile
+FollowingPage --> useAuth
+EntityApi --> activeProfile : withProfile()
+EntityApi --> Server
+@enduml

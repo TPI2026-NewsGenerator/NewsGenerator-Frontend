@@ -1,0 +1,100 @@
+@startuml client-20-briefing-sequence
+!include _sequence.iuml
+title Client — the briefing page: opened, a new briefing followed while it is written, then voted
+
+actor Reader
+participant BriefingPage as Page
+participant "BriefingWindow\n+ BriefingSize" as Controls
+participant BriefingCard as Card
+participant "sizes / formats\n(localStorage)" as Kept
+participant "BriefingApi\n+ ProfileApi" as Api
+participant "server /api" as Server
+
+== Opened (and again when another profile is chosen) ==
+Reader -> Page : /briefing
+alt no reader signed in
+    Page -> Page : logout() -> /login
+end
+Page -> Kept : keptSize(), keptFormat()
+Page -> Api : ProfileApi.get()
+Api -> Server : GET /profile (header X-Profile)
+Server --> Page : {profile}
+note right : profile null: "First, your profile", no button
+Page -> Api : load(): BriefingApi.getLatest()
+Api -> Server : GET /briefing
+Server --> Page : {briefing, mail}
+note right of Page
+    expired(data) on every answer: a session refused
+    signs the reader out. hours = the last briefing's
+    window (2 days by default), size = the last chosen
+end note
+
+== Asked ==
+opt the reader changes the window or the size
+    Reader -> Controls : drags the bar (1 to 7 days), ticks 10, 20 or 30
+    Controls -> Page : onChange(hours) once the bar is let go, onChange(size)
+    Page -> Kept : keepSize(size)
+end
+Reader -> Page : "New briefing"
+Page -> Api : start(): BriefingApi.start(hours, size)
+Api -> Server : POST /briefing {hours, size}
+Server --> Page : {briefing}, status 'running'
+note right : the window and the size are\ndisabled while it is written
+
+loop every 3 s while briefing.status is 'running'
+    Page -> Api : load(): getLatest()
+    Api -> Server : GET /briefing
+    Server --> Page : {briefing: {status, step}}
+    Page -> Page : Working: the text of the step\n(ranking, choosing, checking, reading,\nsummarizing, angles)
+end
+
+alt status 'failed'
+    Page --> Reader : "The last briefing could not be written: ..."
+else ready, no item
+    Page --> Reader : "Nothing today"
+else ready
+    loop each item, in the order of the briefing
+        Page -> Card : item, number, format, lede (the first),\nanalysis, onVote, onSelect (when mail)
+    end
+    Card --> Reader : title, why, picture, the sentences in the\nformat chosen, who tells it, denials, angles,\nofficial sources, who it is about
+end
+
+opt the AI analysis is still 'running' (it comes after the cards)
+    loop every 8 s while briefing.analysis.status is 'running'
+        Page -> Api : getLatest()
+        Api -> Server : GET /briefing
+        Server --> Page : {briefing}
+        Page -> Page : only its analysis taken, when it is\nstill the same briefing (votes kept)
+    end
+    Page -> Card : analysis, analysisPending false
+end
+
+== Read ==
+opt the reader chooses another way of reading
+    Reader -> Page : BriefingFormat: bullet points, summary, key passages
+    Page -> Kept : keepFormat(format)
+    Page -> Card : format
+end
+opt on a card
+    Reader -> Card : "Show original", "Show AI version", the analysis, the "i"
+    note right : drawn by the card itself, no call
+end
+
+== Voted ==
+Reader -> Card : thumb up or down (again: taken back)
+Card -> Page : onVote('up' | 'down' | null)
+Page -> Page : vote(storyId, value): the thumb shown at once
+Page -> Api : BriefingApi.vote(briefingId, storyId, value)
+Api -> Server : POST /briefing/:id/vote {storyId, vote}
+alt 204
+    Server --> Page : saved: the next briefings learn from it
+else refused
+    Server --> Page : {error}
+    Page -> Page : the thumb of before put back,\n"The thumb was not saved"
+end
+note over Page, Server
+    There is no "seen" call: nothing is sent when a card is on the screen.
+    A story counts as read only once it was sent by e-mail (the server
+    leaves it out of the briefings of the next 48 hours, unless something new happened)
+end note
+@enduml

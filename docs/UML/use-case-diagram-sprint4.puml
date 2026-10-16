@@ -1,122 +1,242 @@
 ' Use cases as they stand at sprint 4. use-case-diagram.puml is the planned scope and is left
-' untouched: this file says what a member can actually do today (3.10.2026).
+' untouched: this file says what a reader can actually do today (16.10.2026).
 '
 ' Differences with the planned scope:
 '   - "Enregistrement automatique dernier filtre" is gone. The feature was dropped and its two
 '     tables (filters, users_has_last_filters) are no longer created by any script. The last
 '     search is kept a day in the browser instead.
-'   - "Modification sources personnalisées" is implemented, and split: adding a site, a feed or a
-'     subject by hand, importing a file of sites, the media a search was missing, the sources
-'     recommended for the profile.
-'   - "Enregistrement" is implemented: the account is created with its profile.
+'   - "Modification sources personnalisées" is implemented, and split: one list of every source
+'     (found for the profile, added, left out), a site added by hand, a search of the directory and
+'     of the web, a file of sites imported, the media a search was missing, the sources recommended,
+'     a source trusted (star), removed, brought back, or kept against the thumbs.
+'   - "Enregistrement" is implemented: the account is created with its profile, written by the AI
+'     from its questions, and only while the server opens the signup (SIGNUP_OPEN=1).
+'   - The account: username, e-mail and password, each changed with the current password.
 '   - The briefing and the profile are new: the AI reads interests in what the reader writes, and
-'     chooses the stories of the briefing among the closest to them.
+'     chooses the stories of the briefing among the closest to them. Since sprint 3: a window of 1
+'     to 7 days on a bar, 10, 20 or 30 cards, three ways of reading (bullet points, summary, key
+'     passages, always the article's own sentences), the AI version of the points and the summary on
+'     demand, the AI analysis of the cards that need one, the official sources, the other angles.
+'   - A profile has its language, its projects for a time, and what it follows (Wikidata items,
+'     names and words as written), each with a page of its news. A member renames, switches and
+'     deletes their profiles; only an administrator writes another one (15 at most).
 '   - "Résumer les nouvelles" became the key passages: the article's own sentences, chosen by the AI.
-'   - "Abonnement newsletter" and the admin features are not implemented.
+'   - "Abonnement newsletter" became the e-mail of the briefing, sent on demand by an administrator
+'     (no subscription). "View member information" and "Monitor member activity" are not
+'     implemented: what the administrators can do is send the e-mail (with a news added by its link,
+'     the pictures chosen) and write other profiles (server: services/utils/admin.js; the client
+'     hides it from the others: GET /briefing answers mail, GET /session answers admin).
+'   - The thumbs of a card are votes; there is no "seen" mark: a story counts as read only once it
+'     was sent by e-mail.
+'
+' Two pages, to stay legible (one was over 4000 px high): the account, the profiles and the sources
+' (use-case-diagram-sprint4.png), then the search, the briefing, its e-mail and what is followed
+' (use-case-diagram-sprint4_001.png).
 
 @startuml
-title Diagramme Use Case - NewsGenerator Sprint 4
+title Diagramme Use Case - NewsGenerator Sprint 4 (16.10.2026) - compte, profils, sources
 left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
 
 actor "Invité" as g
 actor "Membre" as m #LightBlue
+actor "Administrateur" as a #LightGreen
 
 rectangle "NewsGenerator System" {
-    package "Features Invité" {
-        usecase "Connexion" as login
-        usecase "Créer un compte avec son profil" as register #LightBlue
-    }
-
     package "Compte" {
-        usecase "Déconnexion" as logout
+        usecase "Se connecter" as login
+        usecase "Créer un compte avec son profil\n(inscription ouverte)" as register #LightBlue
+        usecase "Se déconnecter" as logout
         usecase "Changer son nom d'utilisateur" as changeName #LightBlue
+        usecase "Changer son e-mail" as changeEmail #LightBlue
         usecase "Changer son mot de passe" as changePassword #LightBlue
+        usecase "Confirmer avec son mot de passe actuel" as confirm #LightBlue
     }
 
-    package "Briefing" {
-        usecase "Écrire un briefing" as briefing #LightBlue
-        usecase "Choisir la période\n(24 h, 2 jours, 7 jours)" as period #LightBlue
-        usecase "Voter pour une histoire" as vote #LightBlue
-    }
-
-    package "Profil" {
-        usecase "Décrire ce qu'on veut lire" as profile #LightBlue
-        usecase "Voir les intérêts lus par l'IA" as interests #LightBlue
-        usecase "Choisir sa langue de lecture" as chooseLanguage #LightBlue
-    }
-
-    package "Rechercher" {
-        usecase "Rechercher des nouvelles" as searchNews
-        usecase "Élargir la recherche quand elle trouve peu" as widen #LightBlue
-        usecase "Voir la reprise d'une nouvelle\n(médias et formulations)" as corroboration #LightBlue
-        usecase "Voir les faits d'une affaire" as thread #LightBlue
-        usecase "Lire les passages clés\ndes nouvelles choisies (IA)" as passages
-        usecase "Lire les traductions" as translate #LightBlue
-    }
-
-    package "Recherches personnalisées" {
-        usecase "Sauvegarder une recherche" as saveSearch
-        usecase "Voir ses recherches sauvegardées" as listSearches
-        usecase "Supprimer une recherche" as deleteSearch
+    package "Profils" {
+        usecase "Écrire son profil" as profile #LightBlue
+        usecase "Répondre aux questions de l'IA" as funnel #LightBlue
+        usecase "Corriger ses intérêts\n(texte, principal / secondaire, retirer)" as interests #LightBlue
+        usecase "Choisir la langue du profil" as chooseLanguage #LightBlue
+        usecase "Renommer le profil" as renameProfile #LightBlue
+        usecase "Changer de profil" as switchProfile #LightBlue
+        usecase "Supprimer un profil" as deleteProfile #LightBlue
+        usecase "Créer un autre profil" as newProfile #LightGreen
+        usecase "Ajouter un projet\n(et changer son dernier jour, le retirer)" as project #LightBlue
+        note "Intérêts, sources, projets et\nbriefings sont propres à chaque\nprofil. Plusieurs profils: les\nadministrateurs (15 au plus)" as profilesNote
     }
 
     package "Sources" {
-        usecase "Voir toutes ses sources" as listSources #LightBlue
-        usecase "Ajouter un site, un flux\nou un sujet" as addSource
+        usecase "Voir toutes ses sources\n(trouvées, ajoutées, laissées de côté)" as listSources #LightBlue
+        usecase "Chercher plus de sources" as rediscover #LightBlue
+        usecase "Ajouter un site" as addSource
+        usecase "Chercher une source\n(annuaire et web)" as searchSource #LightBlue
         usecase "Importer un fichier de sites" as importFile #LightBlue
         usecase "Ajouter une source recommandée" as recommended #LightBlue
-        usecase "Voir les médias manquants à sa recherche" as seeMissing #LightBlue
-        usecase "Lire les nouvelles des médias manquants" as readMissing #LightBlue
-        usecase "Importer les sources suggérées" as importSources #LightBlue
-        usecase "Supprimer une de ses sources" as deleteSource
+        usecase "Marquer une source de confiance" as trust #LightBlue
+        usecase "Retirer une source" as deleteSource
+        usecase "Rétablir une source retirée\nou laissée de côté" as restore #LightBlue
     }
 }
+
 
 'invité
 g --> login
 g --> register
 
 'membre
-m --|> g
+g <|-- m
 m --> logout
 m --> changeName
+m --> changeEmail
 m --> changePassword
-m --> briefing
-m --> vote
 m --> profile
-m --> searchNews
-m --> passages
-m --> saveSearch
-m --> listSearches
-m --> deleteSearch
+m --> interests
+m --> renameProfile
+m --> switchProfile
+m --> deleteProfile
+m --> project
 m --> listSources
+m --> rediscover
 m --> addSource
+m --> searchSource
 m --> importFile
 m --> recommended
-m --> seeMissing
+m --> trust
 m --> deleteSource
+m --> restore
+
+'administrateur
+m <|-- a
+a --> newProfile
 
 register ..> profile : <<include>>
-briefing ..> period : <<include>>
-briefing ..> translate : <<extend>>
-profile ..> interests : <<include>>
 profile ..> chooseLanguage : <<include>>
-searchNews ..> chooseLanguage : <<include>>
-searchNews ..> corroboration : <<include>>
-searchNews ..> translate : <<extend>>
-searchNews ..> thread : <<extend>>
-searchNews ..> widen : <<extend>>
-seeMissing ..> readMissing : <<extend>>
-seeMissing ..> importSources : <<extend>>
+funnel ..> profile : <<extend>>
+newProfile ..> profile : <<include>>
+project ..> funnel : <<include>>
+changeName ..> confirm : <<include>>
+changeEmail ..> confirm : <<include>>
+changePassword ..> confirm : <<include>>
 
-note bottom of corroboration
+newpage
+title Diagramme Use Case - NewsGenerator Sprint 4 (16.10.2026) - recherche, briefing, e-mail, suivi
+left to right direction
+
+actor "Membre" as m2 #LightBlue
+actor "Administrateur" as a2 #LightGreen
+
+rectangle "NewsGenerator System " {
+    package "Rechercher" {
+        usecase "Rechercher par une phrase\nou des mots exacts" as searchNews
+        usecase "Élargir la recherche quand elle trouve peu" as widen #LightBlue
+        usecase "Filtrer les résultats" as filter #LightBlue
+        usecase "Voir la reprise d'une nouvelle\n(médias et formulations)" as corroboration #LightBlue
+        usecase "Voir les faits d'une affaire" as thread #LightBlue
+        usecase "Lire les passages clés\ndes nouvelles choisies (IA)" as passages
+        usecase "Lire les traductions" as translate #LightBlue
+        usecase "Voir les médias manquants à sa recherche" as seeMissing #LightBlue
+        usecase "Ajouter les sources suggérées" as importSources #LightBlue
+        usecase "Retrouver sa dernière recherche (un jour)" as kept #LightBlue
+        usecase "Sauvegarder une recherche\n(nouvelle ou remplacée)" as saveSearch
+        usecase "Charger une recherche sauvegardée" as listSearches
+        usecase "Supprimer une recherche sauvegardée" as deleteSearch
+    }
+
+    package "Briefing" {
+        usecase "Écrire un nouveau briefing" as briefing #LightBlue
+        usecase "Choisir la période (1 à 7 jours)" as period #LightBlue
+        usecase "Choisir le nombre de cartes\n(10, 20, 30)" as size #LightBlue
+        usecase "Lire son briefing" as read #LightBlue
+        usecase "Choisir la forme\n(points, résumé, passages clés)" as format #LightBlue
+        usecase "Voir la version IA" as aiVersion #LightBlue
+        usecase "Lire l'analyse IA" as analysis #LightBlue
+        usecase "Voir les sources officielles,\nles démentis, les autres angles" as asides #LightBlue
+        usecase "Lire les traductions " as translate2 #LightBlue
+        usecase "Voter pour une histoire" as vote #LightBlue
+        usecase "Ajouter une nouvelle par son lien" as addNews #LightGreen
+    }
+
+    package "E-mail du briefing" {
+        usecase "Envoyer des histoires par e-mail" as email #LightGreen
+        usecase "Cocher les histoires" as tick #LightGreen
+        usecase "Choisir l'adresse" as to #LightGreen
+        usecase "Changer l'ordre" as order #LightGreen
+        usecase "Changer le titre" as mailTitle #LightGreen
+        usecase "Choisir l'image" as picture #LightGreen
+        usecase "Envoyer la version IA" as sendAi #LightGreen
+        usecase "Retirer des lignes (analyse, démentis,\nangles, sources officielles)" as removeLines #LightGreen
+    }
+
+    package "Suivre" {
+        usecase "Suivre un club, une personne,\nune organisation (Wikidata)" as follow #LightBlue
+        usecase "Suivre un nom ou un mot tel qu'écrit" as followWord #LightBlue
+        usecase "Suivre un nom suggéré" as suggested #LightBlue
+        usecase "Voir ce qu'on suit dans le briefing" as watched #LightBlue
+        usecase "Ouvrir la page d'un nom\n(ses nouvelles et ses liens)" as entityPage #LightBlue
+        usecase "Changer les noms d'un élément" as names #LightBlue
+    }
+}
+
+note right of corroboration
     Décrit ce qui a été mesuré,
     jamais si la nouvelle est vraie.
 end note
 
-note bottom of passages
+note right of passages
     Les phrases de l'article,
     l'IA ne fait que les choisir.
 end note
+
+note right of email
+    Une histoire envoyée compte comme lue:
+    les briefings des 48 h suivantes la laissent
+    de côté, sauf si du nouveau est arrivé.
+end note
+
+'membre
+m2 --> searchNews
+m2 --> passages
+m2 --> seeMissing
+m2 --> kept
+m2 --> saveSearch
+m2 --> listSearches
+m2 --> deleteSearch
+m2 --> briefing
+m2 --> read
+m2 --> vote
+m2 --> follow
+m2 --> followWord
+m2 --> entityPage
+
+'administrateur
+m2 <|-- a2
+a2 --> addNews
+a2 --> email
+
+searchNews ..> corroboration : <<include>>
+translate ..> searchNews : <<extend>>
+thread ..> searchNews : <<extend>>
+widen ..> searchNews : <<extend>>
+filter ..> searchNews : <<extend>>
+importSources ..> seeMissing : <<extend>>
+briefing ..> period : <<include>>
+briefing ..> size : <<include>>
+format ..> read : <<extend>>
+aiVersion ..> read : <<extend>>
+analysis ..> read : <<extend>>
+asides ..> read : <<extend>>
+translate2 ..> read : <<extend>>
+watched ..> read : <<extend>>
+email ..> tick : <<include>>
+email ..> to : <<include>>
+order ..> email : <<extend>>
+mailTitle ..> email : <<extend>>
+picture ..> email : <<extend>>
+sendAi ..> email : <<extend>>
+removeLines ..> email : <<extend>>
+names ..> entityPage : <<extend>>
+suggested ..> follow : <<extend>>
 
 @enduml

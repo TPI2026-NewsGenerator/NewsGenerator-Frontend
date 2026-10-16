@@ -1,0 +1,87 @@
+@startuml client-21-email-sequence
+!include _sequence.iuml
+title Client — the e-mail of a briefing: cards ticked, edited in the bar, sent (administrators)
+
+actor Reader
+participant BriefingPage as Page
+participant BriefingCard as Card
+participant MailBar as Bar
+participant "MailAside\n+ MailPicture" as Edit
+participant mailPictures as Pictures
+participant BriefingApi as Api
+participant "server /api" as Server
+
+note over Page
+    Only when GET /briefing answered mail: true
+    (the server can send, the reader is an
+    administrator): the boxes, "Add a news by
+    its link" and the bar are drawn then only
+end note
+
+== Ticked ==
+opt a news added by its link
+    Reader -> Page : AddNews: an address, "Add"
+    Page -> Api : addNews(url): BriefingApi.addNews(briefingId, url)
+    Api -> Server : POST /briefing/:id/news {url}
+    Server --> Page : {item}: its card, at the end, ticked
+end
+Reader -> Card : "Add to the e-mail" (or "tick them all")
+Card -> Page : onSelect(checked)
+Page -> Page : tickOne(storyId, checked)
+Page -> Bar : stories (the cards ticked), accountEmail,\nformat, onSend = email, onPictures
+Bar --> Reader : "N stories ticked", "Untick all", "Send email"
+
+== Edited ==
+Reader -> Bar : "Send email"
+Bar -> Bar : open(): the order of the briefing, no change,\nto = the e-mail of the account, way = format
+Bar -> Pictures : usePictureSizes(the pictures of the cards)
+Pictures -> Pictures : each loaded by the browser,\nits width measured (15 s at most)
+opt a card's own picture under 560 px wide
+    Bar -> Bar : loadGallery(story)
+    Bar -> Api : onPictures(storyId): BriefingApi.pictures
+    Api -> Server : GET /briefing/:id/stories/:storyId/pictures
+    Server --> Bar : {pictures: [{url, source}]}
+    Bar -> Pictures : bestPicture(pictures, sizes)
+    note right : lying before standing, the widest;\nnone left: the card is sent without
+end
+opt the reader changes the order
+    Reader -> Bar : arrow up or down
+    Bar -> Bar : move(at, by)
+end
+opt the reader edits a card
+    Reader -> Bar : "Edit"
+    Bar -> Bar : edit(story), loadGallery(story)
+    Reader -> Bar : its title for the e-mail; "Send its bullet\npoints / summary in the AI version"
+    Reader -> Edit : MailAside: unticks lines of the analysis,\ndenials, other angles, official sources
+    Edit -> Bar : onChange(removed)
+    Reader -> Edit : MailPicture: another picture of the story,\nnone, an address, a file of theirs
+    Edit -> Bar : onChoose(choice)
+end
+opt the reader chooses the way of the e-mail
+    Reader -> Bar : "In the e-mail, as": points, summary, passages
+end
+
+== Sent ==
+Reader -> Bar : the address (one), "Send"
+Bar -> Bar : send(): the address checked
+alt not one address
+    Bar --> Reader : "An email, like name@example.org"
+else the files chosen weigh more than 6 MB
+    Bar --> Reader : "Your images weigh 6 MB at most together..."
+else
+    Bar -> Pictures : sentPicture(choice) of each card changed
+    Bar -> Page : onSend(to, storyIds in their order, pictures,\ntitles, removed, way, ai)
+    Page -> Api : email(): BriefingApi.email(briefingId, ...)
+    Api -> Server : POST /briefing/:id/email {storyIds, to, and only\nwhat was changed: pictures, titles, removed, format, ai}
+    alt 204
+        Server --> Page : sent
+        Page -> Page : toast "sent to ..., read now for your next\nbriefings", tick([])
+        Page --> Bar : true: the bar closes
+    else refused (403, 10 an hour, 30 a day, ...)
+        Server --> Api : {error}
+        Api --> Page : throws
+        Page -> Page : toast "Not sent: ..."
+        Page --> Bar : false: the bar stays open
+    end
+end
+@enduml

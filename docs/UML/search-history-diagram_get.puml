@@ -1,19 +1,22 @@
+' Mis à jour le 16.10.2026 d'après le code (pages/Search.jsx, loadSavedSearches et applySavedSearch):
+' plus de userId dans l'adresse, l'utilisateur vient du cookie de session.
 @startuml
 title Récupération de recherche personnalisée (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI" as UI
+participant "SearchPage" as UI
 participant "Backend" as BE
 database "Base de données" as DB
 
-
 User -> UI : Visite de la page /search en tant que membre
-UI -> BE : GET /customsearch?userId=id
-BE -> DB : getUserCustomSearch(user_id)
-DB --> BE : resultat_recherche
-BE --> UI : Mise à jour du liste déroulante
-User -> UI : Sélectionne une recherche personnalisée
-UI --> UI : Mise à jour des filtres
+UI -> BE : GET /api/customsearch
+BE -> DB : getUserCustomSearch(userId du cookie)
+DB --> BE : les recherches et leurs catégories
+BE --> UI : [{id, title, keyword, language, category}]
+UI --> User : la liste "Saved searches" à côté du titre
+User -> UI : Clique sur une recherche sauvegardée
+UI -> UI : applySavedSearch(): phrase, langue et catégories\ndans le formulaire, la période choisie reste
+note right : la recherche n'est pas lancée:\nl'utilisateur clique "Search"
 
 @enduml

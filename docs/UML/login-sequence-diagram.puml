@@ -1,23 +1,41 @@
+' Mis à jour le 16.10.2026 d'après le code (pages/Login.jsx, features/auth/AuthContext.jsx,
+' server/routes/login-router.js): la session est un cookie HttpOnly, la page demande ensuite
+' GET /api/session qui dit aussi si le lecteur est administrateur (admin).
 @startuml
 title Connexion de l'utilisateur (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI" as UI
+participant "LoginPage" as UI
+participant "AuthProvider\n(useAuth)" as Auth
 participant "Backend" as BE
 database "Base de données" as DB
 
+UI -> BE : GET /api/profile/options
+BE --> UI : {signup}
+note right of UI : le lien "Sign up" n'est montré\nque si l'inscription est ouverte
+
 User -> UI : Saisie nom utilisateur + mot de passe
 User -> UI : Clique sur "Login"
-
-UI -> BE : POST /api/login (user_cred)
-BE -> DB : authUser(user_cred)
-DB --> BE : user_data
-BE --> UI : {id_user} + cookie "session" (HttpOnly)
-note right : le jeton reste dans le cookie,\nillisible pour la page
-
-UI -> BE : GET /api/session
-BE --> UI : {id, username, email, role}
-UI --> User : redirige /briefing
+alt un champ vide
+    UI --> User : "This field is required"
+else
+    UI -> BE : POST /api/login {username, password}
+    note right of BE : 10 essais par 15 minutes et par adresse
+    BE -> DB : getUserByUsername(username)
+    DB --> BE : user
+    BE -> BE : verifyPassword(), generateAccessToken()
+    alt nom inconnu (404) ou mot de passe faux (401)
+        BE --> UI : {error}
+        UI --> User : toast "Wrong password..." (401),\nsinon l'erreur dans la page
+    else
+        BE --> UI : {id_user} + cookie "session" (HttpOnly, 7 jours)
+        note right : le jeton reste dans le cookie,\nillisible pour la page
+        UI -> Auth : refresh()
+        Auth -> BE : GET /api/session
+        BE --> Auth : {id, username, email, role, admin}
+        UI --> User : redirige / puis /briefing
+    end
+end
 
 @enduml

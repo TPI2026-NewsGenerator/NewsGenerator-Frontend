@@ -1,0 +1,154 @@
+@startuml client-04-briefing
+!include _style.iuml
+title Client — briefing: start one, follow it while it is written, read and vote
+
+class Reader
+package "Pages" {
+    class BriefingPage {
+        hours, size, format, mail, ticks
+        + load()
+        + start()
+        + vote(storyId, value)
+        + addNews(url)
+        + removeNews(storyId)
+        + email(to, storyIds, ...)
+        + chooseTab(value)
+        + showFound()
+    }
+    note right of BriefingPage
+        Asks GET /briefing every 3 s while the
+        briefing is 'running', then every 8 s while
+        only its analysis is (taking the analysis
+        alone from the answer). mail: the server can
+        send e-mails and the reader is an administrator
+    end note
+}
+package "Components" {
+    class BriefingWindow {
+        hours, onChange(hours)
+    }
+    class BriefingSize {
+        size, onChange(size)
+    }
+    class BriefingFormat {
+        format, onChange(format)
+    }
+    class BriefingCard {
+        item, number, format, marked, selected
+        analysis, analysisPending
+        onVote(vote), onSelect(checked), onRemove
+    }
+    class AnalysisNote {
+        analysis, items
+    }
+    class CardAnalysis {
+        analysis, pending, model
+    }
+    class WatchedNews {
+        watched
+    }
+    class AddNews {
+        + add()
+    }
+    class NewsLinks
+    class MailBar <<other feature>>
+    note bottom of BriefingCard
+        The sentences are the article's own, the AI only
+        chose them: as bullet points, a summary or the key
+        passages, translated and marked so. Beside them:
+        why it was chosen, who tells it, its sources, who
+        denies it, other angles, official sources, who it is
+        about (links to /following), the "AI version" on demand
+    end note
+}
+package "State" {
+    class windows {
+        MIN_DAYS = 1, MAX_DAYS = 7
+        DEFAULT_HOURS = 48
+        + windowAfter(hours)
+        + spanOf(hours)
+    }
+    class sizes {
+        SIZES = [10, 20, 30]
+        + keptSize()
+        + keepSize(size)
+    }
+    class formats {
+        points, digest, passages
+        + keptFormat()
+        + keepFormat(format)
+        + fieldsOf(item, format)
+    }
+    class marks {
+        + paragraphsWithMarks(text, marks)
+    }
+    class corroboration {
+        + coverageLabel(corroboration)
+    }
+    class activeProfile <<other feature>> {
+        + useActiveProfile()
+        + withProfile(headers)
+    }
+    class useAuth <<other feature>>
+}
+package "API" {
+    class BriefingApi {
+        + getLatest()
+        + start(hours, size)
+        + vote(briefingId, storyId, vote)
+        + addNews(briefingId, url)
+        + removeNews(briefingId, storyId)
+        + pictures(briefingId, storyId)
+        + email(briefingId, storyIds, to, ...)
+    }
+    class ProfileApi <<other feature>> {
+        + get()
+    }
+}
+class "server /api" as Server <<external>> {
+    + GET /briefing
+    + POST /briefing
+    + POST /briefing/:id/vote
+    + GET /profile
+    + POST /briefing/:id/news, admin only
+    + DELETE /briefing/:id/news/:storyId, admin only
+    + GET /briefing/:id/stories/:storyId/pictures, admin only
+    + POST /briefing/:id/email, admin only
+}
+note right of Server
+    GET /briefing answers {briefing, mail}:
+    status running | ready | failed, its step,
+    items, watched, analysis
+end note
+
+Reader --> BriefingPage
+BriefingPage --> BriefingWindow
+BriefingPage --> BriefingSize
+BriefingPage --> BriefingFormat
+BriefingPage --> AnalysisNote
+BriefingPage --> BriefingCard
+BriefingPage --> WatchedNews
+BriefingPage --> AddNews
+BriefingPage --> MailBar
+BriefingCard --> CardAnalysis
+BriefingCard --> NewsLinks
+BriefingCard --> formats
+BriefingCard --> marks
+BriefingCard --> corroboration
+BriefingWindow --> windows
+BriefingSize --> sizes
+BriefingPage ..> windows
+BriefingWindow -[hidden]down- BriefingSize
+BriefingSize -[hidden]down- BriefingFormat
+AnalysisNote -[hidden]down- WatchedNews
+AddNews -[hidden]down- MailBar
+windows -[hidden]down- sizes
+marks -[hidden]down- corroboration
+BriefingPage --> activeProfile
+BriefingPage --> useAuth
+BriefingPage --> BriefingApi
+BriefingPage --> ProfileApi
+BriefingApi --> activeProfile : withProfile()
+BriefingApi --> Server
+ProfileApi --> Server
+@enduml

@@ -1,0 +1,198 @@
+@startuml client-03-profiles
+!include _style.iuml
+title Client — profiles: the text, the interests, the projects, the sources
+
+class Reader
+package "Pages" {
+    class ProfilePage {
+        creating: admin and ?new=1
+        + apply(answer, {fillForm})
+        + save()
+        + rename()
+        + changeLanguage()
+        + removeProfile()
+        + change(call)
+        + trust(source)
+        + keep(source)
+        + remove(source)
+        + restore(source)
+    }
+    class Interest {
+        interest, onSave(changes), onDelete
+    }
+    class NewProfile {
+        + create()
+    }
+    note right of ProfilePage
+        Every call of ProfileApi answers the whole
+        profile, shown as it is. While the sources are
+        found (discovery 'running') it is asked again
+        every 5 s, one question at a time
+    end note
+}
+package "Components" {
+    class Masthead <<other feature>>
+    class ProfileSwitcher {
+        admin
+        + choose(id)
+    }
+    class ProfileFunnel {
+        language, words, onWritten(text), onCancel
+        + ask(answered)
+        + write(answered)
+    }
+    class Projects {
+        projects, max, change
+        + save()
+    }
+    class SourceList {
+        found, own, refused, removed
+        onTrust, onRemove, onKeep, onRestore
+    }
+    class AddSources {
+        + handleAdd()
+        + handleSearch()
+        + handleAddFound()
+    }
+    class ImportSources {
+        + check(from)
+        + handleAdd()
+    }
+    class RecommendedSources {
+        + add(ids)
+    }
+    note bottom of ProfileFunnel
+        The reader writes a few words (3 to 300), the AI asks
+        rounds of questions with choices to tick; then it writes
+        the text, read and changed before it is saved. Projects
+        use it with their own words (PROJECT_FUNNEL)
+    end note
+    note bottom of ImportSources
+        An Excel, CSV, OPML or text file read in the
+        browser; the server checks 25 sites a request,
+        the reader ticks the ones to add (50 a request)
+    end note
+}
+package "State" {
+    class activeProfile {
+        + activeProfileId()
+        + setActiveProfile(id)
+        + withProfile(headers)
+        + useActiveProfile()
+        + profilesChanged()
+        + onProfilesChanged(listener)
+    }
+    class importFile {
+        + addressesOfFile(file)
+    }
+    class sourceRows {
+        + sourceRows(found, own, refused, removed)
+    }
+    class useAuth <<other feature>> {
+        user.admin
+    }
+    note bottom of activeProfile
+        The profile read, kept in localStorage
+        (newsgenerator.profile) and sent with every
+        call as the header X-Profile; the pages read
+        their data again when it changes
+    end note
+}
+package "API" {
+    class ProfileApi {
+        + get()
+        + getOptions()
+        + save({text, language})
+        + funnelQuestions(funnel)
+        + funnelText(funnel)
+        + updateInterest(id, changes)
+        + deleteInterest(id)
+        + rediscover()
+        + keepSource(key)
+        + removeSource(id)
+        + restoreSource(key)
+        + projectQuestions(funnel)
+        + projectText(funnel)
+        + createProject({name, text, endsOn})
+        + setProjectEnd(id, endsOn)
+        + removeProject(id)
+        + list()
+        + create({name, text, language})
+        + rename(id, name)
+        + remove(id)
+    }
+    class FeedApi {
+        + getUserFeeds()
+        + addUserFeed({site, category, language})
+        + searchSources(query, language, from)
+        + checkSites(sites, language)
+        + importSources(sources, language)
+        + updateFeed(id, {trusted})
+        + deleteUserFeed(id)
+        + getRecommended()
+        + addRecommended(ids)
+    }
+    class SearchApi <<other feature>> {
+        + getCategories(language)
+    }
+}
+class "server /api" as Server <<external>> {
+    + GET, PUT /profile
+    + GET /profile/options
+    + POST /profile/funnel/questions, /text
+    + PATCH, DELETE /profile/interests/:id
+    + POST /profile/discover
+    + POST /profile/kept-sources
+    + DELETE /profile/sources/:id
+    + POST /profile/removed-sources/restore
+    + POST /profile/projects/funnel/questions, /text
+    + POST /profile/projects
+    + PATCH, DELETE /profile/projects/:id
+    + GET, POST /profile/profiles
+    + PATCH, DELETE /profile/profiles/:id
+    + GET, POST /feeds
+    + POST /feeds/search, /check, /import
+    + PATCH, DELETE /feeds/:id
+    + GET, POST /feeds/recommended
+    + GET /news/categories
+}
+note right of Server
+    POST /profile/profiles: 403 unless the
+    account is an administrator, 15 profiles
+    at most. Each profile has its interests,
+    sources, projects and briefings
+end note
+
+Reader --> ProfilePage
+Reader --> Masthead
+Masthead --> ProfileSwitcher
+ProfileSwitcher --> activeProfile
+ProfileSwitcher --> ProfileApi
+ProfilePage --> Interest
+ProfilePage --> NewProfile
+ProfilePage --> ProfileFunnel
+NewProfile --> ProfileFunnel
+ProfilePage --> Projects
+Projects --> ProfileFunnel
+ProfilePage --> SourceList
+SourceList --> sourceRows
+ProfilePage --> AddSources
+AddSources --> ImportSources
+ImportSources --> importFile
+ProfilePage --> RecommendedSources
+ProfilePage --> activeProfile
+ProfilePage --> useAuth
+ProfilePage --> ProfileApi
+ProfilePage --> FeedApi
+ProfilePage --> SearchApi
+ProfileFunnel --> ProfileApi
+Projects --> ProfileApi
+AddSources ..> FeedApi : api
+ImportSources ..> FeedApi : api
+RecommendedSources ..> FeedApi : api
+ProfileApi --> activeProfile : withProfile()
+FeedApi --> activeProfile : withProfile()
+ProfileApi --> Server
+FeedApi --> Server
+SearchApi --> Server
+@enduml

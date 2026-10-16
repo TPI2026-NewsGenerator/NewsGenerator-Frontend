@@ -1,0 +1,122 @@
+@startuml client-01-accounts
+!include _style.iuml
+title Client — accounts: log in, sign up, the session and the settings
+
+class Reader
+package "Pages" {
+    class LoginPage {
+        + handleSubmit()
+        signup: link shown only when open
+    }
+    class SignupPage {
+        + handleSubmit()
+        guided: the AI questions first
+    }
+    class SettingsPage {
+        + rename()
+        + changeEmail()
+        + changePassword()
+    }
+}
+package "Components" {
+    class AuthShell
+    class Masthead {
+        user, onSignOut
+    }
+    class ProfileFunnel <<other feature>> {
+        language, onWritten(text)
+    }
+}
+note right of SignupPage
+    The username (3 to 30 letters, digits . _ -),
+    the e-mail and the password (10 characters)
+    are checked here first, then the server
+    checks them again
+end note
+package "State" {
+    class AuthProvider {
+        user: undefined | null | reader
+        + refresh()
+        + forget()
+    }
+    class sessionContext {
+        AuthContext
+    }
+    class useAuth {
+        + user
+        + refresh()
+        + logout(to = '/login')
+        + expired(data)
+    }
+    class keptSearch <<other feature>> {
+        + forgetSearch()
+    }
+    class activeProfile <<other feature>> {
+        + setActiveProfile(null)
+    }
+}
+note right of AuthProvider
+    Asks GET /session once when the app opens;
+    the pages are drawn once it answered. The
+    session is an HttpOnly cookie: the page
+    never reads the token
+end note
+note left of useAuth
+    expired(): an answer saying "Forbidden,
+    invalid or expired" signs the reader out
+    and opens /login
+end note
+package "API" {
+    class LoginApi {
+        + authUser({username, password})
+        + register({username, email, password, text, language})
+    }
+    class AccountApi {
+        + rename({username, password})
+        + changeEmail({email, password})
+        + changePassword({password, newPassword})
+    }
+    class ProfileApi <<other feature>> {
+        + getOptions()
+    }
+}
+class "server /api" as Server <<external>> {
+    + POST /login
+    + POST /signup
+    + GET /session
+    + DELETE /session
+    + PUT /account/username
+    + PUT /account/email
+    + PUT /account/password
+    + GET /profile/options
+}
+note right of Server
+    /signup answers 403 unless SIGNUP_OPEN=1;
+    /profile/options says it (signup: true)
+end note
+
+Reader --> LoginPage
+Reader --> SignupPage
+Reader --> SettingsPage
+Reader --> Masthead
+LoginPage --> AuthShell
+SignupPage --> AuthShell
+SignupPage --> ProfileFunnel
+LoginPage --> LoginApi
+SignupPage --> LoginApi
+LoginPage --> ProfileApi
+SignupPage --> ProfileApi
+SettingsPage --> AccountApi
+LoginPage --> useAuth
+SignupPage --> useAuth
+SettingsPage --> useAuth
+Masthead ..> useAuth : onSignOut = logout
+useAuth --> sessionContext
+AuthProvider --> sessionContext
+AuthProvider --> keptSearch
+AuthProvider --> activeProfile
+AuthProvider --> Server
+LoginApi --> Server
+AccountApi --> Server
+ProfileApi --> Server
+@enduml

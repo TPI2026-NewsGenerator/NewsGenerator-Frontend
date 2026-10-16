@@ -1,0 +1,121 @@
+@startuml client-05-email
+!include _style.iuml
+title Client — the e-mail of a briefing: the cards ticked, edited, then sent (administrators)
+
+class Reader
+package "Pages" {
+    class BriefingPage <<other feature>> {
+        mail, ticks: {briefingId, storyIds}
+        + tickOne(storyId, checked)
+        + tick(storyIds)
+        + email(to, storyIds, pictures, titles, removed, way, ai)
+        + addNews(url)
+    }
+}
+note right of BriefingPage
+    Shown only when GET /briefing answered
+    mail: true (the server can send, and the
+    reader is an administrator). A card ticked
+    is of this briefing only: none in the next
+end note
+package "Components" {
+    class BriefingCard <<other feature>> {
+        onSelect(checked), selected
+    }
+    class AddNews <<other feature>>
+    class MailBar {
+        stories, accountEmail, format, sending
+        onSend(...), onPictures(storyId), onClear
+        --
+        to, way, order, choices, titles, removed, inAi
+        + open()
+        + move(at, by)
+        + loadGallery(story)
+        + edit(story)
+        + choose(storyId, choice)
+        + send(event)
+    }
+    class MailAside {
+        story, removed, onChange(removed)
+        + change(part, index, kept)
+        + wholeAnalysis(kept)
+    }
+    class MailPicture {
+        story, choice, pictures, onChoose(choice)
+        + pick(url)
+        + takeAddress()
+        + takeFile(event)
+    }
+    class Thumbnail {
+        src
+    }
+    class BriefingFormat <<other feature>> {
+        label = "In the e-mail, as"
+    }
+    note bottom of MailAside
+        Each line kept or taken out: the AI analysis
+        (why it matters, what could come next, the
+        story so far), the denials, the other angles,
+        the official sources
+    end note
+    note bottom of MailPicture
+        Its own picture, another of the story, none,
+        the address of an image, or a file (JPEG, PNG,
+        GIF, WebP, 2 MB, 6 MB for all of them)
+    end note
+}
+package "State" {
+    class mailPictures {
+        MIN_PICTURE_WIDTH = 560
+        MAX_PICTURE_BYTES, MAX_FILES_BYTES
+        + usePictureSizes(urls)
+        + sharp(sizes, url)
+        + tooSmall(sizes, url)
+        + bestPicture(pictures, sizes)
+        + shownPicture(story, choice)
+        + sentPicture(choice)
+        + fileBytes(choice)
+    }
+    note bottom of mailPictures
+        The browser measures each picture as it loads
+        it (15 s at most). A card whose own one is under
+        560 px wide gets the best other of its story,
+        lying before standing, else none
+    end note
+}
+package "API" {
+    class BriefingApi <<other feature>> {
+        + pictures(briefingId, storyId)
+        + email(briefingId, storyIds, to, pictures,
+          titles, removed, format, ai)
+    }
+}
+class "server /api" as Server <<external>> {
+    + GET /briefing/:id/stories/:storyId/pictures
+    + POST /briefing/:id/email
+}
+note right of Server
+    Both 403 for a reader who is not an
+    administrator. /email: 10 an hour, 30 a day
+    per reader; 204 when sent. Body: storyIds in
+    the order of the e-mail, to, and only what
+    was changed: pictures, titles, removed,
+    format, ai (the storyIds in their AI version)
+end note
+
+Reader --> BriefingCard : ticks
+Reader --> MailBar
+BriefingCard ..> BriefingPage : onSelect
+AddNews ..> BriefingPage : onAdd = addNews
+BriefingPage --> MailBar
+MailBar --> MailAside
+MailBar --> MailPicture
+MailBar --> Thumbnail
+MailBar --> BriefingFormat
+MailBar --> mailPictures
+MailPicture --> mailPictures
+MailBar ..> BriefingPage : onSend = email
+MailBar ..> BriefingApi : onPictures
+BriefingPage --> BriefingApi
+BriefingApi --> Server
+@enduml

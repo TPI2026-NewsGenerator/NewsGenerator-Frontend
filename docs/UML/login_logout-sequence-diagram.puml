@@ -1,14 +1,27 @@
+' Mis à jour le 16.10.2026 d'après le code (features/navbar/components/Masthead.jsx,
+' features/auth/useAuth.js et AuthContext.jsx).
 @startuml
 title Déconnexion de l'utilisateur (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI" as UI
+participant "Masthead" as UI
+participant "useAuth\n+ AuthProvider" as Auth
+participant "localStorage" as LS
 participant "Backend" as BE
 
-User -> UI : Clique sur le bouton "Sign out"
-UI -> BE : DELETE /api/session
-BE --> UI : 204 + cookie "session" effacé
-UI --> User : redirige /login
+User -> UI : Clique sur "Sign out"
+UI -> Auth : onSignOut = logout()
+Auth -> Auth : forget(): user = null
+Auth -> LS : forgetSearch()
+note right : la dernière recherche gardée\nest effacée (ordinateur partagé)
+Auth -> LS : setActiveProfile(null)
+Auth -> BE : DELETE /api/session
+BE --> Auth : 204 + cookie "session" effacé
+alt depuis la page Search
+    Auth --> User : reste sur la page (logout(null))
+else
+    Auth --> User : redirige /login
+end
 
 @enduml

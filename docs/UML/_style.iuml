@@ -1,0 +1,29 @@
+' Style shared by the class diagrams of the client (client-0*.puml). Each box is a React component,
+' a hook or an ES module of src/, not a class: its members are the props and the functions of it the
+' feature uses. Packages: "Pages" (src/pages), "Components" (src/features/*/components and
+' src/components), "State" (the session, the profile chosen, what is kept in the browser), "API" (the
+' *Api.js modules, one fetch each). The server is <<external>>, its routes listed on it.
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 45
+skinparam defaultFontSize 13
+skinparam titleFontSize 18
+skinparam noteBackgroundColor #FFFBE6
+skinparam noteBorderColor #C9B458
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #555555
+    ArrowColor #555555
+}
+skinparam class<<other feature>> {
+    BackgroundColor #EEF3FA
+    BorderColor #7A93B8
+}
+skinparam class<<external>> {
+    BackgroundColor #F2F2F2
+    BorderColor #888888
+}
+hide circle
+hide empty members

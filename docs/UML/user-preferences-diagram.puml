@@ -1,6 +1,16 @@
+' ABANDONNÉ (noté le 16.10.2026): la sauvegarde du dernier filtre n'existe plus. Il n'y a ni route
+' /lastfilter sur le serveur ni appel dans le client, et les tables filters et users_has_last_filters ne
+' sont plus créées. À la place, la dernière recherche (formulaire, nouvelles, passages clés et
+' traductions) est gardée un jour dans le navigateur (src/features/search/keptSearch.js), pour ce
+' lecteur seulement, et effacée à la déconnexion. Le diagramme est gardé tel qu'il avait été prévu.
 @startuml
 title Diagramme de séquence - Flux sauvegarde et récupération du dernier filtre appliqué (Frontend)
 autonumber
+
+legend top
+    Abandonné: ni route /lastfilter ni appel dans le client.
+    La dernière recherche est gardée un jour dans le navigateur (keptSearch.js).
+endlegend
 
 actor "Utilisateur" as User
 participant "UI" as UI

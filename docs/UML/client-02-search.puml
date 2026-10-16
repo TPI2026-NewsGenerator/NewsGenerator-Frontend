@@ -1,0 +1,142 @@
+@startuml client-02-search
+!include _style.iuml
+title Client — search: a sentence or exact words, the key passages, saved searches
+
+class Reader
+package "Pages" {
+    class SearchPage {
+        form: keyword, language, timeframe, category
+        + handleSubmit(keyword)
+        + handleWiden(keywords)
+        + handleGenerate(urls)
+        + handleSaveSearch({asNew})
+        + applySavedSearch(item)
+        + removeSavedSearch(item)
+    }
+}
+note left of SearchPage
+    The form starts in the language of the
+    profile, with every category of that
+    language ticked; the timeframe goes from
+    the last hour to all time, or a range
+end note
+package "Components" {
+    class FeedList {
+        newsList, mode, checked, web, wider
+        + handleSelect(id, checked)
+        + applyFilters()
+        + clearFilters()
+    }
+    class Article {
+        news, onSelect
+    }
+    class ThreadTimeline {
+        facts, leadUrl, onSelect
+    }
+    class SummaryList {
+        summaries, open
+    }
+    class BriefingCard <<other feature>>
+    class NewsLinks
+    class SourceSuggestions {
+        search, categories
+        + handleLook()
+        + handleAdd()
+    }
+    note right of FeedList
+        10 cards chosen at most. Filters on what
+        was measured: several media, each its own
+        wording, this source only, a hedging word
+    end note
+    note right of SourceSuggestions
+        The media this search missed (Google News,
+        GDELT): their news for reading only, their
+        feeds added in one click
+    end note
+}
+package "State" {
+    class translation {
+        + createTranslator(language, translate, known)
+        + useTranslation(url, language)
+        TranslationContext
+    }
+    class keptSearch {
+        + keepSearch(userId, state)
+        + keptSearch(userId)
+        + forgetSearch()
+    }
+    class useAuth <<other feature>>
+}
+note bottom of translation
+    A card in another language is translated when
+    it comes 600 px near the screen: the cards
+    reached in 150 ms in one request (30 cards,
+    60 titles of facts at most)
+end note
+note bottom of keptSearch
+    The last search with its news, key passages
+    and translations, in localStorage for a day,
+    for this reader only
+end note
+package "API" {
+    class SearchApi {
+        + getCategories(language)
+        + getNews(query)
+        + translateNews({news, titles}, language)
+        + getNewsSummary(stories, language)
+    }
+    class CustomSearchApi {
+        + getUserCustomSearch()
+        + postUserCustomSearch({id, title, language, keyword, category})
+        + deleteUserCustomSearch({id})
+    }
+    class FeedApi <<other feature>> {
+        + suggestSources({keywords, timeframe, language})
+        + importSources(sources, language, subject)
+    }
+    class ProfileApi <<other feature>> {
+        + get()
+    }
+}
+class "server /api" as Server <<external>> {
+    + GET /news/categories
+    + POST /news
+    + POST /news/translations
+    + POST /news/summary
+    + GET /customsearch
+    + POST /customsearch
+    + DELETE /customsearch
+    + POST /feeds/suggestions
+    + POST /feeds/import
+    + GET /profile
+}
+note right of Server
+    POST /news answers {news, wider, mode,
+    checked, web}: mode 'meaning' for a sentence,
+    'words' as soon as quotes, a comma or -word
+    are written. POST /customsearch with an id
+    replaces that search
+end note
+
+Reader --> SearchPage
+SearchPage --> FeedList
+SearchPage --> SummaryList
+SearchPage --> SourceSuggestions
+FeedList --> Article
+Article --> ThreadTimeline
+Article --> NewsLinks
+Article --> translation
+ThreadTimeline --> translation
+SummaryList --> BriefingCard
+SearchPage --> translation
+SearchPage --> keptSearch
+SearchPage --> useAuth
+SearchPage --> SearchApi
+SearchPage --> CustomSearchApi
+SearchPage --> ProfileApi
+SourceSuggestions --> FeedApi
+SearchApi --> Server
+CustomSearchApi --> Server
+FeedApi --> Server
+ProfileApi --> Server
+@enduml

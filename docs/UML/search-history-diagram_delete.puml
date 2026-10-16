@@ -1,19 +1,26 @@
+' Mis à jour le 16.10.2026 d'après le code (pages/Search.jsx, removeSavedSearch).
 @startuml
 title Suppression de recherche personnalisée (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI" as UI
+participant "SearchPage" as UI
 participant "Backend" as BE
 database "Base de données" as DB
 
-
-User -> UI : Clique sur le bouton supprimer sur le tag
-UI -> BE : DELETE /customsearch (search_id)
-BE -> DB : deleteUserCustomSearch(id, user_id)
-DB --> BE : confirmation_suppression
-BE --> UI : Mise à jour liste locale
-UI --> User : confirmation_suppression (Alerte)
-
+User -> UI : Clique sur "Delete" à côté de la recherche
+UI -> BE : DELETE /api/customsearch {id}
+BE -> DB : deleteUserCustomSearch(id, userId)
+alt supprimée
+    DB --> BE : ok
+    BE --> UI : {deleted: true}
+    UI -> UI : retirée de la liste locale
+    UI --> User : toast "deleted successfully !"
+else pas une recherche de cet utilisateur (404) ou erreur
+    BE --> UI : {error}
+    UI -> BE : GET /api/customsearch
+    BE --> UI : la liste telle que le serveur l'a
+    UI --> User : toast "Error deleting ..."
+end
 
 @enduml

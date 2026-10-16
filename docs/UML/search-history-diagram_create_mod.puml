@@ -1,22 +1,39 @@
+' Mis à jour le 16.10.2026 d'après le code (pages/Search.jsx, custom-search/api/customSearchApi.js,
+' server/services/customsearch-service.js): le même POST crée ou remplace, selon l'id envoyé.
 @startuml
 title Création et modification de recherche personnalisée (Frontend)
 autonumber
 
 actor "Utilisateur" as User
-participant "UI" as UI
+participant "SearchPage" as UI
 participant "Backend" as BE
 database "Base de données" as DB
 
-User -> UI : Saisie des filtres
+User -> UI : Saisie des filtres (phrase, langue, catégories)
 User -> UI : Clique sur "Save search"
-User -> UI : Ajout d'un titre pour la recherche personnalisée
-User -> UI : Appuie sur le bouton "Save"
-
-UI -> BE : /POST customsearch(custom_search)
-BE -> DB : postUserCustomSearch(custom_search)
-DB --> BE : confirmation_sauvegarde
-BE --> UI : confirmation_sauvegarde
-UI --> User : confirmation_sauvegarde (Alerte)
-
+UI --> User : la fenêtre "Save your custom search"
+User -> UI : Saisit un titre
+alt le formulaire vient d'une recherche sauvegardée
+    User -> UI : "Replace « titre »" (id gardé)\nou "Save as a new search" (id null)
+else
+    User -> UI : "Save" (id null)
+end
+alt titre, langue, mot-clé ou catégorie manquant
+    UI --> User : toast "You must enter a title..." (etc.)
+else
+    UI -> BE : POST /api/customsearch {id, title, language, keyword, category}
+    note right : l'utilisateur vient du cookie,\njamais de la requête
+    alt id
+        BE -> DB : updateUserCustomSearch(id, userId, ...)
+    else
+        BE -> DB : postUserCustomSearch(userId, ...)
+    end
+    DB --> BE : la recherche
+    BE --> UI : {id, ...}
+    UI -> UI : formulaire.id = id (le sauver encore la remplace)
+    UI -> BE : GET /api/customsearch
+    BE --> UI : la liste à jour
+    UI --> User : toast "created successfully !" ou "modified successfully !"
+end
 
 @enduml
