@@ -24,6 +24,9 @@ const two = (number) => String(number).padStart(2, '0');
 // the AI version of a story in the way of the e-mail, null when it has none (the key passages have none)
 const aiTextOf = (story, way) => way === 'points' ? (story.ai?.points?.length ? story.ai.points : null)
     : way === 'digest' ? story.ai?.summary ?? null : null;
+// the sentences of the article the e-mail sends in that way instead, translated when it has a translation
+const paragraphsOf = (text) => String(text ?? '').split(/\n\s*\n/).map(paragraph => paragraph.trim()).filter(Boolean);
+const ownTextOf = (story, way) => paragraphsOf(story.own?.[way]);
 
 // "2 angles taken out", "1 denial taken out", "1 official source taken out", "2 analysis lines taken
 // out", or nothing (see MailAside)
@@ -36,7 +39,8 @@ const takenOut = (removed = {}) => [
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
 // thumbnailSource, ai, analysis, contested, angles, official}] (number: their place in the briefing; ai: the points
-// and the summary written by the AI, see BriefingCard AiVersion); accountEmail: the address
+// and the summary written by the AI, see BriefingCard AiVersion; own: {points, digest} the same of the
+// article as published, its paragraphs split by a blank line); accountEmail: the address
 // of the account; format: the way the page shows the sentences of the cards (see formats.js), the one of
 // the e-mail until the reader chooses another, null for a briefing that has the key passages only;
 // onSend(to, storyIds, pictures, titles, removed, format, ai): sends them in this order with the pictures
@@ -216,12 +220,20 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                                   onChange={event => setInAi(current => ({...current, [story.storyId]: event.target.checked}))}>
                                                             Send its {way === 'points' ? 'bullet points' : 'summary'} in the AI version
                                                         </Checkbox>
-                                                        <p className="caption mt-1">
-                                                            {inAi[story.storyId] ? 'The AI version, as the e-mail sends it:' : 'Instead of the article\'s own sentences:'}
-                                                        </p>
-                                                        {way === 'points'
-                                                            ? <ul className="caption mt-1 list-disc pl-5 !text-ink">{story.ai.points.map((point, i) => <li key={i}>{point}</li>)}</ul>
-                                                            : <p className="caption mt-1 !text-ink">{story.ai.summary}</p>}
+                                                        {/* what the e-mail sends, switched with the box (the user, 16.10.2026) */}
+                                                        {(() => {
+                                                            const sent = inAi[story.storyId] ? [aiTextOf(story, way)].flat() : ownTextOf(story, way);
+                                                            return (
+                                                                <>
+                                                                    <p className="caption mt-1">
+                                                                        {inAi[story.storyId] ? 'The AI version, as the e-mail sends it:' : 'The article\'s own sentences, as the e-mail sends them:'}
+                                                                    </p>
+                                                                    {way === 'points'
+                                                                        ? <ul className="caption mt-1 list-disc pl-5 !text-ink">{sent.map((point, i) => <li key={i}>{point}</li>)}</ul>
+                                                                        : <p className="caption mt-1 !text-ink">{sent.join(' […] ')}</p>}
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 )}
                                                 <MailAside story={story} removed={removed[story.storyId]}
