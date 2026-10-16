@@ -99,7 +99,7 @@ export const MailAside = ({story, removed = {}, onChange}) => {
             )}
             {official.length > 0 && (
                 <fieldset className="mt-2 min-w-0 border-0 p-0">
-                    <legend className="kicker">Official source</legend>
+                    <legend className="kicker">Official sources</legend>
                     <div className="flex flex-col">
                         {official.map((post, index) => (
                             <Checkbox key={index} checked={!out('official').includes(index)}

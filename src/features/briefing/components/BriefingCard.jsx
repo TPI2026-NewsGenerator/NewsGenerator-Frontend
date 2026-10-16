@@ -154,7 +154,7 @@ const OtherAngles = ({angles, original}) => (
 // reports (channel 'reported', see statements.js): the sentence quoted, its translation under it
 const OFFICIAL_NOTE = 'A party this news is about said it itself: published on its own website or account, as Wikidata lists them, or in a statement one of the articles reports, quoted as written. Found and read by the AI, which may be wrong: the link is the reference. X and Instagram can’t be read, so most news have none.';
 const OfficialSource = ({posts}) => (
-    <Margin kicker={<>Official source <InfoTip label="Official source">{OFFICIAL_NOTE}</InfoTip></>}>
+    <Margin kicker={<>Official sources <InfoTip label="Official sources">{OFFICIAL_NOTE}</InfoTip></>}>
         <ul className="space-y-2">
             {posts.map(post => post.channel === 'reported' ? (
                 <li key={post.url + post.party}>
