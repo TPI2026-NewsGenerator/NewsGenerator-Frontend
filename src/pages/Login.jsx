@@ -58,9 +58,9 @@ export const LoginPage = () => {
                 password: formValue.password
             });
 
-            // if wrong password
-            if (user.error && user.error.includes("Invalid password...")) {
-                toast.error('Wrong password...');
+            // unknown username or wrong password: the server answers the same for both
+            if (user.error && user.error.includes("Invalid username or password")) {
+                toast.error('Wrong username or password...');
             } else if (user.error) {
                 setError(user.error);
             }

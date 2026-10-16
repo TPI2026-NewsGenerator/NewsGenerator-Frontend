@@ -96,8 +96,6 @@ export const ProfileApi = {
     removeSource: (id) => send(`/profile/sources/${id}`, {method: 'DELETE'}),
     // a source removed brought back, by its key. Answers the profile
     restoreSource: (key) => send('/profile/removed-sources/restore', {method: 'POST', body: {key}}),
-    // the names or words whose news are always shown. Answers the profile
-    setWatchTerms: (terms) => send('/profile/watch-terms', {method: 'PUT', body: {terms}}),
     // The projects of the profile, written with the AI as a profile is ({start, rounds} -> {enough,
     // questions}, then -> {text}); saved ({name, text, endsOn}), their last day changed, deleted. Each
     // answers the profile

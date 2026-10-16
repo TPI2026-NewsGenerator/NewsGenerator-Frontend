@@ -25,16 +25,6 @@ export const SearchApi = {
 
         return await response.json();
     },
-    // full content of the selected news (urls from getNews, 10 max)
-    getNewsContent: async (urls) => {
-        const response = await fetch(`${API_URL}/news/content`, {
-            method: 'POST',
-            headers: withProfile({'Content-Type': 'application/json'}),
-            body: JSON.stringify({urls}),
-        });
-
-        return await response.json();
-    },
     // the titles and descriptions of the cards reached ('news', 30 max) and the titles of the facts of
     // their affairs ('titles', 60 max), translated into the language searched when written in another:
     // {translations: [{url, language, title, description}]}

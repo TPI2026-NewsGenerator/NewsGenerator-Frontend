@@ -15,7 +15,7 @@ import {AddSources} from '@/features/briefing/components/AddSources.jsx';
 const limits = {profileFeeds: 60, relevanceDays: 14};
 // the key is opaque for the client (a hash of the address on the server): any string unique per feed
 const found = (id, site, more = {}) => ({id, key: `k-${site}-rss`, site, url: `https://${site}/rss`, category: 'sport', language: 'en', trusted: false, relevant: 3, ...more});
-const own = (id, site, more = {}) => ({id, key: `k-${site}-feed`, site, url: `https://${site}/feed`, category: 'sport', origin: 'user', trusted: false, shared: false, ...more});
+const own = (id, site, more = {}) => ({id, key: `k-${site}-feed`, site, url: `https://${site}/feed`, category: 'sport', origin: 'user', trusted: false, ...more});
 const handlers = () => ({onTrust: vi.fn(), onShare: vi.fn(), onRemove: vi.fn(), onKeep: vi.fn(), onRestore: vi.fn()});
 
 describe('sourceRows', () => {

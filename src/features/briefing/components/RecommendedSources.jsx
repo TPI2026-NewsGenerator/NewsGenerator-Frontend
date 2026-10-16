@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 25.09.2026
 //  File: RecommendedSources.jsx
-//  Description: Sources the reader could add: found for the profiles of other readers, or shared by
+//  Description: Sources the reader could add: found for the profiles of other readers, or added by
 //               them, and publishing on the interests of this one
 //
 
@@ -70,7 +70,7 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
                     <p className="kicker !text-ink">Read by other readers on your interests</p>
                     <p className="caption mt-2">
                         Sources of your other profiles or of other readers, found or added by hand: they published on your interests this week.
-                        A source another reader added by hand is never shown here unless they chose to share it.
+                        An address that looks like it holds the private key of its reader is never shown here.
                     </p>
                 </div>
                 <Button variant="primary" size="sm" loading={adding?.length > 1} disabled={adding !== null}

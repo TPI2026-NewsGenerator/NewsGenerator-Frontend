@@ -256,7 +256,7 @@ export const ProfilePage = () => {
             toast.error(answer?.error ?? "This source could not be changed.");
             return;
         }
-        setOwn(current => current.map(other => other.id === feed.id ? {...other, trusted: answer.trusted, shared: answer.shared} : other));
+        setOwn(current => current.map(other => other.id === feed.id ? {...other, trusted: answer.trusted} : other));
     }, []);
     const removeOwn = useCallback(async (feed) => {
         const answer = await FeedApi.deleteUserFeed(feed.id);

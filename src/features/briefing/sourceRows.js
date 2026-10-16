@@ -6,7 +6,7 @@
 //
 
 // the sources as one list, by name: found [{id, key, site, url, category, language, trusted, error, relevant,
-// newsPerDay, flood}] of the profile, own [{id, key, site, url, category, trusted, shared, error, newsPerDay,
+// newsPerDay, flood}] of the profile, own [{id, key, site, url, category, trusted, error, newsPerDay,
 // flood}] added by hand, refused
 // [{key, url, site, refused, liked}] left out by the thumbs, marked when they are among the others, removed
 // [{key, site, url, category, language}] found for the profile and removed by the reader.

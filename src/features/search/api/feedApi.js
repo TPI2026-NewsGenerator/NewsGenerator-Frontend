@@ -71,8 +71,7 @@ export const FeedApi = {
         const response = await fetch(`${API_URL}/feeds/${id}`, {method: 'DELETE', headers: withProfile(HEADERS)});
         return await response.json();
     },
-    // a source added by hand, {trusted} and/or {shared}. Trusted: its stories come first in the
-    // briefing. Shared: it can be recommended to the other readers whose interests it publishes on
+    // a source of the profile, {trusted}: its stories come first in the briefing
     updateFeed: async (id, changes) => {
         const response = await fetch(`${API_URL}/feeds/${id}`, {
             method: 'PATCH',
@@ -81,7 +80,7 @@ export const FeedApi = {
         });
         return await response.json();
     },
-    // {sources}: feeds found for other readers, or shared by them, that publish on the interests of this one
+    // {sources}: feeds found for other readers, or added by them, that publish on the interests of this one
     getRecommended: async () => {
         const response = await fetch(`${API_URL}/feeds/recommended`, {method: 'GET', headers: withProfile(HEADERS)});
         return await response.json();
