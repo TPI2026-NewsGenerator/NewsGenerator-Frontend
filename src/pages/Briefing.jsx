@@ -312,7 +312,9 @@ export const BriefingPage = () => {
                 kicker="The briefing"
                 title="Your briefing"
                 standfirst="The stories of the last 1 to 7 days closest to your interests, chosen by the AI. A story you sent by e-mail in the last two days counts as read: it comes back only when something new happened."
-                aside={profile && (
+                // shown while the profile is asked too: it comes after the briefing, and the column
+                // appearing then pushed the cards down (the user, 16.10.2026); none without a profile
+                aside={profile !== null && (
                     <div className="space-y-4">
                         {ready && (
                             <div>
