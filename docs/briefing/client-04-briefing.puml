@@ -1,5 +1,5 @@
 @startuml client-04-briefing
-!include _style.iuml
+!include ../_style/class.iuml
 title Client — briefing: start one, follow it while it is written, read and vote
 
 class Reader

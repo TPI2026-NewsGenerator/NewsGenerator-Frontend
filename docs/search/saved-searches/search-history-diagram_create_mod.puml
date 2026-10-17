@@ -1,5 +1,6 @@
 ' Mis à jour le 16.10.2026 d'après le code (pages/Search.jsx, custom-search/api/customSearchApi.js,
 ' server/services/customsearch-service.js): le même POST crée ou remplace, selon l'id envoyé.
+' 17.10.2026: le message du 409 (titre déjà pris) est montré, la fenêtre reste ouverte.
 @startuml
 title Création et modification de recherche personnalisée (Frontend)
 autonumber
@@ -28,12 +29,17 @@ else
     else
         BE -> DB : postUserCustomSearch(userId, ...)
     end
-    DB --> BE : la recherche
-    BE --> UI : {id, ...}
-    UI -> UI : formulaire.id = id (le sauver encore la remplace)
-    UI -> BE : GET /api/customsearch
-    BE --> UI : la liste à jour
-    UI --> User : toast "created successfully !" ou "modified successfully !"
+    alt un titre que l'utilisateur a déjà (409)
+        BE --> UI : {error: "You already have a search with this title...", status: 409}
+        UI --> User : toast de ce message, la fenêtre reste ouverte
+    else
+        DB --> BE : la recherche
+        BE --> UI : {id, ...}
+        UI -> UI : formulaire.id = id (le sauver encore la remplace)
+        UI -> BE : GET /api/customsearch
+        BE --> UI : la liste à jour
+        UI --> User : toast "created successfully !" ou "modified successfully !"
+    end
 end
 
 @enduml

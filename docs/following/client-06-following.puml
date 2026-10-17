@@ -1,5 +1,5 @@
 @startuml client-06-following
-!include _style.iuml
+!include ../_style/class.iuml
 title Client — following: Wikidata items, names and words, the page of a name
 
 class Reader

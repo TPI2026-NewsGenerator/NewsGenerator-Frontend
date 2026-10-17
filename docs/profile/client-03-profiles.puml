@@ -1,5 +1,5 @@
 @startuml client-03-profiles
-!include _style.iuml
+!include ../_style/class.iuml
 title Client — profiles: the text, the interests, the projects, the sources
 
 class Reader

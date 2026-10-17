@@ -1,5 +1,5 @@
 @startuml client-21-email-sequence
-!include _sequence.iuml
+!include ../../_style/sequence.iuml
 title Client — the e-mail of a briefing: cards ticked, edited in the bar, sent (administrators)
 
 actor Reader
@@ -33,7 +33,7 @@ Bar --> Reader : "N stories ticked", "Untick all", "Send email"
 
 == Edited ==
 Reader -> Bar : "Send email"
-Bar -> Bar : open(): the order of the briefing, no change,\nto = the e-mail of the account, way = format
+Bar -> Bar : open(): the order of the briefing, no change (pictures,\ntitles, parts taken out, AI versions ticked),\nto = the e-mail of the account, way = format
 Bar -> Pictures : usePictureSizes(the pictures of the cards)
 Pictures -> Pictures : each loaded by the browser,\nits width measured (15 s at most)
 opt a card's own picture under 560 px wide

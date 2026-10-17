@@ -1,5 +1,5 @@
 @startuml client-20-briefing-sequence
-!include _sequence.iuml
+!include ../_style/sequence.iuml
 title Client — the briefing page: opened, a new briefing followed while it is written, then voted
 
 actor Reader

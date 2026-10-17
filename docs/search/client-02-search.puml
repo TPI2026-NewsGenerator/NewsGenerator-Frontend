@@ -1,5 +1,5 @@
 @startuml client-02-search
-!include _style.iuml
+!include ../_style/class.iuml
 title Client — search: a sentence or exact words, the key passages, saved searches
 
 class Reader
@@ -23,6 +23,7 @@ end note
 package "Components" {
     class FeedList {
         newsList, mode, checked, web, wider
+        - widerKeywords(wider)
         + handleSelect(id, checked)
         + applyFilters()
         + clearFilters()
@@ -114,8 +115,11 @@ note right of Server
     POST /news answers {news, wider, mode,
     checked, web}: mode 'meaning' for a sentence,
     'words' as soon as quotes, a comma or -word
-    are written. POST /customsearch with an id
-    replaces that search
+    are written. wider.keywords, the wider search
+    with its "phrases" and -words, is what "Show
+    those N" searches. POST /customsearch with an
+    id replaces that search; a title already used:
+    409, its message shown
 end note
 
 Reader --> SearchPage

@@ -1,5 +1,5 @@
 @startuml client-05-email
-!include _style.iuml
+!include ../../_style/class.iuml
 title Client — the e-mail of a briefing: the cards ticked, edited, then sent (administrators)
 
 class Reader

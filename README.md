@@ -177,9 +177,13 @@ See `server/README.md`.
 ## Directory structure
 
 ```shell
-|-- docs
-|   |-- UML                          # use cases, class and sequence diagrams of the client (see Documentation)
-|   `-- design-mock                  # the mockups of the first sprints, before the editorial redesign
+|-- docs                             # README.md says what each folder holds (see Documentation)
+|   |-- accounts, search, profile, briefing, following
+|   |                                # one folder per feature: its pages and components, its sequences
+|   |-- Archive                      # the use cases planned at sprint 1 and their sprints 1-3, the dropped "last filter"
+|   |-- design-mock                  # the mockups of the first sprints, before the editorial redesign
+|   |-- use-cases
+|   `-- _style                       # the style the diagrams include
 |-- public                           # icons, the manifest and the picture of a shared link
 |-- src
 |   |-- App.jsx                      # the routes of the pages
@@ -222,27 +226,33 @@ See `server/README.md`.
 
 ## Documentation
 
-Every diagram is in `docs/UML/`, as source and as PNG next to it. Render them again with
-`java -jar plantuml.jar -charset UTF-8 docs/UML/*.puml`. The class and sequence diagrams of the
-client share `_style.iuml` and `_sequence.iuml`; a box is a React component, a hook or a module of
-`src/`, and the server is one box, its routes listed on it (the server's own diagrams are in
-`server/docs/UML/sprint4/`).
+The documentation of the client and of the server is one site, built from `server/` (`pnpm run docs`, see
+the README of the server): this folder is its part "Client". Every tool and its version is in
+`server/docs/tools.md`.
+
+The diagrams are in `docs/`, one folder per feature, as the ones of the server (`docs/README.md` says what
+each holds), as source and as PNG next to it. Render a folder again, from `client/`, with
+`java -jar plantuml.jar -charset UTF-8 "docs/briefing/*.puml"`. The class and sequence diagrams of the client
+include `docs/_style/class.iuml` and `sequence.iuml`; a box is a React component, a hook or a module of
+`src/`, and the server is one box, its routes listed on it. Each part of a feature (Briefing > Summary (IA),
+Search > Key passages...) is documented from the click to the database in its folder of `server/docs/`; the
+server's own diagrams, its database and the walk of the whole system from A to Z are there too.
 
 | File | What |
 |---|---|
-| `use-case-diagram-sprint4.puml` | the use cases as they stand (16.10.2026), in French, Invité, Membre and Administrateur, on two pages: `use-case-diagram-sprint4.png` (account, profiles, sources) and `use-case-diagram-sprint4_001.png` (search, briefing, e-mail, following). Its header lists what changed since the planned scope |
-| `use-case-diagram.puml` | the use cases planned at sprint 1, kept as they were |
-| `client-01-accounts.puml` | class diagram: login, signup, the session, the settings |
-| `client-02-search.puml` | class diagram: the search, its translations, the key passages, the saved searches |
-| `client-03-profiles.puml` | class diagram: the profiles, the AI questions, the interests, the projects, the sources |
-| `client-04-briefing.puml` | class diagram: the briefing page and its card |
-| `client-05-email.puml` | class diagram: the e-mail bar (MailBar, MailAside, MailPicture, mailPictures) |
-| `client-06-following.puml` | class diagram: what a profile follows and the page of a name |
-| `client-20-briefing-sequence.puml` | sequence: the briefing opened, started, followed every 3 s (8 s for its analysis), voted |
-| `client-21-email-sequence.puml` | sequence: cards ticked, edited in the bar, sent |
-| `login-sequence-diagram.puml`, `login_get_user-sequence-diagram.puml`, `login_logout-sequence-diagram.puml` | sequences, in French: the login, the reader asked when the app opens, the sign out |
-| `search-history-diagram_*.puml` | sequences, in French: a saved search created or replaced, loaded, deleted |
-| `user-preferences-diagram.puml` | the "last filter" of sprint 1, dropped: kept as it was planned, its header says what replaced it |
+| `use-cases/use-case-diagram.puml` | the use cases as they stand (16.10.2026), in French, Invité, Membre and Administrateur, on two pages: `use-case-diagram.png` (account, profiles, sources) and `use-case-diagram_001.png` (search, briefing, e-mail, following). Its header lists what changed since the planned scope |
+| `archive/use-case-diagram-planned.puml` | the use cases planned at sprint 1, kept as they were, with the PNG of sprints 1 to 3 |
+| `accounts/client-01-accounts.puml` | class diagram: login, signup, the session, the settings |
+| `search/client-02-search.puml` | class diagram: the search, its translations, the key passages, the saved searches |
+| `profile/client-03-profiles.puml` | class diagram: the profiles, the AI questions, the interests, the projects, the sources |
+| `briefing/client-04-briefing.puml` | class diagram: the briefing page and its card |
+| `briefing/email/client-05-email.puml` | class diagram: the e-mail bar (MailBar, MailAside, MailPicture, mailPictures) |
+| `following/client-06-following.puml` | class diagram: what a profile follows and the page of a name |
+| `briefing/client-20-briefing-sequence.puml` | sequence: the briefing opened, started, followed every 3 s (8 s for its analysis), voted |
+| `briefing/email/client-21-email-sequence.puml` | sequence: cards ticked, edited in the bar, sent |
+| `accounts/login-sequence-diagram.puml`, `login_get_user-sequence-diagram.puml`, `login_logout-sequence-diagram.puml` | sequences, in French: the login, the reader asked when the app opens, the sign out |
+| `search/saved-searches/search-history-diagram_*.puml` | sequences, in French: a saved search created or replaced, loaded, deleted |
+| `archive/user-preferences-diagram.puml` | the "last filter" of sprint 1, dropped: kept as it was planned, its header says what replaced it |
 
 ## Collaborate
 

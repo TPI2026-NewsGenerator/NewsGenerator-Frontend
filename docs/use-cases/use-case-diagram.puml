@@ -1,5 +1,5 @@
-' Use cases as they stand at sprint 4. use-case-diagram.puml is the planned scope and is left
-' untouched: this file says what a reader can actually do today (16.10.2026).
+' Use cases as they stand at sprint 4. ../Archive/use-case-diagram-planned.puml is the planned scope
+' and is left untouched: this file says what a reader can actually do today (16.10.2026).
 '
 ' Differences with the planned scope:
 '   - "Enregistrement automatique dernier filtre" is gone. The feature was dropped and its two
@@ -30,8 +30,8 @@
 '     was sent by e-mail.
 '
 ' Two pages, to stay legible (one was over 4000 px high): the account, the profiles and the sources
-' (use-case-diagram-sprint4.png), then the search, the briefing, its e-mail and what is followed
-' (use-case-diagram-sprint4_001.png).
+' (use-case-diagram.png), then the search, the briefing, its e-mail and what is followed
+' (use-case-diagram_001.png).
 
 @startuml
 title Diagramme Use Case - NewsGenerator Sprint 4 (16.10.2026) - compte, profils, sources

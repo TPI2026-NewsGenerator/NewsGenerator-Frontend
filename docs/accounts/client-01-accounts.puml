@@ -1,5 +1,5 @@
 @startuml client-01-accounts
-!include _style.iuml
+!include ../_style/class.iuml
 title Client — accounts: log in, sign up, the session and the settings
 
 class Reader
