@@ -112,6 +112,26 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         localStorage.clear();
     });
 
+    it('should forget the AI versions ticked when the e-mail is opened again', async () => {
+        localStorage.clear();
+        const item = {...BRIEFING.items[0], digest: 'Ein Digest.', points: 'Erster Punkt.', pointsTranslation: 'Premier point.', ai: {points: ['Un point de l\'IA.']}};
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        fireEvent.click(within(screen.getByRole('group', {name: 'Read as'})).getByRole('radio', {name: 'Bullet points'}));
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        fireEvent.click(screen.getByRole('checkbox', {name: 'Send its bullet points in the AI version'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
+
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', []));
+        localStorage.clear();
+    });
+
     it('should not offer the ways of a briefing that has its key passages only', async () => {
         await renderPage();
         fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);

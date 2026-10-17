@@ -33,6 +33,10 @@ const TIME_OPTIONS = [
     {label: 'Oldest first', value: 'asc'},
 ];
 
+// the wider search as the server counted it, its exact phrases and -words with it (a search kept from
+// before 17.10.2026 has its words only)
+const widerKeywords = (wider) => wider.keywords ?? wider.terms.join(', ');
+
 // resumeCount / onOpenResume: the key passages shown last, opened again from here once closed
 // mode: 'meaning' for a sentence (each news has match 'answer' or 'related', in the order of the AI),
 // 'words' for exact words; checked: false when the AI could not sort the news found by meaning; web:
@@ -89,7 +93,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                         : 'Try fewer words, a longer period or more categories.'}
                     {wider && <>
                         {' '}{wider.found} have at least one of {wider.terms.join(', ')}.{' '}
-                        <Button variant="link" onClick={() => onWiden(wider.terms.join(', '))}>Show those {wider.found}</Button>
+                        <Button variant="link" onClick={() => onWiden(widerKeywords(wider))}>Show those {wider.found}</Button>
                     </>}
                 </p>
             </section>
@@ -161,7 +165,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                     <p className="mt-2">
                         Every word is asked for at once, so only these have all of {wider.terms.join(', ')}.
                         {' '}{wider.found} have at least one.{' '}
-                        <Button variant="link" onClick={() => onWiden(wider.terms.join(', '))}>
+                        <Button variant="link" onClick={() => onWiden(widerKeywords(wider))}>
                             Show those {wider.found}
                         </Button>
                     </p>

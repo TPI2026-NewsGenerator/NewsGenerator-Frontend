@@ -78,6 +78,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
         setChoices({});
         setTitles({});
         setRemoved({});
+        setInAi({});
         setEditing(null);
         setWay(format);
         setTo(accountEmail ?? '');

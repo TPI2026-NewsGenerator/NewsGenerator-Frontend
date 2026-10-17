@@ -9,6 +9,9 @@ import '@testing-library/jest-dom';
 import {describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {RecommendedSources} from '@/features/briefing/components/RecommendedSources.jsx';
+import {toast} from '@/lib/toast.js';
+
+vi.mock('@/lib/toast.js', () => ({toast: {success: vi.fn(), error: vi.fn()}}));
 
 const source = (id, site) => ({
     id, site, url: `https://${site}/rss`, category: 'sport', language: 'en', news: 40, relevant: 9,
@@ -46,6 +49,17 @@ describe('RecommendedSources', () => {
         await waitFor(() => expect(screen.queryByText('goal.com')).not.toBeInTheDocument());
         expect(api.addRecommended).toHaveBeenCalledWith([1]);
         expect(screen.getByText('tribuna.com')).toBeInTheDocument();
+    });
+
+    it('should count every source added, the ones built from a page that come back without their address too', async () => {
+        const api = {
+            getRecommended: vi.fn().mockResolvedValue({sources: [source(1, 'goal.com'), source(2, 'tribuna.com')]}),
+            addRecommended: vi.fn().mockResolvedValue({feeds: [{id: 50, url: null}, {id: 51, url: null}], errors: []}),
+        };
+        render(<RecommendedSources api={api} expired={expired} reloadKey="done"/>);
+
+        fireEvent.click(await screen.findByRole('button', {name: 'Add all 2'}));
+        await waitFor(() => expect(toast.success).toHaveBeenCalledWith('2 sources added: they join your sources, above.'));
     });
 
     it('should show nothing when no source is recommended', async () => {

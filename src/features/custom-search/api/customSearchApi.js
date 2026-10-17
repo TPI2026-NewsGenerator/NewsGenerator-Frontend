@@ -19,6 +19,7 @@ export const CustomSearchApi = {
 
         return await response.json();
     },
+    // the search saved, else {error, status}: 409 when the user already has a search of this title
     postUserCustomSearch: async (query) => {
         const response = await fetch(`${API_URL}/customsearch`, {
             method: 'POST',
@@ -28,7 +29,8 @@ export const CustomSearchApi = {
             body: JSON.stringify(query),
         });
 
-        return await response.json();
+        const body = await response.json();
+        return response.ok ? body : {...body, status: response.status};
     },
     deleteUserCustomSearch: async (query) => {
         const response = await fetch(`${API_URL}/customsearch`, {

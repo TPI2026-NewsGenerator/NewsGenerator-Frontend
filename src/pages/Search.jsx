@@ -327,6 +327,11 @@ export const SearchPage = () => {
                 keyword: formValue.keyword,
                 category: formValue.category,
             });
+            // a title the reader already gave another search: the server says so, the form stays open
+            if (saved?.status === 409) {
+                toast.error(saved.error);
+                return;
+            }
             if (!saved || saved.error) throw new Error(saved?.error ?? 'nothing saved');
             setSaveSearchModal(false);
             // the form is now the one saved: saving it again replaces it

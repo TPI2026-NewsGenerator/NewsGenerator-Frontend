@@ -24,15 +24,17 @@ const send = async (path, {method = 'GET', body} = {}) => {
 export const BriefingApi = {
     // the last briefing, {briefing: null} before the first one
     getLatest: () => send('/briefing'),
-    // a new briefing of the news of the last hours (24, 48 or 168), of 'size' cards (10, 20 or 30),
+    // a new briefing of the news of the last hours (1 to 7 days: 24, 48, ... 168), of 'size' cards (10, 20 or 30),
     // written in background: getLatest until its status is 'ready' or 'failed'
     start: (hours, size) => send('/briefing', {method: 'POST', body: {hours, size}}),
     // the cards of the briefing ticked (their storyId) sent to the address 'to', the one of the account
     // when not given (204, no body). pictures: {storyId: null | {url} | {data}}, the picture of the
     // cards the reader changed: taken out, an image of the web, a file of theirs in base64. titles:
     // {storyId: title}, the ones the reader wrote for the e-mail; removed: {storyId: {contested: [index],
-    // angles: [index], official: [index]}}, the denials, other angles and official sources they took out; format: the way their sentences are
-    // shown, 'points', 'digest' or 'passages' (see formats.js), the key passages when not given
+    // angles: [index], official: [index], why: [index], next: [index], timeline: [index]}}, the denials,
+    // other angles, official sources and lines of the AI analysis they took out; format: the way their
+    // sentences are shown, 'points', 'digest' or 'passages' (see formats.js), the key passages when not
+    // given; ai: the storyIds of the cards sent in their AI version
     email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai) => {
         const some = (map) => map && Object.keys(map).length > 0;
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {

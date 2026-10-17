@@ -41,7 +41,8 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
                 toast.error(answer.error);
                 return;
             }
-            const done = new Set((answer.feeds ?? []).map(feed => feed.url));
+            // by their id: a feed built from a page (a bridge) comes back without its address
+            const done = new Set((answer.feeds ?? []).map(feed => feed.id));
             if (done.size > 0) {
                 toast.success(`${done.size} source${done.size > 1 ? 's' : ''} added: they join your sources, above.`);
                 onAdded?.();

@@ -174,7 +174,7 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
                                 Add {selected.length} source{selected.length > 1 ? 's' : ''}
                             </Button>
                             <p className="caption">
-                                Only for you, they join <Link to="/profile#sources" className="underline underline-offset-2 hover:text-ink">your sources</Link>.
+                                They join <Link to="/profile#sources" className="underline underline-offset-2 hover:text-ink">your sources</Link>, and are read for every reader.
                             </p>
                         </div>
                     </div>

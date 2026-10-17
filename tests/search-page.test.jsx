@@ -104,6 +104,20 @@ describe('SearchPage', () => {
         expect(toast.success).toHaveBeenCalledWith('Foot deleted successfully !');
     });
 
+    it('should tell the reader a title is already one of their searches, as the server says it', async () => {
+        CustomSearchApi.getUserCustomSearch.mockResolvedValue([FOOT]);
+        CustomSearchApi.postUserCustomSearch.mockResolvedValue({error: 'You already have a search with this title...', status: 409});
+        renderPage();
+
+        fireEvent.click(await screen.findByRole('button', {name: 'Foot'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Save search'}));
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', {name: 'Save as a new search'}));
+
+        await waitFor(() => expect(toast.error).toHaveBeenCalledWith('You already have a search with this title...'));
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
     it('should replace the loaded search when asked, under its new title', async () => {
         CustomSearchApi.getUserCustomSearch.mockResolvedValueOnce([FOOT]).mockResolvedValueOnce([{...FOOT, title: 'Referees'}]);
         CustomSearchApi.postUserCustomSearch.mockResolvedValue({id: 13, title: 'Referees'});
