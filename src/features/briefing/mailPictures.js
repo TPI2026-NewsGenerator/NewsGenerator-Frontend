@@ -57,12 +57,15 @@ export const sharp = (sizes, url) => (sizes[url]?.width ?? 0) >= MIN_PICTURE_WID
 // measured too narrow for the e-mail, or that does not load; false while it is not known
 export const tooSmall = (sizes, url) => sizes[url] !== undefined && !sharp(sizes, url);
 
-// the best of pictures ([{url}]) for the e-mail: wide enough, lying (a standing one fills the screen of
-// a phone) before standing, the widest first. undefined when none is
+// the best of pictures ([{url, illustration}]) for the e-mail: wide enough, one of its articles before
+// its illustration (Wikimedia Commons, of who it names: never the picture of the news, however wide),
+// lying (a standing one fills the screen of a phone) before standing, the widest first. undefined when
+// none is
 export const bestPicture = (pictures, sizes) => pictures
     .filter(picture => sharp(sizes, picture.url))
-    .map(picture => ({url: picture.url, lying: sizes[picture.url].width >= sizes[picture.url].height, width: sizes[picture.url].width}))
-    .sort((a, b) => Number(b.lying) - Number(a.lying) || b.width - a.width)[0]?.url;
+    .map(picture => ({url: picture.url, illustration: Boolean(picture.illustration),
+        lying: sizes[picture.url].width >= sizes[picture.url].height, width: sizes[picture.url].width}))
+    .sort((a, b) => Number(a.illustration) - Number(b.illustration) || Number(b.lying) - Number(a.lying) || b.width - a.width)[0]?.url;
 
 // a choice: undefined (its own), {kind: 'none'}, {kind: 'url', url}, {kind: 'file', data, preview,
 // name}. Its own too small: {kind: 'url', url, auto: true}, the best other of the story, else

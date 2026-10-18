@@ -175,15 +175,17 @@ const OfficialSource = ({posts}) => (
 );
 
 // The picture of one of its articles, the site it is of under it. Asked without the address of the page
-// (some sites refuse their pictures to other sites), and left out when it can't be loaded
-const Picture = ({src, source}) => {
+// (some sites refuse their pictures to other sites), and left out when it can't be loaded. illustration:
+// the picture of Wikimedia Commons of who it names, not of the news, said so; a portrait cut nearer its
+// top, where the face is
+const Picture = ({src, source, illustration = false}) => {
     const [failed, setFailed] = useState(false);
     if (failed) return null;
     return (
         <figure className="m-0 mt-5">
             <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}
-                 className="aspect-[16/9] w-full bg-secondary object-cover"/>
-            {source && <figcaption className="caption mt-1.5">Picture — {source}</figcaption>}
+                 className={`aspect-[16/9] w-full bg-secondary object-cover ${illustration ? 'object-[50%_25%]' : ''}`}/>
+            {source && <figcaption className="caption mt-1.5">{illustration ? 'Illustration' : 'Picture'} — {source}</figcaption>}
         </figure>
     );
 };
@@ -222,7 +224,8 @@ const Margin = ({kicker, tone, children}) => (
 // item.marks (and the marks of its angles and denials): {field: [[start, end]]}, the places of the terms
 // the profile follows in its texts; item.found: [{term, angle}] the terms it names, angle when only one
 // of its other angles does. marked: they are shown, with the terms found; else the card is as written
-// item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones).
+// item.thumbnail: the picture of one of its articles, item.thumbnailSource its site (absent from the older ones);
+// else its illustration (item.illustration: {url, credit...}, the picture of Wikimedia Commons of who it names).
 // onSelect(checked): the card ticked or not for the e-mail, selected says it is; without onSelect no box is shown
 // format: the way the sentences are shown, 'passages', 'digest' or 'points' (see formats.js); item.points,
 // item.digest and their translations are of the same sentences as published, absent from the older ones.
@@ -294,7 +297,8 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <p lang={item.language ?? undefined} className="caption mt-1 italic">“<Marked text={item.title} marks={marks.title}/>”</p>
                 )}
                 {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
-                {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}/>}
+                {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}
+                                            illustration={item.thumbnail === item.illustration?.url}/>}
 
                 {paragraphs.length === 0 ? (
                     <div className="mt-6">
