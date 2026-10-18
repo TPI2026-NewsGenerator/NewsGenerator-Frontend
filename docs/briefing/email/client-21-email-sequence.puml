@@ -40,9 +40,9 @@ opt a card's own picture under 560 px wide
     Bar -> Bar : loadGallery(story)
     Bar -> Api : onPictures(storyId): BriefingApi.pictures
     Api -> Server : GET /briefing/:id/stories/:storyId/pictures
-    Server --> Bar : {pictures: [{url, source}]}
+    Server --> Bar : {pictures: [{url, source, illustration}]}
     Bar -> Pictures : bestPicture(pictures, sizes)
-    note right : lying before standing, the widest;\nnone left: the card is sent without
+    note right : one of its articles before its illustration,\nlying before standing, the widest;\nnone left: the card is sent without
 end
 opt the reader changes the order
     Reader -> Bar : arrow up or down

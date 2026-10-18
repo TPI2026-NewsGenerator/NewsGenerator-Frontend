@@ -80,7 +80,9 @@ package "State" {
         The browser measures each picture as it loads
         it (15 s at most). A card whose own one is under
         560 px wide gets the best other of its story,
-        lying before standing, else none
+        one of its articles before its illustration
+        (Wikimedia Commons), lying before standing,
+        else none
     end note
 }
 package "API" {
