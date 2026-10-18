@@ -21,6 +21,7 @@ import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
+import {countryNames} from "@/features/briefing/countries.js";
 import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {cn} from "@/lib/utils.js";
 import {pageOf} from "@/features/entities/entityApi.js";
@@ -221,6 +222,8 @@ const Margin = ({kicker, tone, children}) => (
 // its statements an article reports (channel 'reported', with source, translation, language), absent from the older ones.
 // item.names: [{name, qid, kind}] the people and organisations most of its articles name, each opening its page (the one
 // of its item of Wikidata, else the one of the name as written), absent from the briefings before 13.10.2026.
+// item.countries: the codes ISO 3166-1 of the countries of who and where it names, the main first, shown
+// under its topic unless its title names them, absent from the briefings before 18.10.2026.
 // item.marks (and the marks of its angles and denials): {field: [[start, end]]}, the places of the terms
 // the profile follows in its texts; item.found: [{term, angle}] the terms it names, angle when only one
 // of its other angles does. marked: they are shown, with the terms found; else the card is as written
@@ -253,6 +256,8 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     // the AI version of the points or the summary, absent from the key passages and the briefings before 15.10.2026
     const aiText = format === 'points' ? item.ai?.points : format === 'digest' ? item.ai?.summary : null;
     const [showAi, setShowAi] = useState(false);
+    // the countries of who it names, none when its title names them (see countries.js)
+    const countries = countryNames(item.countries, {titles: [item.title, item.titleTranslation], languages: [item.language]});
 
     return (
         <article className="grid-12 border-t border-rule pt-7 pb-14">
@@ -264,6 +269,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 )}
                 <div className="md:mt-4">
                     {item.topic && <p className="kicker !text-ink">{item.topic}</p>}
+                    {countries.length > 0 && <p className="caption mt-1 font-medium !text-ink">{countries.join(' · ')}</p>}
                     {item.publishedAt && <p className="folio mt-1"><time dateTime={item.publishedAt}>{when(item.publishedAt)}</time></p>}
                     {item.language && <p className="mt-1"><LanguageMark code={item.language} className="ml-0"/></p>}
                     {marked && item.found?.length > 0 && (
