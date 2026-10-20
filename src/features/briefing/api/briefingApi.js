@@ -34,14 +34,15 @@ export const BriefingApi = {
     // angles: [index], official: [index], why: [index], next: [index], timeline: [index]}}, the denials,
     // other angles, official sources and lines of the AI analysis they took out; format: the way their
     // sentences are shown, 'points', 'digest' or 'passages' (see formats.js), the key passages when not
-    // given; ai: the storyIds of the cards sent in their AI version
-    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai) => {
+    // given; ai: the storyIds of the cards sent in their AI version; texts: {storyId: [paragraph]}, the
+    // points or paragraphs the reader wrote instead of the card's in that way
+    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai, texts) => {
         const some = (map) => map && Object.keys(map).length > 0;
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
             body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
-                ...(format ? {format} : {}), ...(ai?.length ? {ai} : {})}),
+                ...(format ? {format} : {}), ...(ai?.length ? {ai} : {}), ...(some(texts) ? {texts} : {})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },

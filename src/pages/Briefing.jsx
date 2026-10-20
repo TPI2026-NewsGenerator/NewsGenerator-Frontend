@@ -149,13 +149,13 @@ export const BriefingPage = () => {
     const tick = (storyIds) => setTicks({briefingId: briefing.id, storyIds});
     const tickOne = (storyId, checked) => tick(checked ? [...ticked, storyId] : ticked.filter(other => other !== storyId));
 
-    // the cards ticked, in the order the reader gave them in the bar, with the pictures and titles they changed,
-    // without the denials and angles they took out, their sentences in the way chosen, sent to the address
-    // 'to': true when sent
-    const email = async (to, storyIds, pictures, titles, removed, way, ai) => {
+    // the cards ticked, in the order the reader gave them in the bar, with the pictures, titles and
+    // sentences they changed, without the denials and angles they took out, their sentences in the way
+    // chosen, sent to the address 'to': true when sent
+    const email = async (to, storyIds, pictures, titles, removed, way, ai, texts) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way, ai);
+            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way, ai, texts);
             // sent, they count as read: the next briefings leave them out unless something new happens
             toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}, read now for your next briefings.`);
             tick([]);
@@ -401,7 +401,8 @@ export const BriefingPage = () => {
                                      thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                      contested: item.contested ?? [],
                                      ai: item.ai ?? null,
-                                     own: {points: item.pointsTranslation || item.points || null, digest: item.digestTranslation || item.digest || null},
+                                     own: {points: item.pointsTranslation || item.points || null, digest: item.digestTranslation || item.digest || null,
+                                         passages: item.translation || item.summary || null},
                                      analysis: briefing.analysis?.status === 'ready' ? briefing.analysis.cards?.[item.storyId] ?? null : null,
                                      angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source})),
                                      official: (item.official ?? []).map(post => ({party: post.party, title: post.translation ?? post.title}))}] : [])}/>
