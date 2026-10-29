@@ -6,7 +6,7 @@
 //               of the last 1 to 7 days as they choose
 //
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {Tabs} from "radix-ui";
 import {PageShell, Opening} from "@/components/layout/Page.jsx";
@@ -26,6 +26,7 @@ import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
+import {useClearance} from "@/lib/useClearance.js";
 import {toast} from "@/lib/toast.js";
 
 const POLL_MS = 3000;
@@ -53,6 +54,9 @@ export const BriefingPage = () => {
     const [profile, setProfile] = useState(undefined);      // undefined: not loaded yet
     const [briefing, setBriefing] = useState(undefined);
     const [error, setError] = useState(null);
+    const asideRef = useRef(null);       // the menu hanging beside the page, and the cards that start under it
+    const listRef = useRef(null);
+    useClearance(asideRef, listRef);
     // the hours of news of the next briefing: the ones of the last until the reader chooses (the default
     // after one of a window no longer offered)
     const [chosen, setChosen] = useState(null);
@@ -267,7 +271,7 @@ export const BriefingPage = () => {
             )}
 
             {ready && count > 0 && (
-                <ol className="list-none p-0">
+                <ol ref={listRef} className="list-none p-0">
                     {/* the stories of the terms followed keep their place in the briefing */}
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId} id={`card-${item.storyId}`} className="scroll-mt-6">
@@ -313,7 +317,10 @@ export const BriefingPage = () => {
                 title="Your briefing"
                 standfirst="The stories of the last 1 to 7 days closest to your interests, chosen by the AI. A story you sent by e-mail in the last two days counts as read: it comes back only when something new happened."
                 // shown while the profile is asked too: it comes after the briefing, and the column
-                // appearing then pushed the cards down (the user, 16.10.2026); none without a profile
+                // appearing then pushed the cards down (the user, 16.10.2026); none without a profile.
+                // Hanging beside the page: taller than the title, it left a gap under it and pushed the
+                // tabs down (the user, 29.10.2026); the cards start under it (useClearance)
+                hanging asideRef={asideRef}
                 aside={profile !== null && (
                     <div className="space-y-4">
                         {ready && (

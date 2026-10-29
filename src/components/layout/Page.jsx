@@ -21,17 +21,22 @@ export const PageShell = ({user, onSignOut, children}) => (
     </div>
 );
 
-// the opening spread: kicker, headline and standfirst on the left, a meta column on the right
-export const Opening = ({kicker, title, standfirst, aside}) => (
+// the opening spread: kicker, headline and standfirst on the left, a meta column on the right. hanging: the
+// column does not set the height of the spread (it hangs beside the page, from the headline down), so a tall
+// one leaves no gap under the standfirst and pushes nothing down when it appears; the list under it makes
+// room for it (see useClearance). asideRef: the element of the column
+export const Opening = ({kicker, title, standfirst, aside, hanging = false, asideRef}) => (
     <section className="page pt-12 md:pt-20">
-        <div className="grid-12">
+        <div className={cn('grid-12', hanging && 'md:relative')}>
             <p className="kicker kicker-rule col-span-12 mb-6">{kicker}</p>
             <div className="col-span-12 md:col-span-9">
                 <h1 className="display text-balance">{title}</h1>
                 {standfirst && <p className="standfirst mt-6">{standfirst}</p>}
             </div>
             {aside && (
-                <aside className="col-span-12 mt-10 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-3 md:border-t-0 md:border-l md:pt-0 md:pl-5">
+                <aside ref={asideRef}
+                       className={cn('col-span-12 mt-10 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-3 md:border-t-0 md:border-l md:pt-0 md:pl-5',
+                           hanging && 'md:absolute md:row-start-2')}>
                     {aside}
                 </aside>
             )}
