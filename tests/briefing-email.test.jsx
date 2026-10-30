@@ -111,6 +111,31 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         localStorage.clear();
     });
 
+    it('should say why a card has no AI version to send, instead of a box that is not there', async () => {
+        localStorage.clear();
+        // points written by the AI, no summary
+        const item = {...BRIEFING.items[0], digest: 'Ein Digest.', points: 'Erster Punkt.', ai: {points: ['Un point de l\'IA.'], summary: null}};
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const story = screen.getByRole('list', {name: 'The story of the e-mail'});
+
+        // the key passages have none
+        expect(within(story).queryByRole('checkbox')).toBeNull();
+        expect(within(story).getByText(/The key passages have no AI version/)).toBeInTheDocument();
+        // the summary was not written for this card
+        fireEvent.click(within(screen.getByRole('group', {name: 'In the e-mail, as'})).getByRole('radio', {name: 'Summary'}));
+        expect(within(story).queryByRole('checkbox')).toBeNull();
+        expect(within(story).getByText(/No AI version of the summary of this card/)).toBeInTheDocument();
+        // the bullet points were
+        fireEvent.click(within(screen.getByRole('group', {name: 'In the e-mail, as'})).getByRole('radio', {name: 'Bullet points'}));
+        expect(within(story).getByRole('checkbox', {name: 'Send its bullet points in the AI version'})).toBeInTheDocument();
+        localStorage.clear();
+    });
+
     it('should send the bullet points, the summary or the key passages the reader wrote, their own when left as they are', async () => {
         localStorage.clear();
         const item = {...BRIEFING.items[0], digest: 'Ein Digest.\n\nSein Ende.', points: 'Erster Punkt.', ai: {points: ['Un point de l\'IA.']}};

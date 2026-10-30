@@ -40,7 +40,7 @@ export const AddNews = ({onAdd}) => {
                        }}/>
                 <Button onClick={add} loading={adding} disabled={!valid || adding}>Add</Button>
             </div>
-            <Help>{adding ? 'Reading the page and choosing its key passages…' : 'Read and added at the end of the briefing, ticked for the e-mail.'}</Help>
+            <Help>{adding ? 'Reading the page and choosing its key passages…' : 'Added at the end of the briefing, ticked for the e-mail. A news of another of your briefings comes as it is there.'}</Help>
         </div>
     );
 };

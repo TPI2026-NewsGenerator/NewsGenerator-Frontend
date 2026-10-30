@@ -243,7 +243,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                     )}
                                                 </div>
                                                 <div className="mt-2 border border-rule p-3">
-                                                    {aiTextOf(story, way) && (
+                                                    {aiTextOf(story, way) ? (
                                                         <Checkbox checked={Boolean(inAi[story.storyId])} className="mb-2"
                                                                   onChange={event => {
                                                                       // the text shown is the version ticked, the one changed put aside
@@ -252,6 +252,13 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                                   }}>
                                                             Send its {WAY_NAMES[shown]} in the AI version
                                                         </Checkbox>
+                                                    ) : way && (
+                                                        // the box is not there: said, rather than left to be looked for
+                                                        <p className="caption mb-2">
+                                                            {way === 'passages'
+                                                                ? 'The key passages have no AI version: choose bullet points or the summary (In the e-mail, as) to send one.'
+                                                                : `No AI version of the ${WAY_NAMES[way]} of this card: the AI did not write one the article backs (a figure it does not give, or no answer).`}
+                                                        </p>
                                                     )}
                                                     {/* what the e-mail sends, the reader changing it as they want (the user, 20.10.2026) */}
                                                     <Label htmlFor={`mail-text-${story.storyId}`}>Its {WAY_NAMES[shown]} in the e-mail</Label>

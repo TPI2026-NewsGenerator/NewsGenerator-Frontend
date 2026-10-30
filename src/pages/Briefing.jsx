@@ -21,6 +21,7 @@ import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {keepSize, keptSize} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
+import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
@@ -175,8 +176,10 @@ export const BriefingPage = () => {
     // a news added by its link: at the end of the briefing, ticked for the e-mail; true when added
     const addNews = async (url) => {
         try {
-            const item = await BriefingApi.addNews(briefing.id, url);
-            setBriefing(current => current && current.id === briefing.id ? {...current, items: [...current.items, item]} : current);
+            const {item, analysis} = await BriefingApi.addNews(briefing.id, url);
+            // a news copied from another briefing comes with its analysis, shown as the cards' are
+            setBriefing(current => current && current.id === briefing.id ? {...current, items: [...current.items, item],
+                ...(analysis && current.analysis?.status === 'ready' ? {analysis: {...current.analysis, cards: {...current.analysis.cards, [item.storyId]: analysis}}} : {})} : current);
             tick([...ticked, item.storyId]);
             toast.success('The news was added at the end of the briefing, ticked for the e-mail.');
             return true;
@@ -189,7 +192,8 @@ export const BriefingPage = () => {
     const removeNews = async (storyId) => {
         try {
             await BriefingApi.removeNews(briefing.id, storyId);
-            setBriefing(current => current && ({...current, items: current.items.filter(item => item.storyId !== storyId)}));
+            setBriefing(current => current && ({...current, items: current.items.filter(item => item.storyId !== storyId),
+                ...(current.analysis?.cards?.[storyId] ? {analysis: {...current.analysis, cards: Object.fromEntries(Object.entries(current.analysis.cards).filter(([id]) => Number(id) !== storyId))}} : {})}));
             tick(ticked.filter(other => other !== storyId));
         } catch (err) {
             toast.error(`Not taken out: ${err.message}`);
@@ -408,8 +412,8 @@ export const BriefingPage = () => {
                                      thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                      contested: item.contested ?? [],
                                      ai: item.ai ?? null,
-                                     own: {points: item.pointsTranslation || item.points || null, digest: item.digestTranslation || item.digest || null,
-                                         passages: item.translation || item.summary || null},
+                                     own: {points: withoutOriginalMarks(item.pointsTranslation || item.points || null), digest: withoutOriginalMarks(item.digestTranslation || item.digest || null),
+                                         passages: withoutOriginalMarks(item.translation || item.summary || null)},
                                      analysis: briefing.analysis?.status === 'ready' ? briefing.analysis.cards?.[item.storyId] ?? null : null,
                                      angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source})),
                                      official: (item.official ?? []).map(post => ({party: post.party, title: post.translation ?? post.title}))}] : [])}/>
