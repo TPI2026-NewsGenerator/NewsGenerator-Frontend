@@ -16,7 +16,7 @@ import {coverageLabel} from "@/features/briefing/corroboration.js";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
 import {Marked} from "@/components/news/Marked.jsx";
-import {paragraphsWithMarks} from "@/features/briefing/marks.js";
+import {ORIGINAL_START, paragraphsWithMarks} from "@/features/briefing/marks.js";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
@@ -236,7 +236,7 @@ const Margin = ({kicker, tone, children}) => (
 // analysis: the AI analysis of the card when it merits one (see CardAnalysis), analysisPending while it is
 // written, analysisModel the model writing it
 // item.followUp: the card of the last days it follows (see FollowUp); item.imported: a news the reader
-// added by its link, for the e-mail
+// added by its link, for the e-mail; item.transferred: that card copied from another briefing of the reader
 const unmarked = (entry) => ({...entry, marks: undefined});
 // onRemove: a news the reader added taken out of the briefing
 export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages',
@@ -316,6 +316,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                         <div className="body-text mt-3"><Way paragraphs={translation} lede={lede}/></div>
                         <p className="caption mt-3">
                             Sentences chosen by the AI in the article {lead && <>of {lead.source} </>}and translated by it: it may contain errors, the original is the reference.
+                            {item[fields.translation]?.includes(ORIGINAL_START) && ' The sentences in italics, between parentheses, are left in the language of the article: the AI could not translate them with their figures.'}
                         </p>
                         {original && (
                             <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
@@ -358,7 +359,9 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
             <aside className="col-span-12 mt-8 space-y-5 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-1 md:border-t-0 md:border-l md:pt-0 md:pl-5">
                 {item.imported && (
                     <Margin kicker="Added by you">
-                        From its link: not chosen nor checked against other media.
+                        {item.transferred
+                            ? 'Copied from another of your briefings, with its other angles, sources and analysis.'
+                            : 'From its link: not chosen nor checked against other media.'}
                         {onRemove && (
                             <button type="button" onClick={onRemove}
                                     className="mt-1 block cursor-pointer text-ink-mute underline underline-offset-4 hover:text-ink">Take it out</button>

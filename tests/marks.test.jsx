@@ -91,3 +91,32 @@ describe('WatchedNews tabs', () => {
         expect(getByText('Dario Amodei speaks')).toBeInTheDocument();
     });
 });
+
+describe('BriefingCard sentences left in their language', () => {
+    const left = String.fromCharCode(0xE000) + '(Er wurde bestraft.)' + String.fromCharCode(0xE001);
+    const german = {
+        storyId: 2, title: 'Der VAR', titleTranslation: 'Le VAR', language: 'de', summary: 'Der VAR kommt. Er wurde bestraft.',
+        translation: `Le VAR arrive. ${left}`, articles: [], corroboration: {media: 1, read: 1, independent: 1, agencies: []},
+    };
+
+    it('should show them in italics, between their parentheses, without the marks, and say why', () => {
+        const {container, getByText} = render(<BriefingCard item={german}/>);
+        const italics = [...container.querySelectorAll('.body-text i')].map(i => i.textContent);
+        expect(italics).toEqual(['(Er wurde bestraft.)']);
+        expect(container.textContent).not.toMatch(/[]/);
+        expect(getByText(/left in the language of the article/)).toBeInTheDocument();
+    });
+
+    it('should italicise them in the middle of a term marked', () => {
+        // the places of the terms are in the text as written, the marks included
+        const item = {...german, marks: {translation: [[0, 6], [17, 23]]}};
+        const {container} = render(<BriefingCard item={item} marked/>);
+        expect(marked(container)).toEqual(['Le VAR', 'Er wur']);
+        expect([...container.querySelectorAll('.body-text i')].map(i => i.textContent).join('')).toBe('(Er wurde bestraft.)');
+    });
+
+    it('should not say it of a card with none', () => {
+        const {queryByText} = render(<BriefingCard item={{...german, translation: 'Le VAR arrive. Il a été puni.'}}/>);
+        expect(queryByText(/left in the language of the article/)).toBeNull();
+    });
+});

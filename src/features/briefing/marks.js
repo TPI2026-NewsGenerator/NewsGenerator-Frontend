@@ -6,6 +6,12 @@
 //               (server/services/utils/filter.js, highlights): [[start, end]] in the text as written
 //
 
+// A sentence the translation left in its own language, between parentheses, is written between these two
+// characters (see server/services/utils/original-marks.js): shown in italics, taken out of a text to edit
+export const ORIGINAL_START = '\uE000';
+export const ORIGINAL_END = '\uE001';
+export const withoutOriginalMarks = (text) => text?.replace(/[\uE000\uE001]/g, '') ?? text;
+
 // the text in pieces, the ones of a term marked: [{text, marked}]
 export const segmentsOf = (text, marks = []) => {
     const segments = [];
