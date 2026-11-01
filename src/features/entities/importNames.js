@@ -84,7 +84,7 @@ export const withRetry = async (call, {onWait = null, stop = null, sleep = delay
 };
 
 // The names looked for in Wikidata, CHECK_LOT a request, one request after the other: Map name -> the result
-// of the server ({name, status, item?, items?, famous?}). check(lot): the call, answering {results, retryIn?} or
+// of the server ({name, status, item?, items?, famous?, themed?}). check(lot): the call, answering {results, retryIn?} or
 // {error}; onResult(done): once each lot is back; stop(): true to leave off before the next lot; onWait, sleep,
 // patienceMs: see withRetry. A call that fails for a reason that passes is asked again by itself after a wait,
 // nothing lost: it never asks the reader to click again before patienceMs of waiting. The server may answer for
@@ -129,7 +129,7 @@ export const planOf = (names, results, choices) => {
         else if (result.status === 'invalid') counts.invalid++;
         else if (result.status === 'linked') {
             qids.push(result.item.qid);
-            linked.push({name, item: result.item, famous: Boolean(result.famous)});
+            linked.push({name, item: result.item, famous: Boolean(result.famous), themed: result.themed ?? null});
             counts.linked++;
         } else if (result.status === 'word') {
             words.push(result.name);

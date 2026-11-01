@@ -164,12 +164,14 @@ describe('checkNames', () => {
 
 describe('planOf', () => {
     const names = ['Infantino', 'Mbappé', 'Oliver', 'LFF', 'Nobody', 'Known', 'x', 'Unchecked'];
+    const withTaylor = [...names, 'Taylor'];
     const item = (qid, label) => ({qid, label, description: null});
     const results = new Map([
         ['Infantino', {name: 'Infantino', status: 'linked', item: item('Q1', 'Gianni Infantino')}],
         ['Mbappé', {name: 'Mbappé', status: 'linked', item: item('Q2', 'Kylian Mbappé'), famous: true}],
         ['Oliver', {name: 'Oliver', status: 'choose', items: [item('Q3', 'Michael Oliver'), item('Q4', 'Michael Oliver')]}],
         ['LFF', {name: 'LFF', status: 'choose', items: [item('Q5', 'Lucasfilm')]}],
+        ['Taylor', {name: 'Taylor', status: 'linked', item: item('Q6', 'Anthony Taylor', 'English football referee'), themed: 'football'}],
         ['Nobody', {name: 'Nobody', status: 'word'}],
         ['Known', {name: 'Known', status: 'known'}],
         ['x', {name: 'x', status: 'invalid'}],
@@ -182,6 +184,12 @@ describe('planOf', () => {
         expect(plan.counts).toEqual({total: 8, known: 1, linked: 2, word: 1, toChoose: 2, invalid: 1, unchecked: 1});
         expect(plan.toChoose.map(choice => choice.name)).toEqual(['Oliver', 'LFF']);
         expect(plan.linked.map(link => [link.name, link.famous])).toEqual([['Infantino', false], ['Mbappé', true]]);
+    });
+
+    it('should keep the word of the theme a name was linked by, none for the others', () => {
+        const plan = planOf(withTaylor, results, new Map());
+        expect(plan.linked.map(link => [link.name, link.themed])).toEqual([['Infantino', null], ['Mbappé', null], ['Taylor', 'football']]);
+        expect(plan.qids).toEqual(['Q1', 'Q2', 'Q6']);
     });
 
     it('should follow the item chosen among several, and as written the ones the reader says none of', () => {

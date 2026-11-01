@@ -23,6 +23,8 @@ const RESULTS = {
     'Gianni Infantino': {status: 'linked', item: item('Q124138', 'Gianni Infantino', 'Swiss-Italian football administrator')},
     'Kylian Mbappé': {status: 'linked', famous: true, item: item('Q21621995', 'Kylian Mbappé', 'French footballer')},
     'Michael Oliver': {status: 'choose', items: [item('Q4333767', 'Michael Oliver', 'English football referee'), item('Q2720825', 'Michael Oliver', 'American actor')]},
+    // none stands out in Wikipedias, the server chose the one of the theme of the profile
+    'Anthony Taylor': {status: 'linked', themed: 'football', item: item('Q4453759', 'Anthony Taylor', 'English football referee (born 1978)')},
     'Vadims Ļašenko': {status: 'word'},
     'Aleksander Čeferin': {status: 'known'},
 };
@@ -90,6 +92,25 @@ describe('ImportNames', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
         await screen.findByText('Check before following');
         expect(api.importCheck.mock.calls[0][0]).toEqual(['Gianni Infantino']);
+    });
+
+    it('should say why a name among several was linked without asking: it fits the interests of the profile', async () => {
+        api.importCheck.mockImplementation(async lot => answer(lot));
+        api.importNames.mockResolvedValue({added: {items: 2, words: 0}, left: {full: 0, missing: 0, invalid: 0}, limits: {total: 300}, entities: [], words: []});
+        await choose([['Anthony Taylor'], ['Kylian Mbappé']]);
+        fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
+        await screen.findByText('Check before following');
+
+        // nothing to choose, both linked; each tells how it was settled
+        expect(screen.queryByRole('radiogroup')).toBeNull();
+        const linked = screen.getByText('The 2 linked to Wikidata').closest('details');
+        expect(within(linked).getByText(/chosen among several: it fits your interests, “football”/)).toBeInTheDocument();
+        expect(within(linked).getAllByText(/the best known of several/)).toHaveLength(1);
+        expect(within(linked).getByText('Anthony Taylor').closest('li')).toHaveTextContent('English football referee (born 1978)');
+
+        fireEvent.click(screen.getByRole('button', {name: 'Follow 2'}));
+        await screen.findByText('Done');
+        expect(api.importNames).toHaveBeenCalledWith({qids: ['Q4453759', 'Q21621995'], words: []});
     });
 
     it('should carry on by itself when Wikidata asks to wait, saying so, without the reader clicking', async () => {

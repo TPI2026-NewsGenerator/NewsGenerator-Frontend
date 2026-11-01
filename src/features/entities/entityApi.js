@@ -25,7 +25,7 @@ export const EntityApi = {
     // {items: [{qid, label, description}]}: the items of Wikidata named so
     search: (q) => send(`/entities/search?${new URLSearchParams({q})}`),
     // a list of names (10 at most) looked for in Wikidata, one after the other: {results: [{name, status, item?, items?,
-    // famous?}]}, status: known, linked (item), choose (items), word, invalid
+    // famous?, themed?}]}, status: known, linked (item), choose (items), word, invalid
     importCheck: (names) => send('/entities/import/check', {method: 'POST', body: {names}}),
     // a list of names followed at once: qids, the items of Wikidata, words, the names as written.
     // {added: {items, words}, left: {full, missing, invalid}, entities, words, limits}

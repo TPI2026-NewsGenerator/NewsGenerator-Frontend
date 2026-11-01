@@ -254,11 +254,12 @@ export const ImportNames = ({room, onImported, disabled = false, sleep, patience
                     <details>
                         <summary className="kicker cursor-pointer">The {plan.linked.length} linked to Wikidata</summary>
                         <ul className="mt-2 list-none p-0 text-[0.9375rem] leading-snug">
-                            {plan.linked.map(({name, item, famous}) => (
+                            {plan.linked.map(({name, item, famous, themed}) => (
                                 <li key={name} className="py-1">
                                     “{name}” → <a href={`https://www.wikidata.org/wiki/${item.qid}`} target="_blank" rel="noreferrer" className="link">{item.label}</a>
                                     {item.description && <span className="caption">, {item.description}</span>}
                                     {famous && <span className="caption"> (the best known of several)</span>}
+                                    {themed && <span className="caption"> (chosen among several: it fits your interests, “{themed}”)</span>}
                                 </li>
                             ))}
                         </ul>
