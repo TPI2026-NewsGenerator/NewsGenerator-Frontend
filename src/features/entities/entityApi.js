@@ -23,7 +23,13 @@ const send = async (path, {method = 'GET', body} = {}) => {
 export const EntityApi = {
     // {items: [{qid, label, description}]}: the items of Wikidata named so
     search: (q) => send(`/entities/search?${new URLSearchParams({q})}`),
-    // {entities: [{qid, label, description, kind, names, followed, inBriefing, links}], words, limits: {entities, words}}
+    // a list of names (10 at most) looked for in Wikidata, one after the other: {results: [{name, status, item?, items?,
+    // famous?}]}, status: known, linked (item), choose (items), word, invalid
+    importCheck: (names) => send('/entities/import/check', {method: 'POST', body: {names}}),
+    // a list of names followed at once: qids, the items of Wikidata, words, the names as written.
+    // {added: {items, words}, left: {full, missing, invalid}, entities, words, limits}
+    importNames: ({qids, words}) => send('/entities/import', {method: 'POST', body: {qids, words}}),
+    // {entities: [{qid, label, description, kind, names, followed, inBriefing, links}], words, limits: {total}}
     list: () => send('/entities'),
     follow: (qid) => send('/entities', {method: 'POST', body: {qid}}),
     unfollow: (qid) => send(`/entities/${encodeURIComponent(qid)}`, {method: 'DELETE'}),

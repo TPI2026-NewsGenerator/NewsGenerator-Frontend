@@ -20,6 +20,9 @@ vi.mock('@/features/briefing/api/briefingApi.js', () => ({
 
 const entities = vi.hoisted(() => ({list: vi.fn()}));
 vi.mock('@/features/entities/entityApi.js', () => ({EntityApi: entities}));
+// the titles in another language than the reader's are translated as the rows are reached
+const translate = vi.hoisted(() => ({translateNews: vi.fn()}));
+vi.mock('@/features/search/api/searchApi.js', () => ({SearchApi: translate}));
 
 const {BriefingApi} = await import('@/features/briefing/api/briefingApi.js');
 const {BriefingPage} = await import('@/pages/Briefing.jsx');
@@ -169,6 +172,96 @@ describe('BriefingPage tabs', () => {
         BriefingApi.following.mockResolvedValue({limit: 100, groups: [{...groups[0], count: 137, hours: 24}]});
         await renderPage(briefingWith(), '/briefing#terms');
         expect(await screen.findByText('137 stories in 24 hours')).toBeInTheDocument();
+    });
+
+    it('should translate the title of a news written in another language than the reader reads, with the title as written under it', async () => {
+        follows();
+        const foreign = [{term: 'VAR', count: 3, hours: 24, limit: 100, news: [
+            {title: 'Der VAR entscheidet', url: 'https://x/de-1', link: 'https://x/de-1', source: 'x.de', language: 'de'},
+            {title: 'Le VAR décide', url: 'https://x/fr-1', link: 'https://x/fr-1', source: 'x.fr', language: 'fr'},
+            {title: 'VAR news', url: 'https://x/none', link: 'https://x/none', source: 'x.com', language: null},
+        ]}];
+        BriefingApi.following.mockResolvedValue({limit: 100, groups: foreign});
+        translate.translateNews.mockResolvedValue({translations: [{url: 'https://x/de-1', language: 'de', title: 'The VAR decides', description: null}]});
+        await renderPage();
+        fireEvent.mouseDown(await followingTab());
+
+        // the translation replaces the title, which stays under it in italics, marked as a machine translation
+        expect(await screen.findByRole('link', {name: 'The VAR decides'})).toHaveAttribute('href', 'https://x/de-1');
+        expect(screen.getByText(/“Der VAR entscheidet”/)).toBeInTheDocument();
+        expect(screen.getByText(/translated from German/)).toBeInTheDocument();
+        // only the news in another language are asked, by the link of the feed, in the language of the profile
+        expect(translate.translateNews).toHaveBeenCalledTimes(1);
+        expect(translate.translateNews).toHaveBeenCalledWith({news: [], titles: ['https://x/de-1']}, 'fr');
+        expect(screen.getByRole('link', {name: 'Le VAR décide'})).toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'VAR news'})).toBeInTheDocument();
+    });
+
+    it('should show a title as written when it could not be translated', async () => {
+        follows();
+        BriefingApi.following.mockResolvedValue({limit: 100, groups: [{term: 'VAR', count: 1, hours: 24, limit: 100, news: [
+            {title: 'Der VAR entscheidet', url: 'https://x/de-1', link: 'https://x/de-1', source: 'x.de', language: 'de'},
+        ]}]});
+        translate.translateNews.mockResolvedValue({error: 'Unknown news'});
+        await renderPage();
+        fireEvent.mouseDown(await followingTab());
+
+        await waitFor(() => expect(translate.translateNews).toHaveBeenCalled());
+        expect(await screen.findByRole('link', {name: 'Der VAR entscheidet'})).toBeInTheDocument();
+        expect(screen.queryByText(/translated from/)).toBeNull();
+    });
+
+    it('should ask again while the search runs, telling the names done, then show the news once it ends', async () => {
+        follows();
+        BriefingApi.following
+            .mockResolvedValueOnce({status: 'running', limit: 100, progress: {finished: 120, total: 300}})
+            .mockResolvedValue({status: 'ready', limit: 100, partial: false, groups});
+        await renderPage();
+        fireEvent.mouseDown(await followingTab());
+
+        expect(await screen.findByText(/120 of 300 names/)).toBeInTheDocument();
+        expect(screen.queryByText('A VAR news')).toBeNull();
+        // asked again every few seconds
+        expect(await screen.findByText('A VAR news', {}, {timeout: 5000})).toBeInTheDocument();
+        expect(BriefingApi.following).toHaveBeenCalledTimes(2);
+        expect(screen.queryByText(/120 of 300 names/)).toBeNull();
+    });
+
+    it('should say when the search stopped before the end', async () => {
+        follows();
+        BriefingApi.following.mockResolvedValue({status: 'ready', limit: 100, partial: true, groups});
+        await renderPage();
+        fireEvent.mouseDown(await followingTab());
+        expect(await screen.findByText('The search stopped before the end')).toBeInTheDocument();
+        expect(screen.getByText('A VAR news')).toBeInTheDocument();
+    });
+
+    it('should give a list to pick from, and a field to find a name, from thirteen names followed', async () => {
+        follows();
+        const many = Array.from({length: 40}, (_, i) => ({term: `Person ${i + 1}`, qid: `Q${i + 1}`, count: i % 3 === 0 ? 0 : 2, hours: 720, limit: 100,
+            news: i % 3 === 0 ? [] : [{title: `Person ${i + 1} speaks`, url: `https://x/${i}`, link: `https://x/${i}`, source: 'x.fr'}]}));
+        BriefingApi.following.mockResolvedValue({status: 'ready', limit: 100, partial: false, groups: many});
+        await renderPage();
+        fireEvent.mouseDown(await followingTab());
+
+        // no tab for each of them: a list, the ones with news first
+        const pick = await screen.findByRole('combobox', {name: /of 40/});
+        expect(screen.queryAllByRole('tab', {name: /Person/})).toHaveLength(0);
+        expect(pick.options[0].textContent).toBe('Person 2 · 2');
+        expect(pick.options[pick.options.length - 1].textContent).toBe('Person 40 · 0');
+        expect(screen.getByText('Person 2 speaks')).toBeInTheDocument();
+
+        fireEvent.change(pick, {target: {value: 'Q5 Person 5'}});
+        expect(screen.getByText('Person 5 speaks')).toBeInTheDocument();
+
+        // narrowed by what is typed
+        fireEvent.change(screen.getByLabelText('Find a name'), {target: {value: 'person 3'}});
+        const narrowed = screen.getByRole('combobox', {name: /of 40/});
+        expect([...narrowed.options].map(option => option.textContent)).toEqual(
+            expect.arrayContaining(['Person 3 · 2', 'Person 30 · 2', 'Person 31 · 0', 'Person 39 · 2']));
+        expect(narrowed.options).toHaveLength(11);
+        fireEvent.change(screen.getByLabelText('Find a name'), {target: {value: 'zzz'}});
+        expect(screen.getByText(/No name followed has “zzz” in it/)).toBeInTheDocument();
     });
 
     it('should say when the news could not be searched, and search again when the tab is opened again', async () => {

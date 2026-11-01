@@ -6,7 +6,7 @@
 //               of the last 1 to 7 days as they choose
 //
 
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {Tabs} from "radix-ui";
 import {PageShell, Opening} from "@/components/layout/Page.jsx";
@@ -17,6 +17,8 @@ import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx"
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {FollowingNews} from "@/features/briefing/components/FollowingNews.jsx";
 import {useFollowing} from "@/features/briefing/useFollowing.js";
+import {SearchApi} from "@/features/search/api/searchApi.js";
+import {createTranslator} from "@/features/search/translation.js";
 import {DEFAULT_HOURS, keepWatchLimit, keptWatchLimit, spanOf, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {EntityApi} from "@/features/entities/entityApi.js";
@@ -249,6 +251,12 @@ export const BriefingPage = () => {
     const tab = hasTerms && location.hash === '#terms' ? 'terms' : 'briefing';
     const following = useFollowing(tab === 'terms', watchLimit, active, expired);
     const watchedCount = following.groups ? following.groups.reduce((sum, group) => sum + group.count, 0) : null;
+    // the titles of the news of the terms in another language than the reader's, translated as the rows come
+    // near the screen; one translator for the language, the translations had are kept across the tabs
+    const readerLanguage = profile?.language ?? null;
+    const translator = useMemo(() => readerLanguage
+        ? createTranslator(readerLanguage, asked => SearchApi.translateNews(asked, readerLanguage).then(data => data?.translations ?? []))
+        : null, [readerLanguage]);
     const chooseTab = (value) => navigate({pathname: location.pathname, search: location.search, hash: value === 'terms' ? '#terms' : ''}, {replace: true});
     // the stories of the briefing naming a term, shown alone in the tab of the briefing
     const showFound = () => {
@@ -328,7 +336,7 @@ export const BriefingPage = () => {
                     </p>
                 )}
                 <div className="mt-6">
-                    <FollowingNews following={following} limit={watchLimit} onLimit={chooseWatchLimit}/>
+                    <FollowingNews following={following} limit={watchLimit} onLimit={chooseWatchLimit} translator={translator}/>
                 </div>
             </section>
         </div>

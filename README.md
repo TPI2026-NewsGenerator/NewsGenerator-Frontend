@@ -21,8 +21,9 @@ them and of the ones every reader added. The pages:
   written a minute or more after the cards. A small "i" explains each label. When the profile
   follows names, a second tab, **Following**, lists every news of the sources naming one;
 - **Following** (`/following`): the clubs, people and organisations the profile follows, found in
-  Wikidata, and the names or words followed as written; the names met on several cards are
-  suggested. Each has a page of its news (`/following/:qid`, with the news of what it is linked to,
+  Wikidata, and the names or words followed as written, 300 in all; a list of names can be imported
+  from the first column of an Excel file (looked for in Wikidata, the reader choosing among the ones it
+  cannot tell); the names met on several cards are suggested. Each has a page of its news (`/following/:qid`, with the news of what it is linked to,
   `/following/name/:name` for a name as written), over a window of 1 to 7 days;
 - **Search** (`/search`): the news of a sentence, by its meaning, or of exact words (quotes, commas,
   `-word`), saved searches, and the key passages of up to ten news chosen;

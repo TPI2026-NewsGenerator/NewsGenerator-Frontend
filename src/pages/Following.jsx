@@ -12,7 +12,9 @@ import {useEffect, useState} from "react";
 import {Link} from "react-router-dom";
 import {Opening, PageShell, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
-import {Checkbox, Input, Label} from "@/components/ui/field.jsx";
+import {Input, Label} from "@/components/ui/field.jsx";
+import {ImportNames} from "@/features/entities/components/ImportNames.jsx";
+import {InBriefingCheckbox} from "@/features/entities/components/InBriefingCheckbox.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {EntityApi, pageOf} from "@/features/entities/entityApi.js";
 import {KIND_LABELS} from "@/features/entities/kinds.js";
@@ -21,13 +23,14 @@ import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
 const SEARCH_AFTER_MS = 400;        // the reader stops typing, Wikidata is asked
+const MAX_FOLLOWED = 300;           // what a profile follows in all, the items and the names as written
 const sameWord = (a, b) => a.toLowerCase() === b.toLowerCase();
 const cleanWord = (text) => text.replace(/["“”,\s]+/g, ' ').trim();
 
 export const FollowingPage = () => {
     const {user, logout, expired} = useAuth();
     const active = useActiveProfile();
-    const [followed, setFollowed] = useState(null);     // {entities, words, limits}
+    const [followed, setFollowed] = useState(null);     // {entities, words, limits: {total}}
     const [suggested, setSuggested] = useState([]);
     const [error, setError] = useState(null);
     const [query, setQuery] = useState('');
@@ -48,7 +51,7 @@ export const FollowingPage = () => {
             .then(data => {
                 if (!current || expired(data)) return;
                 if (data.error) setError(data.error);
-                else setFollowed({entities: data.entities ?? [], words: data.words ?? [], limits: data.limits ?? {entities: 30, words: 20}});
+                else setFollowed({entities: data.entities ?? [], words: data.words ?? [], limits: data.limits ?? {total: MAX_FOLLOWED}});
             })
             .catch(err => current && setError(err.message));
         // the suggestions never stop the page
@@ -110,6 +113,11 @@ export const FollowingPage = () => {
     const inBriefing = (qid, on) => run(qid, () => EntityApi.setInBriefing(qid, on), (data, current) => ({
         entities: current.entities.map(entity => entity.qid === qid ? {...entity, inBriefing: data.entity.inBriefing} : entity),
     }));
+    // a list of names followed at once (see ImportNames): what the server answers put in place
+    const imported = (data) => {
+        setFollowed({entities: data.entities ?? [], words: data.words ?? [], limits: data.limits ?? {total: MAX_FOLLOWED}});
+        setSuggested(current => current.filter(name => !(data.entities ?? []).some(entity => entity.qid === name.qid) && !(data.words ?? []).some(word => sameWord(word, name.name))));
+    };
     // a name of the cards followed: its item when the tagger linked it to one, else as written
     const followSuggested = async (name) => {
         const done = name.qid ? await followItem(name.qid) : await followWord(name.name);
@@ -118,7 +126,8 @@ export const FollowingPage = () => {
 
     const entities = followed?.entities ?? [];
     const words = followed?.words ?? [];
-    const limits = followed?.limits ?? {entities: 30, words: 20};
+    const limits = followed?.limits ?? {total: MAX_FOLLOWED};
+    const room = Math.max(0, limits.total - entities.length - words.length);
     const qids = new Set(entities.map(entity => entity.qid));
     const text = cleanWord(query);
     const shown = text.length >= 2 ? found : null;
@@ -145,7 +154,7 @@ export const FollowingPage = () => {
                                 </span>
                                 {wordFollowed
                                     ? <span className="folio">Followed</span>
-                                    : <Button size="sm" loading={busy === text} disabled={busy !== null || words.length >= limits.words}
+                                    : <Button size="sm" loading={busy === text} disabled={busy !== null || room === 0}
                                               onClick={() => followWord(text)} aria-label={`Follow “${text}” as written`}>Follow</Button>}
                             </div>
                         )}
@@ -167,6 +176,20 @@ export const FollowingPage = () => {
                                 ))}
                             </ul>
                         )}
+                    </div>
+                </div>
+            </Section>
+
+            <Section kicker="Many at once" title="Import a list of names">
+                <div className="grid-12">
+                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                        <p className="caption">
+                            An Excel file (.xlsx) with the names one under the other in the first column. Each is looked for in Wikidata and linked
+                            when it has one item, you choose when it has several, and it is followed as written when it has none. You follow {limits.total} names at most.
+                        </p>
+                        <div className="mt-3">
+                            <ImportNames room={room} onImported={imported} disabled={followed === null || busy !== null}/>
+                        </div>
                     </div>
                 </div>
             </Section>
@@ -214,10 +237,8 @@ export const FollowingPage = () => {
                                             {/* the label of Wikidata, when it is shown by its acronym */}
                                             {entity.short && entity.short !== entity.label && <span className="caption block">{entity.label}</span>}
                                             {entity.description && <span className="caption block">{entity.description}</span>}
-                                            <Checkbox checked={entity.inBriefing} disabled={busy !== null} className="mt-2 text-[0.9375rem]"
-                                                      onChange={event => inBriefing(entity.qid, event.target.checked)}>
-                                                Its news in my briefing
-                                            </Checkbox>
+                                            <InBriefingCheckbox checked={entity.inBriefing} disabled={busy !== null} className="mt-2 text-[0.9375rem]"
+                                                                onChange={event => inBriefing(entity.qid, event.target.checked)}/>
                                         </span>
                                         <Button size="sm" variant="subtle" loading={busy === entity.qid} disabled={busy !== null}
                                                 onClick={() => unfollowItem(entity.qid)} aria-label={`Stop following ${entity.short ?? entity.label}`}>
@@ -247,7 +268,7 @@ export const FollowingPage = () => {
                         )}
                         {followed && (
                             <p className="caption mt-4">
-                                {entities.length} of {limits.entities} clubs, people and organisations · {words.length} of {limits.words} names or words as written.
+                                {entities.length + words.length} of {limits.total} followed: {entities.length} clubs, people and organisations, {words.length} names or words as written.
                             </p>
                         )}
                     </div>

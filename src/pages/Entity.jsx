@@ -11,7 +11,8 @@ import {useEffect, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 import {Opening, PageShell} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
-import {Checkbox, Input, Label} from "@/components/ui/field.jsx";
+import {Input, Label} from "@/components/ui/field.jsx";
+import {InBriefingCheckbox} from "@/features/entities/components/InBriefingCheckbox.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {Term} from "@/features/briefing/components/WatchedNews.jsx";
@@ -176,9 +177,7 @@ export const EntityPage = () => {
                             ? <Button variant="subtle" onClick={() => follow(false)} loading={busy}>Stop following</Button>
                             : <Button variant="primary" onClick={() => follow(true)} loading={busy}>Follow</Button>)}
                         {entity?.followed && (
-                            <Checkbox checked={entity.inBriefing} disabled={busy} onChange={event => inBriefing(event.target.checked)}>
-                                Its news in my briefing
-                            </Checkbox>
+                            <InBriefingCheckbox checked={entity.inBriefing} disabled={busy} onChange={event => inBriefing(event.target.checked)}/>
                         )}
                         <p className="caption">
                             {entity && !entity.followed && 'Followed, its news are in your briefing, in a tab of their own. '}

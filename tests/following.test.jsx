@@ -68,6 +68,21 @@ describe('FollowingPage', () => {
         expect(screen.getByRole('checkbox', {name: 'Its news in my briefing'})).toBeChecked();
     });
 
+    it('should explain the box of the news in the briefing with a small "i", which does not tick it', async () => {
+        EntityApi.list.mockResolvedValueOnce({entities: [{qid: 'Q483020', label: 'Paris Saint-Germain FC', kind: 'club', names: [], links: 0, inBriefing: true}],
+            words: [], limits: {entities: 30, words: 20}});
+        renderFollowing();
+        const tip = await screen.findByRole('button', {name: 'What “Its news in my briefing” means'});
+        // beside the box, not in its label: the box keeps its name
+        expect(screen.getByRole('checkbox', {name: 'Its news in my briefing'})).toBeChecked();
+
+        fireEvent.focus(tip);
+        expect((await screen.findAllByText(/Unticked, you still follow it and keep its page/))[0]).toBeInTheDocument();
+        fireEvent.click(tip);
+        expect(screen.getByRole('checkbox', {name: 'Its news in my briefing'})).toBeChecked();
+        expect(EntityApi.setInBriefing).not.toHaveBeenCalled();
+    });
+
     it('should follow a word as written, and take its news out of the briefing for an item', async () => {
         EntityApi.list.mockResolvedValueOnce({entities: [{qid: 'Q483020', label: 'Paris Saint-Germain FC', kind: 'club', names: [], links: 0, inBriefing: true}],
             words: ['VAR'], limits: {entities: 30, words: 20}});
