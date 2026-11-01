@@ -15,8 +15,9 @@ import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
-import {FollowLimit} from "@/features/briefing/components/FollowLimit.jsx";
-import {DEFAULT_HOURS, spanOf, watchLimitAfter, windowAfter} from "@/features/briefing/windows.js";
+import {FollowingNews} from "@/features/briefing/components/FollowingNews.jsx";
+import {useFollowing} from "@/features/briefing/useFollowing.js";
+import {DEFAULT_HOURS, keepWatchLimit, keptWatchLimit, spanOf, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {EntityApi} from "@/features/entities/entityApi.js";
 import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
@@ -24,7 +25,6 @@ import {keepSize, keptSize} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
-import {WatchedNews} from "@/features/briefing/components/WatchedNews.jsx";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
@@ -64,11 +64,10 @@ export const BriefingPage = () => {
     // after one of a window no longer offered)
     const [chosen, setChosen] = useState(null);
     const hours = chosen ?? windowAfter(briefing?.hours ?? DEFAULT_HOURS);
-    // the news each name followed should have in the next briefing: the ones of the last until the reader
-    // chooses. The bar is shown to a profile that follows something (its items in the briefing, or words)
-    const [chosenLimit, setChosenLimit] = useState(null);
-    const watchLimit = chosenLimit ?? watchLimitAfter(briefing?.watched?.[0]?.limit);
+    // whether the profile follows something (its items in the briefing, or words): the page has a tab for
+    // their news, with the number wanted for each, the last choice of the reader
     const [follows, setFollows] = useState(false);
+    const [watchLimit, setWatchLimit] = useState(keptWatchLimit);
     // the cards of the next briefing, the last choice of the reader
     const [size, setSize] = useState(keptSize);
     // the way the cards are read, the last choice of the reader
@@ -106,7 +105,6 @@ export const BriefingPage = () => {
         setBriefing(undefined);
         setProfile(undefined);
         setChosen(null);
-        setChosenLimit(null);
         setFollows(false);
         ProfileApi.get()
             .then(data => {
@@ -114,7 +112,7 @@ export const BriefingPage = () => {
                 setProfile(data.profile ?? null);
             })
             .catch(err => setError(err.message));
-        // what it follows decides whether the bar of the news wanted is of any use; without the answer, it is hidden
+        // what it follows decides whether the tab of its news is of any use; without the answer, it is hidden
         EntityApi.list()
             .then(data => setFollows(Boolean(data?.entities?.some(entity => entity.inBriefing) || data?.words?.length > 0)))
             .catch(() => setFollows(false));
@@ -147,10 +145,15 @@ export const BriefingPage = () => {
 
     const start = async () => {
         setError(null);
-        const data = await BriefingApi.start(hours, size, watchLimit);
+        const data = await BriefingApi.start(hours, size);
         if (expired(data)) return;
         if (data.error) setError(data.error);
         else setBriefing(data.briefing);
+    };
+
+    const chooseWatchLimit = (value) => {
+        setWatchLimit(value);
+        keepWatchLimit(value);
     };
 
     const chooseSize = (value) => {
@@ -240,10 +243,12 @@ export const BriefingPage = () => {
     const shorter = ready && briefing.items.some(item => item.digest);
 
     // the news of the terms the profile follows, in a tab of their own (#terms in the address, kept when
-    // the page is opened again); none followed, the page has the briefing only
-    const hasTerms = ready && briefing.watched?.length > 0;
-    const watchedCount = hasTerms ? briefing.watched.reduce((sum, group) => sum + group.count, 0) : 0;
+    // the page is opened again); none followed, the page has the briefing only. They are not part of the
+    // briefing: they are searched when the tab is opened, whatever the briefing written
+    const hasTerms = follows;
     const tab = hasTerms && location.hash === '#terms' ? 'terms' : 'briefing';
+    const following = useFollowing(tab === 'terms', watchLimit, active, expired);
+    const watchedCount = following.groups ? following.groups.reduce((sum, group) => sum + group.count, 0) : null;
     const chooseTab = (value) => navigate({pathname: location.pathname, search: location.search, hash: value === 'terms' ? '#terms' : ''}, {replace: true});
     // the stories of the briefing naming a term, shown alone in the tab of the briefing
     const showFound = () => {
@@ -312,20 +317,19 @@ export const BriefingPage = () => {
             <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
                 <h2 id="watched-head" className="section-head">What you follow</h2>
                 <p className="caption mt-2">
-                    {/* the news wanted for each, going back up to 30 days to find them, since 1.11.2026; the window of the briefing before */}
-                    {briefing.watched[0]?.limit
-                        ? `The news of your sources that name one, whatever their relevance, not chosen by the AI: up to ${briefing.watched[0].limit} for each, going back as far as 30 days to find them.`
-                        : `Every news of your sources of the last ${spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one, whatever its relevance, not chosen by the AI.`}
-                    {' '}<Link className="link" to="/following">Change them</Link>.
+                    The news of your sources that name one, whatever their relevance, not chosen by the AI. They are searched
+                    when you open this tab, back to 30 days until each has the number you want. <Link className="link" to="/following">Change them</Link>.
                 </p>
-                {found > 0 && (
+                {ready && found > 0 && (
                     <p className="caption mt-1">
                         <button type="button" onClick={showFound} className="cursor-pointer text-accent-ink underline underline-offset-4 hover:text-ink">
                             {found === 1 ? '1 story of your briefing names them' : `${found} stories of your briefing name them`}
                         </button>
                     </p>
                 )}
-                <div className="mt-6"><WatchedNews watched={briefing.watched}/></div>
+                <div className="mt-6">
+                    <FollowingNews following={following} limit={watchLimit} onLimit={chooseWatchLimit}/>
+                </div>
             </section>
         </div>
     );
@@ -353,7 +357,6 @@ export const BriefingPage = () => {
                             </div>
                         )}
                         <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
-                        {follows && <FollowLimit limit={watchLimit} onChange={setChosenLimit} disabled={running}/>}
                         <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
                         <div className="flex flex-wrap gap-2">
                             <Button variant="primary" onClick={start} loading={running} disabled={running}>
@@ -410,7 +413,7 @@ export const BriefingPage = () => {
                                        className="col-span-12 flex flex-wrap gap-x-8 gap-y-1 border-b border-ink md:col-span-7 md:col-start-3">
                                 <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
                                 <Tabs.Trigger value="terms" className={PAGE_TAB}>
-                                    Following <span className="folio align-middle">{watchedCount}</span>
+                                    Following{watchedCount !== null && <> <span className="folio align-middle">{watchedCount}</span></>}
                                 </Tabs.Trigger>
                             </Tabs.List>
                         </div>
