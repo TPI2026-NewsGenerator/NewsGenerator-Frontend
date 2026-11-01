@@ -8,9 +8,9 @@
 
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
-import {Popover, Tabs} from "radix-ui";
-import {SlidersHorizontal} from "lucide-react";
-import {PageShell, Opening} from "@/components/layout/Page.jsx";
+import {Tabs} from "radix-ui";
+import {PageShell, Opening, Toolbar} from "@/components/layout/Page.jsx";
+import {SettingsPill} from "@/components/ui/settings-pill.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
@@ -337,26 +337,11 @@ export const BriefingPage = () => {
     // way to read, they took the toolbar to two lines on a laptop (the user, 01.11.2026)
     const next = profile !== null && (
         <div className="flex items-center gap-3 md:ml-auto">
-            <Popover.Root>
-                <Popover.Trigger aria-label={`Next briefing: the news of the last ${spanOf(hours)}, ${size} cards. Change`}
-                                 className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full bg-paper-deep px-3.5 text-[0.8125rem] whitespace-nowrap text-ink transition-colors duration-200 hover:bg-rule/60 data-[state=open]:bg-rule/60">
-                    <SlidersHorizontal aria-hidden className="size-3.5 text-ink-mute" strokeWidth={1.75}/>
-                    {spanOf(hours)} · {size} cards
-                </Popover.Trigger>
-                <Popover.Portal>
-                    {/* opened on the bar: on its first "i", the focus opened its tip over the panel */}
-                    <Popover.Content align="end" sideOffset={8} collisionPadding={16}
-                                     onOpenAutoFocus={event => {
-                                         event.preventDefault();
-                                         event.currentTarget.querySelector('[role="slider"]')?.focus();
-                                     }}
-                                     className="raised z-50 w-72 space-y-5 rounded-2xl bg-paper p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)] ring-1 ring-rule/60 outline-none animate-in fade-in-0 zoom-in-[0.98]">
-                        <p className="text-[0.9375rem] font-semibold tracking-[-0.01em]">Next briefing</p>
-                        <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
-                        <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
-                    </Popover.Content>
-                </Popover.Portal>
-            </Popover.Root>
+            <SettingsPill label={`${spanOf(hours)} · ${size} cards`} title="Next briefing"
+                          ariaLabel={`Next briefing: the news of the last ${spanOf(hours)}, ${size} cards. Change`}>
+                <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
+                <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
+            </SettingsPill>
             <Button variant="primary" size="sm" onClick={start} loading={running} disabled={running}>
                 New briefing
             </Button>
@@ -391,16 +376,13 @@ export const BriefingPage = () => {
                     </p>
                 </div>
 
-                {/* one bar for what the page shows and for the next briefing, kept under the masthead while
-                    the cards are read (on a phone it wraps: it stays in the flow there) */}
+                {/* one bar for what the page shows and for the next briefing */}
                 {(tabs || next) && (
-                    <div className="z-30 mt-4 border-y border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150 md:sticky md:top-14 lg:top-16">
-                        <div className="page flex min-h-14 flex-wrap items-center gap-x-5 gap-y-3 py-2.5">
-                            {tabs}
-                            {reading}
-                            {next}
-                        </div>
-                    </div>
+                    <Toolbar>
+                        {tabs}
+                        {reading}
+                        {next}
+                    </Toolbar>
                 )}
 
                 {/* room under the last card for the bar of the e-mail */}

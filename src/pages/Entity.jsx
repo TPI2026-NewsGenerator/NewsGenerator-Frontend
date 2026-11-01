@@ -9,7 +9,9 @@
 
 import {useEffect, useState} from "react";
 import {Link, useParams} from "react-router-dom";
-import {Opening, PageShell} from "@/components/layout/Page.jsx";
+import {X} from "lucide-react";
+import {Opening, PageShell, Toolbar} from "@/components/layout/Page.jsx";
+import {SettingsPill} from "@/components/ui/settings-pill.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Input, Label} from "@/components/ui/field.jsx";
 import {InBriefingCheckbox} from "@/features/entities/components/InBriefingCheckbox.jsx";
@@ -21,7 +23,6 @@ import {EntityApi} from "@/features/entities/entityApi.js";
 import {KIND_LABELS} from "@/features/entities/kinds.js";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
-import {cn} from "@/lib/utils.js";
 import {toast} from "@/lib/toast.js";
 
 const stories = (count) => `${count} ${count === 1 ? 'story' : 'stories'}`;
@@ -43,12 +44,14 @@ const Names = ({entity, onChange, busy}) => {
     return (
         <div>
             <p className="kicker">The names it is found by</p>
-            <ul aria-label="The names it is found by" className="mt-2 flex list-none flex-wrap gap-2 p-0">
+            <ul aria-label="The names it is found by" className="mt-3 flex list-none flex-wrap gap-2 p-0">
                 {entity.names.map(text => (
-                    <li key={text} className="inline-flex items-center gap-1 border border-rule py-0.5 pr-1 pl-2 text-[0.9375rem]">
+                    <li key={text} className="inline-flex h-8 items-center rounded-full bg-paper-deep pr-1 pl-3.5 text-[0.875rem]">
                         {text}
                         <button type="button" disabled={busy} onClick={() => remove(text)} aria-label={`Do not look for “${text}”`}
-                                className="cursor-pointer px-1 text-ink-mute hover:text-accent-ink disabled:opacity-45">×</button>
+                                className="ml-1 inline-flex size-6 cursor-pointer items-center justify-center rounded-full text-ink-mute transition-colors hover:bg-rule/60 hover:text-ink disabled:opacity-40">
+                            <X aria-hidden className="size-3.5"/>
+                        </button>
                     </li>
                 ))}
             </ul>
@@ -58,12 +61,12 @@ const Names = ({entity, onChange, busy}) => {
                     {entity.removedNames.map((text, i) => (
                         <span key={text}>{i > 0 && ', '}
                             <button type="button" disabled={busy} onClick={() => onChange(entity.addedNames, entity.removedNames.filter(other => other !== text))}
-                                    className="cursor-pointer underline underline-offset-4 hover:text-ink" aria-label={`Look for “${text}” again`}>{text}</button>
+                                    className="link cursor-pointer" aria-label={`Look for “${text}” again`}>{text}</button>
                         </span>
                     ))}
                 </p>
             )}
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex max-w-sm gap-2">
                 <div className="min-w-0 flex-1">
                     <Label htmlFor="entity-name" className="sr-only">Another name</Label>
                     <Input id="entity-name" maxLength={60} placeholder="Another name it goes by" value={name}
@@ -168,41 +171,92 @@ export const EntityPage = () => {
             <Opening
                 kicker={entity ? KIND_LABELS[entity.kind] ?? entity.kind : 'Following'}
                 title={entity?.label ?? (error ? 'Not found' : '…')}
-                standfirst={entity?.description}
-                aside={(
-                    <div className="space-y-4">
+                standfirst={entity?.description}/>
+
+            <div className="page mt-8">
+                <p className="caption">
+                    {entity && !entity.followed && 'Followed, its news are in your briefing, in a tab of their own. '}
+                    <Link className="link" to="/following">All you follow</Link>
+                </p>
+            </div>
+
+            {/* following it, and the days of its news: in a column on the right, they made the page two columns
+                (the user, 01.11.2026) */}
+            <Toolbar>
+                {entity && (entity.followed
+                    ? <Button size="sm" onClick={() => follow(false)} loading={busy}>Stop following</Button>
+                    : <Button size="sm" variant="primary" onClick={() => follow(true)} loading={busy}>Follow</Button>)}
+                {entity?.followed && (
+                    <InBriefingCheckbox checked={entity.inBriefing} disabled={busy} className="text-[0.875rem]"
+                                        onChange={event => inBriefing(event.target.checked)}/>
+                )}
+                <div className="md:ml-auto">
+                    <SettingsPill label={spanOf(hours)} ariaLabel={`The news of the last ${spanOf(hours)}. Change`}>
                         <BriefingWindow hours={hours} onChange={setHours} disabled={page === null && !error}
                                         tip="The news of these last days that name it, or what it is linked to, from every source read."/>
-                        {entity && (entity.followed
-                            ? <Button variant="subtle" onClick={() => follow(false)} loading={busy}>Stop following</Button>
-                            : <Button variant="primary" onClick={() => follow(true)} loading={busy}>Follow</Button>)}
-                        {entity?.followed && (
-                            <InBriefingCheckbox checked={entity.inBriefing} disabled={busy} onChange={event => inBriefing(event.target.checked)}/>
-                        )}
-                        <p className="caption">
-                            {entity && !entity.followed && 'Followed, its news are in your briefing, in a tab of their own. '}
-                            <Link className="link" to="/following">All you follow</Link>
-                        </p>
-                    </div>
-                )}/>
+                    </SettingsPill>
+                </div>
+            </Toolbar>
 
-            <div className="page mt-12">
-                {error && <Notice type="error">{error}</Notice>}
-                {page === null && !error && (
-                    <Working>Looking for the news of the last {spanOf(hours)} naming it and its links… (up to half a minute)</Working>
-                )}
-                {page && (
-                    <div className="grid-12 gap-y-12">
-                        <section className="col-span-12 md:col-span-7" aria-labelledby="entity-news">
+            {/* one column: the names it is found by, its news, then what it is linked to and the news of the one chosen */}
+            <div className="page mt-10 md:mt-12">
+                <div className="max-w-[52rem] space-y-16">
+                    {error && <Notice type="error">{error}</Notice>}
+                    {page === null && !error && (
+                        <Working>Looking for the news of the last {spanOf(hours)} naming it and its links… (up to half a minute)</Working>
+                    )}
+                    {page && (entity.followed
+                        ? <Names entity={entity} onChange={setNames} busy={busy}/>
+                        : (
+                            <div>
+                                <p className="kicker">The names it is found by</p>
+                                <p className="caption mt-2">{entity.names.join(' · ')}</p>
+                                <p className="caption mt-1">Follow it to change them.</p>
+                            </div>
+                        ))}
+
+                    {page && (
+                        <section aria-labelledby="entity-news">
                             <h2 id="entity-news" className="section-head">{stories(page.count)} name it</h2>
                             <p className="caption mt-2">
                                 Every news of your sources of the last {spanOf(page.hours)} that names it, whatever its relevance, the newest first.
                             </p>
                             <div className="mt-4"><Term group={{term: entity.label, count: page.count, news: page.news}} heading={false}/></div>
+                        </section>
+                    )}
 
-                            {named.length > 0 && link && (
-                                <div className="mt-14">
-                                    <h2 className="section-head">{link.label}</h2>
+                    {page?.links.length > 0 && (
+                        <section aria-labelledby="entity-links">
+                            <h2 id="entity-links" className="section-head">Linked to it</h2>
+                            <p className="caption mt-2">By Wikidata. Choose one to read its news of the last {spanOf(page.hours)}.</p>
+                            {named.length > 0 && (
+                                <ul aria-label="Linked to it" className="mt-5 flex list-none flex-wrap gap-2 p-0">
+                                    {named.map(other => (
+                                        <li key={other.qid}>
+                                            <button type="button" onClick={() => setChosen(other.qid)} aria-pressed={other.qid === chosen}
+                                                    title={other.relation}
+                                                    className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full bg-paper-deep px-3.5 text-[0.875rem] text-ink transition-colors duration-200 hover:bg-rule/60 aria-pressed:bg-action/12 aria-pressed:text-action-text">
+                                                {other.label}
+                                                <span className="tabular-nums text-ink-mute">{other.count}</span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {silent.length > 0 && (
+                                <details className="mt-4">
+                                    <summary className="caption cursor-pointer">{silent.length} named by no news of the last {spanOf(page.hours)}</summary>
+                                    <p className="caption mt-2">
+                                        {silent.map((other, i) => (
+                                            <span key={other.qid}>{i > 0 && ', '}<Link className="link" to={`/following/${other.qid}`}>{other.label}</Link></span>
+                                        ))}
+                                    </p>
+                                </details>
+                            )}
+
+                            {link && (
+                                <div className="mt-10">
+                                    <h3 className="story-head">{link.label}</h3>
                                     <MetaLine className="mt-1">
                                         <Meta>{link.relation}</Meta>
                                         <Meta>{stories(link.count)}</Meta>
@@ -215,50 +269,8 @@ export const EntityPage = () => {
                                 </div>
                             )}
                         </section>
-
-                        <aside className="col-span-12 space-y-8 md:col-span-4 md:col-start-9">
-                            {entity.followed
-                                ? <Names entity={entity} onChange={setNames} busy={busy}/>
-                                : (
-                                    <div>
-                                        <p className="kicker">The names it is found by</p>
-                                        <p className="caption mt-2">{entity.names.join(' · ')}</p>
-                                        <p className="caption mt-1">Follow it to change them.</p>
-                                    </div>
-                                )}
-                            {page.links.length > 0 && (
-                                <div>
-                                    <p className="kicker">Linked to it, by Wikidata</p>
-                                    <ul aria-label="Linked to it" className="mt-2 list-none border-t border-rule p-0">
-                                        {named.map(other => (
-                                            <li key={other.qid} className="border-b border-rule">
-                                                <button type="button" onClick={() => setChosen(other.qid)} aria-pressed={other.qid === chosen}
-                                                        className={cn('flex w-full cursor-pointer items-baseline justify-between gap-3 py-2 text-left hover:text-action-text',
-                                                            other.qid === chosen ? 'text-ink' : 'text-ink-mute')}>
-                                                    <span className="min-w-0">
-                                                        <span className={cn('block', other.qid === chosen && 'font-semibold')}>{other.label}</span>
-                                                        <span className="caption block">{other.relation}</span>
-                                                    </span>
-                                                    <span className="folio tabular shrink-0">{other.count}</span>
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    {silent.length > 0 && (
-                                        <details className="mt-3">
-                                            <summary className="caption cursor-pointer">{silent.length} named by no news of the last {spanOf(page.hours)}</summary>
-                                            <p className="caption mt-2">
-                                                {silent.map((other, i) => (
-                                                    <span key={other.qid}>{i > 0 && ', '}<Link className="link" to={`/following/${other.qid}`}>{other.label}</Link></span>
-                                                ))}
-                                            </p>
-                                        </details>
-                                    )}
-                                </div>
-                            )}
-                        </aside>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </PageShell>
     );

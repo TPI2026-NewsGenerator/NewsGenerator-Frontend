@@ -9,7 +9,8 @@
 
 import {useEffect, useState} from "react";
 import {Link, Navigate, useParams} from "react-router-dom";
-import {Opening, PageShell} from "@/components/layout/Page.jsx";
+import {Opening, PageShell, Toolbar} from "@/components/layout/Page.jsx";
+import {SettingsPill} from "@/components/ui/settings-pill.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
@@ -73,38 +74,45 @@ export const NamePage = () => {
             <Opening
                 kicker="A name"
                 title={page?.name ?? name}
-                standfirst="As written in the news: Wikidata does not have it as one item, or not yet."
-                aside={(
-                    <div className="space-y-4">
+                standfirst="As written in the news: Wikidata does not have it as one item, or not yet."/>
+
+            <div className="page mt-8">
+                <p className="caption">
+                    {page?.followed ? 'Its news are in your briefing. ' : 'Followed, its news are in your briefing. '}
+                    <Link className="link" to="/following">All you follow</Link>
+                </p>
+            </div>
+
+            {/* following it, and the days of its news, in one bar as on the page of an item */}
+            <Toolbar>
+                {page && (page.followed
+                    ? <Button size="sm" onClick={() => follow(false)} loading={busy}>Stop following</Button>
+                    : <Button size="sm" variant="primary" onClick={() => follow(true)} loading={busy} disabled={page.wordsLeft === 0}>Follow</Button>)}
+                {page && !page.followed && page.wordsLeft === 0 && (
+                    <p className="caption">You follow as many names or words as written as you can: stop following one first.</p>
+                )}
+                <div className="md:ml-auto">
+                    <SettingsPill label={spanOf(hours)} ariaLabel={`The news of the last ${spanOf(hours)}. Change`}>
                         <BriefingWindow hours={hours} onChange={setHours} disabled={page === null && !error}
                                         tip="The news of these last days that name it, from every source read."/>
-                        {page && (page.followed
-                            ? <Button variant="subtle" onClick={() => follow(false)} loading={busy}>Stop following</Button>
-                            : <Button variant="primary" onClick={() => follow(true)} loading={busy} disabled={page.wordsLeft === 0}>Follow</Button>)}
-                        {page && !page.followed && page.wordsLeft === 0 && (
-                            <p className="caption">You follow as many names or words as written as you can: stop following one first.</p>
-                        )}
-                        <p className="caption">
-                            {page?.followed ? 'Its news are in your briefing. ' : 'Followed, its news are in your briefing. '}
-                            <Link className="link" to="/following">All you follow</Link>
-                        </p>
-                    </div>
-                )}/>
+                    </SettingsPill>
+                </div>
+            </Toolbar>
 
-            <div className="page mt-12">
-                {error && <Notice type="error">{error}</Notice>}
-                {page === null && !error && <Working>Looking for the news of the last {spanOf(hours)} naming it…</Working>}
-                {page && (
-                    <div className="grid-12">
-                        <section className="col-span-12 md:col-span-7" aria-labelledby="name-news">
+            <div className="page mt-10 md:mt-12">
+                <div className="max-w-[52rem]">
+                    {error && <Notice type="error">{error}</Notice>}
+                    {page === null && !error && <Working>Looking for the news of the last {spanOf(hours)} naming it…</Working>}
+                    {page && (
+                        <section aria-labelledby="name-news">
                             <h2 id="name-news" className="section-head">{stories(page.count)} name it</h2>
                             <p className="caption mt-2">
                                 Every news of your sources of the last {spanOf(page.hours)} that names it, whatever its relevance, the newest first.
                             </p>
                             <div className="mt-4"><Term group={{term: page.name, count: page.count, news: page.news}} heading={false}/></div>
                         </section>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </PageShell>
     );

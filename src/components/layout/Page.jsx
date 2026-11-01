@@ -3,7 +3,7 @@
 //  Date: 28.09.2026
 //  File: Page.jsx
 //  Description: The frame of a page: the navigation bar, the opening of the page, the heads of its
-//               sections, the bar of the sections of a long page, and the footer at the bottom
+//               sections, the bars of its controls and of the sections of a long page, and the footer
 //
 
 import {useEffect, useState} from "react";
@@ -22,20 +22,14 @@ export const PageShell = ({user, onSignOut, children}) => (
     </div>
 );
 
-// the opening of a page: eyebrow, headline and lead on the left, a quiet column on the right
-export const Opening = ({kicker, title, standfirst, aside}) => (
+// the opening of a page: eyebrow, headline and lead, the whole width (what a page controls goes in its
+// Toolbar under it, never in a column beside)
+export const Opening = ({kicker, title, standfirst}) => (
     <section className="page pt-16 md:pt-28">
-        <div className="grid-12">
-            <p className="kicker kicker-rule col-span-12 mb-4">{kicker}</p>
-            <div className="col-span-12 md:col-span-9">
-                <h1 className="display text-balance">{title}</h1>
-                {standfirst && <p className="standfirst mt-6">{standfirst}</p>}
-            </div>
-            {aside && (
-                <aside className="col-span-12 mt-12 md:col-span-3 md:col-start-10 md:mt-3">
-                    {aside}
-                </aside>
-            )}
+        <p className="kicker kicker-rule mb-4">{kicker}</p>
+        <div className="max-w-[60rem]">
+            <h1 className="display text-balance">{title}</h1>
+            {standfirst && <p className="standfirst mt-6">{standfirst}</p>}
         </div>
     </section>
 );
@@ -53,6 +47,14 @@ export const Section = ({kicker, title, intro, aside, className, children, id}) 
         </div>
         <div className="mt-10 md:mt-12">{children}</div>
     </section>
+);
+
+// the controls of a page in one bar under its opening, kept under the masthead while the page is read
+// (on a phone it wraps: it stays in the flow there)
+export const Toolbar = ({children}) => (
+    <div className="z-30 mt-4 border-y border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150 md:sticky md:top-14 lg:top-16">
+        <div className="page flex min-h-14 flex-wrap items-center gap-x-5 gap-y-3 py-2.5">{children}</div>
+    </div>
 );
 
 // the sections of a long page, a link each, in a bar kept under the masthead; the one read is raised.
