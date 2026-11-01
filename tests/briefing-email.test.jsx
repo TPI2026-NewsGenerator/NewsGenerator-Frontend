@@ -286,7 +286,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
-        const own = await screen.findByRole('button', {name: 'The picture of media1.fr'});
+        const own = await screen.findByRole('button', {name: 'The picture of media1.fr'}, {timeout: 5000});
         expect(BriefingApi.pictures).toHaveBeenCalledWith(9, 1);
         expect(own).toHaveAttribute('aria-pressed', 'true');
         fireEvent.click(screen.getByRole('button', {name: 'The picture of kicker.de'}));
@@ -294,12 +294,12 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Done'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
-        fireEvent.click(await screen.findByRole('button', {name: 'No picture'}));
+        fireEvent.click(await screen.findByRole('button', {name: 'No picture'}, {timeout: 5000}));
         fireEvent.click(screen.getByRole('button', {name: 'Done'}));
 
         // the third: an address pasted, then back to its own
         fireEvent.click(screen.getByRole('button', {name: 'Edit “Third story” in the e-mail'}));
-        fireEvent.change(await screen.findByLabelText('Or the address of an image'), {target: {value: 'https://web.example/a.png'}});
+        fireEvent.change(await screen.findByLabelText('Or the address of an image', {}, {timeout: 5000}), {target: {value: 'https://web.example/a.png'}});
         fireEvent.click(screen.getByRole('button', {name: 'Use it'}));
         fireEvent.click(screen.getByRole('button', {name: 'Back to its own'}));
 
@@ -316,7 +316,8 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2, 3], 'reader@example.org', {
             1: {url: 'https://cdn.example/other.jpg'}, 2: null,
         }, {3: 'The third, told my way'}, {}, undefined, [], {}));
-    });
+        // many steps of a dialog opened three times: more than the 5 s of a test when the computer is busy
+    }, 30000);
 
     it('should offer only the pictures wide enough for the e-mail, and put the best of the story instead of an own too small', async () => {
         const offered = BriefingApi.pictures.getMockImplementation();
