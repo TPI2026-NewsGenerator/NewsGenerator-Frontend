@@ -65,6 +65,45 @@ describe('createTranslator', () => {
     });
 });
 
+describe('createTranslator for the passages of a description', () => {
+    it('should ask the passages with the titles, each once, and keep the answer by news and text', async () => {
+        vi.useFakeTimers();
+        const translate = vi.fn(async ({titles, excerpts}) => [
+            ...titles.map(url => ({url, language: 'de', title: 'Le titre', description: null})),
+            {url: 'https://a.test', text: '…Der VAR griff ein…', language: 'de', excerpt: '…Le VAR est intervenu…'},
+        ]);
+        const translator = createTranslator('fr', translate);
+
+        translator.request('https://a.test', false);
+        translator.requestExcerpt('https://a.test', '…Der VAR griff ein…');
+        translator.requestExcerpt('https://a.test', '…Der VAR griff ein…');
+        translator.requestExcerpt('https://b.test', 'Ein anderer Satz');
+        await act(async () => vi.runAllTimersAsync());
+
+        expect(translate).toHaveBeenCalledTimes(1);
+        expect(translate).toHaveBeenCalledWith({news: [], titles: ['https://a.test'], excerpts: [
+            {url: 'https://a.test', text: '…Der VAR griff ein…'}, {url: 'https://b.test', text: 'Ein anderer Satz'}]});
+        // the title and the passage of one news do not take the place of each other
+        expect(translator.get('https://a.test').title).toBe('Le titre');
+        expect(translator.getExcerpt('https://a.test', '…Der VAR griff ein…').excerpt).toBe('…Le VAR est intervenu…');
+        // asked, no translation: shown as written and not asked again
+        expect(translator.getExcerpt('https://b.test', 'Ein anderer Satz')).toBeNull();
+        translator.requestExcerpt('https://b.test', 'Ein anderer Satz');
+        await act(async () => vi.runAllTimersAsync());
+        expect(translate).toHaveBeenCalledTimes(1);
+        vi.useRealTimers();
+    });
+
+    it('should not send the passages when there are none', async () => {
+        vi.useFakeTimers();
+        const translate = vi.fn(async () => []);
+        createTranslator('fr', translate).request('https://a.test', true);
+        await act(async () => vi.runAllTimersAsync());
+        expect(translate).toHaveBeenCalledWith({news: ['https://a.test'], titles: []});
+        vi.useRealTimers();
+    });
+});
+
 describe('Article in another language', () => {
     it('should show the translation, marked, with the title as written under it', async () => {
         const translate = vi.fn(async () => [{url: 'https://kicker.test/1', language: 'de',

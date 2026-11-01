@@ -197,6 +197,31 @@ describe('BriefingPage tabs', () => {
         expect(screen.getByRole('link', {name: 'VAR news'})).toBeInTheDocument();
     });
 
+    it('should translate the words of the description around the name too, with the words as written under them', async () => {
+        follows();
+        const excerpt = '…Der Schiedsrichter nutzte den VAR in der 80. Minute…';
+        BriefingApi.following.mockResolvedValue({limit: 100, groups: [{term: 'VAR', count: 2, hours: 24, limit: 100, news: [
+            {title: 'Elfmeter nach Videobeweis', url: 'https://x/de-1', link: 'https://x/de-1', source: 'x.de', language: 'de', excerpt, marks: {excerpt: [[40, 43]]}},
+            {title: 'La VAR décide', url: 'https://x/fr-1', link: 'https://x/fr-1', source: 'x.fr', language: 'fr', excerpt: 'Un extrait en français.'},
+        ]}]});
+        translate.translateNews.mockResolvedValue({translations: [
+            {url: 'https://x/de-1', language: 'de', title: 'Penalty after the video', description: null},
+            {url: 'https://x/de-1', text: excerpt, language: 'de', excerpt: '…The referee used the VAR in the 80th minute…'},
+        ]});
+        await renderPage();
+        fireEvent.mouseDown(await followingTab());
+
+        // the words of the description in the language of the reader, the ones as written in italics under them
+        expect(await screen.findByText('…The referee used the VAR in the 80th minute…')).toBeInTheDocument();
+        expect(screen.getByText('Penalty after the video')).toBeInTheDocument();
+        expect(screen.getByText(/“…Der Schiedsrichter nutzte den/)).toBeInTheDocument();
+        expect(screen.getByText(/translated from German/)).toBeInTheDocument();
+        // asked once with the title, the passage as the page shows it; the news in the reader's language is not asked
+        expect(translate.translateNews).toHaveBeenCalledTimes(1);
+        expect(translate.translateNews).toHaveBeenCalledWith({news: [], titles: ['https://x/de-1'], excerpts: [{url: 'https://x/de-1', text: excerpt}]}, 'fr');
+        expect(screen.getByText('Un extrait en français.')).toBeInTheDocument();
+    });
+
     it('should show a title as written when it could not be translated', async () => {
         follows();
         BriefingApi.following.mockResolvedValue({limit: 100, groups: [{term: 'VAR', count: 1, hours: 24, limit: 100, news: [

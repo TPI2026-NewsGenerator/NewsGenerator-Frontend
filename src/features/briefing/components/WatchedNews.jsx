@@ -21,34 +21,42 @@ const SHOWN = 8;
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 
-// A news of the list. Written in another language than the reader's, its title is translated when the
-// row comes near the screen (the translator of the page, see FollowingNews and search/translation.js), shown
-// marked as translated with the title as written under it in italics; without a translator, as written
+// A news of the list, with the words of its description. Written in another language than the reader's, its
+// title and those words are translated when the row comes near the screen (the translator of the page, see
+// FollowingNews and search/translation.js), shown marked as translated with the title and the words as written
+// under them in italics; without a translator, as written
 const News = ({news}) => {
-    const {ref, translation} = useTranslation(news.link, news.language, {withDescription: false});
-    const translated = Boolean(translation?.title);
+    const {ref, translation, excerpt} = useTranslation(news.link, news.language, {withDescription: false, excerpt: news.excerpt});
+    const translated = Boolean(translation?.title) || Boolean(excerpt);
     return (
         <li ref={ref} className="body-text">
             <a href={news.url} target="_blank" rel="noreferrer" className="link">
-                {translated ? translation.title : <Marked text={news.title} marks={news.marks?.title}/>}
+                {translation?.title ? translation.title : <Marked text={news.title} marks={news.marks?.title}/>}
             </a>
             {/* the title as written, with the places of the terms */}
-            {translated && (
+            {translation?.title && (
                 <span lang={translation.language} className="caption mt-0.5 block italic">
                     “<Marked text={news.title} marks={news.marks?.title}/>”
                 </span>
             )}
-            {/* the title does not name it: the words of the news around it */}
-            {news.excerpt && (
+            {/* the words of its description (around the name when it is there), translated with the words as written under */}
+            {news.excerpt && (excerpt ? (
+                <>
+                    <span className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80">{excerpt}</span>
+                    <span lang={news.language ?? undefined} className="caption mt-0.5 block italic">
+                        “<Marked text={news.excerpt} marks={news.marks?.excerpt}/>”
+                    </span>
+                </>
+            ) : (
                 <span lang={news.language ?? undefined} className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80">
                     <Marked text={news.excerpt} marks={news.marks?.excerpt}/>
                 </span>
-            )}
+            ))}
             <span className="caption block">
                 {news.source}<LanguageMark code={news.language}/>
                 {news.publishedAt && <> · <time dateTime={news.publishedAt}>{when(news.publishedAt)}</time></>}
                 {news.media > 1 && <> · told by {news.media} media</>}
-                {translated && <span title="Machine translation: it may contain errors"> · translated from {languageLabel(translation.language)}</span>}
+                {translated && <span title="Machine translation: it may contain errors"> · translated from {languageLabel(translation?.language ?? news.language)}</span>}
             </span>
         </li>
     );

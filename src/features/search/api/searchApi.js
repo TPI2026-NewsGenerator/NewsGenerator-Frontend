@@ -27,12 +27,13 @@ export const SearchApi = {
     },
     // the titles and descriptions of the cards reached ('news', 30 max) and the titles of the facts of
     // their affairs ('titles', 60 max), translated into the language searched when written in another:
-    // {translations: [{url, language, title, description}]}
-    translateNews: async ({news, titles}, language) => {
+    // {translations: [{url, language, title, description}]}. excerpts: [{url, text}], the words of a description
+    // around a name followed (30 max), answered [{url, text, language, excerpt}] after the others
+    translateNews: async ({news, titles, excerpts}, language) => {
         const response = await fetch(`${API_URL}/news/translations`, {
             method: 'POST',
             headers: withProfile({'Content-Type': 'application/json'}),
-            body: JSON.stringify({news, titles, language}),
+            body: JSON.stringify({news, titles, ...(excerpts ? {excerpts} : {}), language}),
         });
 
         return await response.json();
