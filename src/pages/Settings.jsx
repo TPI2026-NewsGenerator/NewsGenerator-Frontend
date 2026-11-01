@@ -29,7 +29,7 @@ const PasswordField = ({id, label, value, onChange, autoComplete, error, help}) 
         <div>
             <div className="flex items-baseline justify-between">
                 <Label htmlFor={id}>{label}</Label>
-                <button type="button" className="kicker cursor-pointer hover:text-ink" onClick={() => setShown(!shown)}
+                <button type="button" className="cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4" onClick={() => setShown(!shown)}
                         aria-controls={id} aria-pressed={shown}>
                     {shown ? 'Hide' : 'Show'}
                 </button>
@@ -127,28 +127,26 @@ export const SettingsPage = () => {
 
             {error && (
                 <div className="page mt-10">
-                    <div className="grid-12">
-                        <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-8">{error}</Notice>
-                    </div>
+                    <Notice type="error" onClose={() => setError(null)} className="max-w-[52rem]">{error}</Notice>
                 </div>
             )}
 
             <Section kicker="Sign in" title="Your username"
                      intro="You sign in with it, and it is shown at the top of the pages.">
-                <form className="grid-12 gap-y-7" onSubmit={rename} noValidate>
-                    <div className="col-span-12 md:col-span-6">
+                <form className="max-w-[28rem] space-y-6" onSubmit={rename} noValidate>
+                    <div>
                         <Label htmlFor="settings-username">Username</Label>
                         <Input id="settings-username" autoComplete="username" value={name.username}
                                onChange={event => setName({...name, username: event.target.value})}
                                invalid={Boolean(errors.username)} aria-describedby={errors.username ? 'settings-username-error' : undefined}/>
                         <FieldError id="settings-username-error">{errors.username}</FieldError>
                     </div>
-                    <div className="col-span-12 md:col-span-6">
+                    <div>
                         <PasswordField id="rename-password" label="Current password" autoComplete="current-password"
                                        value={name.password} onChange={password => setName({...name, password})}
                                        error={errors.renamePassword}/>
                     </div>
-                    <div className="col-span-12">
+                    <div className="pt-2">
                         <Button type="submit" variant="primary" loading={sending === 'username'}
                                 disabled={sending !== null || name.username.trim() === user?.username}>
                             Change my username
@@ -159,20 +157,20 @@ export const SettingsPage = () => {
 
             <Section kicker="E-mail" title="Your email"
                      intro="The stories of your briefing you send by e-mail go to it, unless you write another address when you send them.">
-                <form className="grid-12 gap-y-7" onSubmit={changeEmail} noValidate>
-                    <div className="col-span-12 md:col-span-6">
+                <form className="max-w-[28rem] space-y-6" onSubmit={changeEmail} noValidate>
+                    <div>
                         <Label htmlFor="settings-email">Email</Label>
                         <Input id="settings-email" type="email" autoComplete="email" value={mail.email}
                                onChange={event => setMail({...mail, email: event.target.value})}
                                invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'settings-email-error' : undefined}/>
                         <FieldError id="settings-email-error">{errors.email}</FieldError>
                     </div>
-                    <div className="col-span-12 md:col-span-6">
+                    <div>
                         <PasswordField id="email-password" label="Current password" autoComplete="current-password"
                                        value={mail.password} onChange={password => setMail({...mail, password})}
                                        error={errors.emailPassword}/>
                     </div>
-                    <div className="col-span-12">
+                    <div className="pt-2">
                         <Button type="submit" variant="primary" loading={sending === 'email'}
                                 disabled={sending !== null || mail.email.trim() === user?.email}>
                             Change my email
@@ -183,24 +181,24 @@ export const SettingsPage = () => {
 
             <Section kicker="Security" title="Your password"
                      intro={`${MIN_PASSWORD} characters at least. A sentence of a few words is easier to remember than a word with symbols, and harder to guess.`}>
-                <form className="grid-12 gap-y-7" onSubmit={changePassword} noValidate>
+                <form className="max-w-[28rem] space-y-6" onSubmit={changePassword} noValidate>
                     <input type="text" name="username" autoComplete="username" value={user?.username ?? ''} readOnly hidden/>
-                    <div className="col-span-12 md:col-span-6">
+                    <div>
                         <PasswordField id="current-password" label="Current password" autoComplete="current-password"
                                        value={secret.password} onChange={password => setSecret({...secret, password})}
                                        error={errors.password}/>
                     </div>
-                    <div className="col-span-12 md:col-span-6 md:col-start-1">
+                    <div>
                         <PasswordField id="new-password" label="New password" autoComplete="new-password"
                                        value={secret.newPassword} onChange={newPassword => setSecret({...secret, newPassword})}
                                        error={errors.newPassword} help={`At least ${MIN_PASSWORD} characters.`}/>
                     </div>
-                    <div className="col-span-12 md:col-span-6">
+                    <div>
                         <PasswordField id="again-password" label="New password again" autoComplete="new-password"
                                        value={secret.again} onChange={again => setSecret({...secret, again})}
                                        error={errors.again}/>
                     </div>
-                    <div className="col-span-12">
+                    <div className="pt-2">
                         <Button type="submit" variant="primary" loading={sending === 'password'} disabled={sending !== null}>
                             Change my password
                         </Button>

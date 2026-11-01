@@ -79,8 +79,8 @@ export const LoginPage = () => {
 
     return (
         <AuthShell>
-            <div className="grid-12 gap-y-14">
-                <div className="col-span-12 md:col-span-6">
+            <div className="max-w-[60rem]">
+                <div>
                     <p className="kicker kicker-rule mb-6">Your daily briefing</p>
                     <h1 className="display text-balance">The news you follow, read and chosen for you.</h1>
                     <p className="standfirst mt-6">
@@ -89,9 +89,10 @@ export const LoginPage = () => {
                     </p>
                 </div>
 
-                <div className="col-span-12 md:col-span-4 md:col-start-9 md:mt-3">
+                {/* under the title, on its left edge: beside it, the page was two columns */}
+                <div className="mt-14 max-w-[24rem] md:mt-20">
                     <h2 className="section-head">Login</h2>
-                    <form className="mt-8 space-y-7" onSubmit={handleSubmit} noValidate>
+                    <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
                         <div>
                             <Label htmlFor="username">Username</Label>
                             <Input id="username" name="username" autoComplete="username" value={formValue.username}
@@ -102,7 +103,7 @@ export const LoginPage = () => {
                         <div>
                             <div className="flex items-baseline justify-between">
                                 <Label htmlFor="password">Password</Label>
-                                <button type="button" className="kicker cursor-pointer hover:text-ink"
+                                <button type="button" className="cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4"
                                         onClick={() => setShowPassword(!showPassword)}
                                         aria-controls="password" aria-pressed={showPassword}>
                                     {showPassword ? 'Hide' : 'Show'}

@@ -100,8 +100,8 @@ export const SignupPage = () => {
     if (options.signup === false) {
         return (
             <AuthShell>
-                <div className="grid-12 gap-y-14">
-                    <div className="col-span-12 md:col-span-6">
+                <div className="max-w-[60rem]">
+                    <div>
                         <p className="kicker kicker-rule mb-6">Your daily briefing</p>
                         <h1 className="display text-balance">Account creation is closed.</h1>
                         <p className="standfirst mt-6">
@@ -118,8 +118,8 @@ export const SignupPage = () => {
 
     return (
         <AuthShell>
-            <div className="grid-12 gap-y-14">
-                <div className="col-span-12 md:col-span-4">
+            <div className="max-w-[60rem]">
+                <div>
                     <p className="kicker kicker-rule mb-6">Your daily briefing</p>
                     <h1 className="display text-balance">Tell us what you follow.</h1>
                     <p className="standfirst mt-6">
@@ -129,9 +129,10 @@ export const SignupPage = () => {
                     </p>
                 </div>
 
-                <form className="col-span-12 space-y-10 md:col-span-7 md:col-start-6 md:mt-3"
+                {/* under the title, on its left edge: beside it, the page was two columns */}
+                <form className="mt-14 max-w-[40rem] space-y-16 md:mt-20"
                       onSubmit={handleSubmit} noValidate>
-                    <fieldset className="min-w-0 space-y-7 border-0 p-0">
+                    <fieldset className="min-w-0 max-w-[28rem] space-y-6 border-0 p-0">
                         <legend className="section-head mb-8">Your account</legend>
                         <div>
                             <Label htmlFor="username">Username</Label>
@@ -150,7 +151,7 @@ export const SignupPage = () => {
                         <div>
                             <div className="flex items-baseline justify-between">
                                 <Label htmlFor="password">Password</Label>
-                                <button type="button" className="kicker cursor-pointer hover:text-ink"
+                                <button type="button" className="cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4"
                                         onClick={() => setShowPassword(!showPassword)}
                                         aria-controls="password" aria-pressed={showPassword}>
                                     {showPassword ? 'Hide' : 'Show'}
@@ -164,7 +165,7 @@ export const SignupPage = () => {
                         </div>
                     </fieldset>
 
-                    <fieldset className="min-w-0 space-y-7 border-0 p-0">
+                    <fieldset className="min-w-0 space-y-6 border-0 p-0">
                         <legend className="section-head mb-8">What you want to read</legend>
                         {/* first: the questions are asked in it */}
                         <div>
