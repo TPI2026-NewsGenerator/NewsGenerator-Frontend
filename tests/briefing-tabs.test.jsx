@@ -17,6 +17,10 @@ vi.mock('@/features/briefing/api/briefingApi.js', () => ({
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},
 }));
 
+vi.mock('@/features/entities/entityApi.js', () => ({
+    EntityApi: {list: vi.fn(async () => ({entities: [], words: []}))},
+}));
+
 const {BriefingApi} = await import('@/features/briefing/api/briefingApi.js');
 const {BriefingPage} = await import('@/pages/Briefing.jsx');
 
@@ -87,6 +91,31 @@ describe('BriefingPage tabs', () => {
 
         fireEvent.mouseDown(screen.getByRole('tab', {name: 'Following 3'}));
         expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull();
+    });
+
+    it('should say the news wanted for each term and that the search goes back up to a month, for a new briefing', async () => {
+        await renderPage(briefingWith({watched: watched.map(group => ({...group, hours: 720, limit: 50}))}), '/briefing#terms');
+        expect(screen.getByText(/up to 50 for each, going back as far as 30 days to find them/)).toBeInTheDocument();
+        // and for each tab the days the search went back
+        expect(screen.getByText(/2 stories name “VAR” in the last 30 days\./)).toBeInTheDocument();
+    });
+
+    it('should say the window of the briefing for the news of the terms of a briefing written before the month', async () => {
+        await renderPage(briefingWith(), '/briefing#terms');
+        expect(screen.getByText(/of your sources of the last 24 hours that names one/)).toBeInTheDocument();
+    });
+
+    it('should tell how far back the news listed reach when more name the term than are listed', async () => {
+        const capped = [{term: 'UEFA', qid: 'Q35572', count: 4907, hours: 24, limit: 100, news: [
+            {title: 'UEFA fines a club', url: 'https://x/1', source: 'x.fr', publishedAt: '2026-10-31T12:00:00.000Z'},
+            {title: 'UEFA opens a case', url: 'https://x/2', source: 'x.fr', publishedAt: '2026-10-28T12:00:00.000Z'},
+        ]}];
+        await renderPage(briefingWith({watched: capped}));
+        fireEvent.mouseDown(screen.getByRole('tab', {name: 'Following 4907'}));
+        expect(screen.getByText('UEFA fines a club')).toBeInTheDocument();
+        expect(screen.getByText(/The 2 newest are listed, back to 28 Oct\./)).toBeInTheDocument();
+        // a single term has no tab: the days are told in its heading
+        expect(screen.getByText('4907 stories in 24 hours')).toBeInTheDocument();
     });
 
     it('should have no tab when the profile follows no term', async () => {

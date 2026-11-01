@@ -29,6 +29,10 @@ vi.stubGlobal('Image', class {
     }
 });
 
+vi.mock('@/features/entities/entityApi.js', () => ({
+    EntityApi: {list: vi.fn(async () => ({entities: [], words: []}))},
+}));
+
 const {BriefingApi} = await import('@/features/briefing/api/briefingApi.js');
 const {BriefingPage} = await import('@/pages/Briefing.jsx');
 

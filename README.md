@@ -8,7 +8,9 @@ and write it; the AI reads interests in it, and the server reads the news of the
 them and of the ones every reader added. The pages:
 
 - **Briefing** (`/briefing`, the home page): written on demand, the stories of the last 1 to 7 days
-  (a bar, 2 days by default) closest to the profile, 10, 20 or 30 cards. Each card has its key
+  (a bar, 2 days by default) closest to the profile, 10, 20 or 30 cards; a second bar (10 to 100, shown to a
+  profile that follows something) says how many news each name followed should have in its tab, the search
+  going back up to 30 days to find them. Each card has its key
   sentences as published, read as bullet points, a summary of 5 to 6 lines or the key passages, why
   it was chosen, the media that tell it and how many of them wrote their own text, who it credits,
   who denies it, other angles of the same affair, the posts where a party said it itself (official

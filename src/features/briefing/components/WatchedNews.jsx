@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 08.10.2026
 //  File: WatchedNews.jsx
-//  Description: The news of what the profile follows: every one of the window that names one, listed
+//  Description: The news of what the profile follows: the ones that name one, as many as the reader wants,
 //               apart from the cards, the newest first, a tab for each club, person, organisation or
 //               word followed
 //
@@ -12,9 +12,11 @@ import {Link} from "react-router-dom";
 import {Tabs} from "radix-ui";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
 import {Marked} from "@/components/news/Marked.jsx";
+import {spanOf} from "@/features/briefing/windows.js";
 
 const SHOWN = 8;
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 
 // heading: the term named above its news, when it has no tab of its own. Also the news of a club or a
 // person followed (see pages/Entity.jsx)
@@ -25,7 +27,7 @@ export const Term = ({group, heading = true}) => {
         <section className={heading ? 'border-t border-rule pt-5' : ''}>
             {heading && (
                 <h3 className="font-display text-[1.35rem] leading-tight">
-                    {group.qid ? group.term : `“${group.term}”`} <span className="folio align-middle">{group.count} {group.count === 1 ? 'story' : 'stories'}</span>
+                    {group.qid ? group.term : `“${group.term}”`} <span className="folio align-middle">{group.count} {group.count === 1 ? 'story' : 'stories'}{group.hours && ` in ${spanOf(group.hours)}`}</span>
                 </h3>
             )}
             {group.news.length === 0 ? (
@@ -57,7 +59,11 @@ export const Term = ({group, heading = true}) => {
                     {all ? 'show less' : `show the ${group.news.length - SHOWN} others`}
                 </button>
             )}
-            {group.count > group.news.length && <p className="caption mt-1">The {group.news.length} newest are listed.</p>}
+            {group.count > group.news.length && (
+                <p className="caption mt-1">
+                    The {group.news.length} newest are listed{group.news.at(-1)?.publishedAt && <>, back to {day(group.news.at(-1).publishedAt)}</>}.
+                </p>
+            )}
         </section>
     );
 };
@@ -85,7 +91,8 @@ export const WatchedNews = ({watched}) => {
             {watched.map(group => (
                 <Tabs.Content key={tabOf(group)} value={tabOf(group)} className="pt-4 outline-none focus-visible:ring-1 focus-visible:ring-ink">
                     <p className="caption">
-                        {group.count} {group.count === 1 ? 'story names' : 'stories name'} {group.qid ? group.term : `“${group.term}”`}.{' '}
+                        {/* the window the search went back to, absent from the briefings before 1.11.2026 */}
+                        {group.count} {group.count === 1 ? 'story names' : 'stories name'} {group.qid ? group.term : `“${group.term}”`}{group.hours && ` in the last ${spanOf(group.hours)}`}.{' '}
                         <Link className="link" to={group.qid ? `/following/${group.qid}` : `/following/name/${encodeURIComponent(group.term)}`}>Its page</Link>
                     </p>
                     <Term group={group} heading={false}/>

@@ -15,8 +15,10 @@ import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
-import {DEFAULT_HOURS, spanOf, windowAfter} from "@/features/briefing/windows.js";
+import {FollowLimit} from "@/features/briefing/components/FollowLimit.jsx";
+import {DEFAULT_HOURS, spanOf, watchLimitAfter, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
+import {EntityApi} from "@/features/entities/entityApi.js";
 import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {keepSize, keptSize} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
@@ -62,6 +64,11 @@ export const BriefingPage = () => {
     // after one of a window no longer offered)
     const [chosen, setChosen] = useState(null);
     const hours = chosen ?? windowAfter(briefing?.hours ?? DEFAULT_HOURS);
+    // the news each name followed should have in the next briefing: the ones of the last until the reader
+    // chooses. The bar is shown to a profile that follows something (its items in the briefing, or words)
+    const [chosenLimit, setChosenLimit] = useState(null);
+    const watchLimit = chosenLimit ?? watchLimitAfter(briefing?.watched?.[0]?.limit);
+    const [follows, setFollows] = useState(false);
     // the cards of the next briefing, the last choice of the reader
     const [size, setSize] = useState(keptSize);
     // the way the cards are read, the last choice of the reader
@@ -99,12 +106,18 @@ export const BriefingPage = () => {
         setBriefing(undefined);
         setProfile(undefined);
         setChosen(null);
+        setChosenLimit(null);
+        setFollows(false);
         ProfileApi.get()
             .then(data => {
                 if (expired(data)) return;
                 setProfile(data.profile ?? null);
             })
             .catch(err => setError(err.message));
+        // what it follows decides whether the bar of the news wanted is of any use; without the answer, it is hidden
+        EntityApi.list()
+            .then(data => setFollows(Boolean(data?.entities?.some(entity => entity.inBriefing) || data?.words?.length > 0)))
+            .catch(() => setFollows(false));
         load();
     }, [user, logout, expired, load, active]);
 
@@ -134,7 +147,7 @@ export const BriefingPage = () => {
 
     const start = async () => {
         setError(null);
-        const data = await BriefingApi.start(hours, size);
+        const data = await BriefingApi.start(hours, size, watchLimit);
         if (expired(data)) return;
         if (data.error) setError(data.error);
         else setBriefing(data.briefing);
@@ -299,8 +312,11 @@ export const BriefingPage = () => {
             <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
                 <h2 id="watched-head" className="section-head">What you follow</h2>
                 <p className="caption mt-2">
-                    Every news of your sources of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one,
-                    whatever its relevance, not chosen by the AI. <Link className="link" to="/following">Change them</Link>.
+                    {/* the news wanted for each, going back up to 30 days to find them, since 1.11.2026; the window of the briefing before */}
+                    {briefing.watched[0]?.limit
+                        ? `The news of your sources that name one, whatever their relevance, not chosen by the AI: up to ${briefing.watched[0].limit} for each, going back as far as 30 days to find them.`
+                        : `Every news of your sources of the last ${spanOf(briefing.hours ?? DEFAULT_HOURS)} that names one, whatever its relevance, not chosen by the AI.`}
+                    {' '}<Link className="link" to="/following">Change them</Link>.
                 </p>
                 {found > 0 && (
                     <p className="caption mt-1">
@@ -337,6 +353,7 @@ export const BriefingPage = () => {
                             </div>
                         )}
                         <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
+                        {follows && <FollowLimit limit={watchLimit} onChange={setChosenLimit} disabled={running}/>}
                         <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
                         <div className="flex flex-wrap gap-2">
                             <Button variant="primary" onClick={start} loading={running} disabled={running}>
