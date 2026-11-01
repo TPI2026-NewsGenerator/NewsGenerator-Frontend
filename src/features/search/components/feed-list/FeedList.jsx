@@ -172,7 +172,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                 )}
             </>}
             aside={
-                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <div className="flex flex-wrap items-center gap-2">
                     {resumeCount > 0 && (
                         <Button size="sm" variant="primary" onClick={onOpenResume}>Read the key passages ({resumeCount})</Button>
                     )}

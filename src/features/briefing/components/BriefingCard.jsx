@@ -84,6 +84,9 @@ const AiVersion = ({id, format, text, model, source}) => (
     </div>
 );
 
+// the dot after a meta of the line over the title, on a phone
+const DOT = "after:ml-2 after:text-[0.8125rem] after:text-ink-mute/60 after:content-['·'] md:after:content-none";
+
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
 // Someone named who denies the news, in the words of one of its articles, a machine translation under
@@ -259,21 +262,34 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     // the countries of who it names, none when its title names them (see countries.js)
     const countries = countryNames(item.countries, {titles: [item.title, item.titleTranslation], languages: [item.language]});
 
+    // what the card is about and when, in the column beside it, or one line over its title on a phone
+    const metas = [
+        item.topic && <p key="topic" className="kicker !text-ink">{item.topic}</p>,
+        countries.length > 0 && <p key="countries" className="caption font-medium !text-ink">{countries.join(' · ')}</p>,
+        item.publishedAt && <p key="at" className="caption"><time dateTime={item.publishedAt}>{when(item.publishedAt)}</time></p>,
+        item.language && <p key="language" className="leading-none md:leading-normal"><LanguageMark code={item.language} className="ml-0"/></p>,
+    ].filter(Boolean);
+
     return (
         <article className="grid-12 border-t border-rule pt-10 pb-20">
-            <div className="col-span-12 flex items-baseline gap-4 md:col-span-2 md:block">
+            {/* on a phone one line over the title, its number first ("01 · sport · Italy · 30 Oct"): beside a
+                big number, the column stacked into a block of its own (the user, 01.11.2026); beside the card from md */}
+            <div className="col-span-12 flex flex-wrap items-center gap-x-2 gap-y-1 md:col-span-2 md:block">
                 {number !== undefined && (
-                    <p aria-hidden className="tabular text-[2.25rem] leading-none font-semibold tracking-[-0.04em] text-ink-mute/45 md:text-[3rem]">
+                    <p aria-hidden className={cn('tabular text-[0.8125rem] font-semibold text-ink-mute md:text-[3rem] md:leading-none md:tracking-[-0.04em] md:text-ink-mute/45',
+                        metas.length > 0 && DOT)}>
                         {String(number).padStart(2, '0')}
                     </p>
                 )}
-                <div className="md:mt-4">
-                    {item.topic && <p className="kicker !text-ink">{item.topic}</p>}
-                    {countries.length > 0 && <p className="caption mt-1 font-medium !text-ink">{countries.join(' · ')}</p>}
-                    {item.publishedAt && <p className="folio mt-1"><time dateTime={item.publishedAt}>{when(item.publishedAt)}</time></p>}
-                    {item.language && <p className="mt-1"><LanguageMark code={item.language} className="ml-0"/></p>}
+                <div className="contents md:mt-4 md:block">
+                    {metas.map((meta, i) => (
+                        // a dot after each but the last on a phone, at the end of a line where it wraps; none in the column
+                        <div key={meta.key} className={cn('flex items-center md:mt-1 md:block md:first:mt-0', i < metas.length - 1 && DOT)}>
+                            {meta}
+                        </div>
+                    ))}
                     {marked && item.found?.length > 0 && (
-                        <div className="mt-3">
+                        <div className="basis-full md:mt-3">
                             <p className="kicker !text-accent-ink">Found</p>
                             <p className="caption mt-0.5 !text-ink">
                                 {item.found.map(({term, angle}) => angle ? `${term} (other angle)` : term).join(' · ')}

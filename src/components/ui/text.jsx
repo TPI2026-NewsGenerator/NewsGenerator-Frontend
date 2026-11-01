@@ -20,9 +20,10 @@ export const Meta = ({tone, className, ...props}) => (
     />
 );
 
-// a row of meta marks, separated by a thin dot
+// a row of meta marks, separated by a thin dot: after each but the last, so a dot ends a line where it
+// wraps, none starts one
 export const MetaLine = ({className, children}) => (
-    <div className={cn('flex flex-wrap items-baseline gap-x-2 gap-y-0.5 [&>*+*]:before:mr-2 [&>*+*]:before:text-rule [&>*+*]:before:content-["·"]', className)}>
+    <div className={cn('flex flex-wrap items-baseline gap-x-2 gap-y-0.5 [&>*:not(:last-child)]:after:ml-2 [&>*:not(:last-child)]:after:text-ink-mute/60 [&>*:not(:last-child)]:after:content-["·"]', className)}>
         {children}
     </div>
 );

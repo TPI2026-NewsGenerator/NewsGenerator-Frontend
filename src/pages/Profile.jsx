@@ -9,7 +9,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import {Link, useLocation, useNavigate, useSearchParams} from "react-router-dom";
-import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
+import {PageShell, Opening, Section, LocalNav} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
 import {Dialog} from "@/components/ui/overlay.jsx";
@@ -49,20 +49,20 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
                 <p aria-hidden className="tabular text-[1.75rem] leading-none font-semibold tracking-[-0.04em] text-ink-mute/45">{String(number).padStart(2, '0')}</p>
                 <Meta className="md:mt-2 md:block">{secondary ? 'secondary' : 'main'}</Meta>
             </div>
-            <div className="col-span-12 md:col-span-7">
+            <div className="col-span-12 md:col-span-9">
                 <label htmlFor={id} className="sr-only">Interest {number}</label>
                 <Textarea id={id} rows={2} value={text} onChange={event => setText(event.target.value)}/>
                 {interest.keywords && <p className="caption mt-2">Keywords used to find its sources: {interest.keywords}</p>}
-            </div>
-            <div className="col-span-12 flex flex-wrap items-start gap-2 md:col-span-3 md:col-start-10 md:flex-col md:items-end">
-                <Button size="sm" variant="primary" disabled={busy || text.trim() === interest.text} onClick={() => onSave({text})}>Save</Button>
-                <Button size="sm" disabled={busy} onClick={() => onSave({weight: secondary ? 1 : 0.85})}
-                        title="A secondary interest weighs less in the briefing">
-                    {secondary ? 'Make it main' : 'Make it secondary'}
-                </Button>
-                <Button size="sm" variant="subtle" disabled={busy} onClick={onDelete} title="Remove this interest">
-                    Remove
-                </Button>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="primary" disabled={busy || text.trim() === interest.text} onClick={() => onSave({text})}>Save</Button>
+                    <Button size="sm" disabled={busy} onClick={() => onSave({weight: secondary ? 1 : 0.85})}
+                            title="A secondary interest weighs less in the briefing">
+                        {secondary ? 'Make it main' : 'Make it secondary'}
+                    </Button>
+                    <Button size="sm" variant="subtle" disabled={busy} onClick={onDelete} title="Remove this interest">
+                        Remove
+                    </Button>
+                </div>
             </div>
         </li>
     );
@@ -370,23 +370,28 @@ export const ProfilePage = () => {
                 kicker="Your profile"
                 title="What you want to read"
                 standfirst="The subjects you follow, how closely, and what you don't want: written by the AI from your answers, or in your own words. The AI splits it into interests, and sources are found for each of them."
-                aside={data?.profile && (
-                    <div className="space-y-3">
-                        <div>
-                            <p className="kicker">Interests</p>
-                            <p className="folio mt-1 !text-ink">{data.interests.length}</p>
-                        </div>
-                        <div>
-                            <p className="kicker">Sources</p>
-                            <p className="folio mt-1 !text-ink">{data.sources.length} found, {own.length} added</p>
-                        </div>
-                        <div>
-                            <p className="kicker">Search for sources</p>
-                            <Meta tone={discovery.tone ?? 'ink'} className="mt-1 block">{discovery.label}</Meta>
-                        </div>
-                    </div>
-                )}
             />
+
+            {data?.profile && (
+                <div className="page mt-8">
+                    <p className="caption">
+                        {data.interests.length} {data.interests.length === 1 ? 'interest' : 'interests'} · {data.sources.length} sources
+                        found, {own.length} added · Search for sources:{' '}
+                        <Meta tone={discovery.tone ?? 'ink'} className="text-[0.8125rem]">{discovery.label}</Meta>
+                    </p>
+                </div>
+            )}
+
+            {/* the sections of the page, eight when all are there: one click to each, kept on top */}
+            {!creating && data && <LocalNav label="The sections of your profile" sections={[
+                ...(data.profile ? [{id: 'this-profile', label: 'This profile'}] : []),
+                ...(user ? [{id: 'account', label: 'Account'}] : []),
+                {id: 'words', label: 'Your words'},
+                ...(data.interests?.length > 0 ? [{id: 'interests', label: 'Interests'}] : []),
+                ...(data.profile ? [{id: 'terms', label: 'Following'}, {id: 'projects', label: 'Projects'}] : []),
+                {id: 'sources', label: 'Sources'},
+                {id: 'add-sources', label: 'Add sources'},
+            ]}/>}
 
             {data === null && !error && (
                 <div className="page mt-10">
@@ -410,7 +415,7 @@ export const ProfilePage = () => {
                             onCreated={created} onCancel={() => navigate('/profile', {replace: true})}/>
             ) : (<>
             {data?.profile && (
-                <Section kicker="This profile" title={data.profile.name}
+                <Section id="this-profile" kicker="This profile" title={data.profile.name}
                          intro={data.profiles?.length > 1
                              ? 'One of your profiles: its interests, its sources and its briefings are its own. Switch to another at the top of the page.'
                              : user?.admin
@@ -438,7 +443,7 @@ export const ProfilePage = () => {
                             </Help>
                             {changingLanguage && <p className="caption mt-2 italic">The AI reads your profile again, this takes a few seconds…</p>}
                         </div>
-                        <div className="col-span-12 flex flex-wrap items-end gap-3 md:col-span-6 md:col-start-7 md:justify-end">
+                        <div className="col-span-12 flex flex-wrap items-center gap-3 empty:hidden md:col-span-8 md:row-start-3">
                             {user?.admin && (
                                 <Button variant="subtle" onClick={() => navigate('/profile?new=1')} disabled={busy || (data.profiles?.length ?? 1) >= (data.limits?.profiles ?? 15)}>
                                     New profile
@@ -460,7 +465,7 @@ export const ProfilePage = () => {
 
             {/* the account is not of one profile: changed in the settings (the user, 12.10.2026: from here too) */}
             {user && (
-                <Section kicker="Your account" title="Username, email and password"
+                <Section id="account" kicker="Your account" title="Username, email and password"
                          intro="You sign in with your username and password; the stories of your briefing you send by e-mail go to your email."
                          aside={<Button onClick={() => navigate('/settings')}>Change them</Button>}>
                     <dl className="grid-12 gap-y-4">
@@ -480,7 +485,7 @@ export const ProfilePage = () => {
                 </Section>
             )}
 
-            <Section kicker="Your words" title="In your own words"
+            <Section id="words" kicker="Your words" title="In your own words"
                      intro="The subjects you follow, how closely, and what you don't want. The more precise, the better the briefing.">
                 <div className="grid-12 gap-y-8">
                     <div className="col-span-12 md:col-span-8">
@@ -511,12 +516,9 @@ export const ProfilePage = () => {
                             </p>
                             <Textarea id="profile-text" rows={before !== null ? 10 : 7} className="mt-3" value={form.text} placeholder={PLACEHOLDER}
                                       onChange={event => setForm({...form, text: event.target.value})}/>
+                            <p className="caption mt-3">For example: <span className="italic">“{PLACEHOLDER}”</span></p>
                         </>)}
                     </div>
-                    <aside className="col-span-12 md:col-span-3 md:col-start-10 md:mt-8">
-                        <p className="kicker">For example</p>
-                        <p className="caption mt-2 max-w-[30ch] italic">“{PLACEHOLDER}”</p>
-                    </aside>
 
                     {/* a profile saved has its language under its name, above */}
                     {!data?.profile && (
@@ -541,7 +543,7 @@ export const ProfilePage = () => {
             </Section>
 
             {data?.interests?.length > 0 && (
-                <Section kicker="As the AI read it" title="Your interests"
+                <Section id="interests" kicker="As the AI read it" title="Your interests"
                          intro="Each one is matched on its own with the news: correct them if the AI misread you.">
                     <ol className="list-none border-t border-rule p-0">
                         {data.interests.map((interest, index) => (

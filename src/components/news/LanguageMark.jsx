@@ -16,7 +16,7 @@ export const LanguageMark = ({code, className}) => {
     const name = languageLabel(code);
     return (
         <span title={`Written in ${name}`} aria-label={`written in ${name}`}
-              className={cn('ml-1 inline-flex items-center gap-0.5 border border-rule px-1 align-[0.08em] font-mono text-[0.6875rem] leading-[1.35] font-medium tracking-[0.04em] text-ink-mute uppercase', className)}>
+              className={cn('ml-1 inline-flex items-center gap-0.5 rounded-[5px] border border-rule px-1 align-[0.08em] text-[0.6875rem] leading-[1.35] font-semibold tracking-[0.04em] text-ink-mute uppercase', className)}>
             <Languages aria-hidden className="size-2.5"/>
             {code}
         </span>

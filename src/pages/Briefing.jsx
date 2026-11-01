@@ -50,7 +50,7 @@ const steps = (span) => ({
 });
 
 // a tab of the page: a segment of the toolbar, the one read raised
-const PAGE_TAB = 'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] text-ink-mute transition-[color,background-color,box-shadow] duration-200 hover:text-ink data-[state=active]:bg-paper data-[state=active]:text-ink data-[state=active]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=active]:bg-rule';
+const PAGE_TAB = 'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[0.8125rem] text-ink-mute transition-[color,background-color,box-shadow] duration-200 hover:text-ink data-[state=active]:bg-paper data-[state=active]:text-ink data-[state=active]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=active]:bg-rule';
 
 const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});
 
@@ -363,7 +363,7 @@ export const BriefingPage = () => {
         </div>
     );
     const tabs = hasTerms && (
-        <Tabs.List aria-label="Your briefing and what you follow" className="inline-flex gap-0.5 rounded-full bg-paper-deep p-1">
+        <Tabs.List aria-label="Your briefing and what you follow" className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-paper-deep p-1 [scrollbar-width:none]">
             <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
             <Tabs.Trigger value="terms" className={PAGE_TAB}>
                 Following{watchedCount !== null && <> <span className="tabular-nums text-ink-mute">{watchedCount}</span></>}

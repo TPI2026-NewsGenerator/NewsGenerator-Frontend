@@ -61,10 +61,10 @@ export const SourceList = memo(({found, own, refused, removed, limits, busy, onT
         <div>
             {/* the radix group of the ToggleGroup of shadcn: one of them always chosen */}
             <ToggleGroup.Root type="single" value={show} onValueChange={value => value && setShow(value)}
-                              aria-label="Which sources to show" className="mb-6 inline-flex flex-wrap gap-0.5 rounded-full bg-paper-deep p-1">
+                              aria-label="Which sources to show" className="mb-6 inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-paper-deep p-1 [scrollbar-width:none]">
                 {SHOWS.filter(({value}) => value !== 'leftOut' || counts.leftOut > 0).map(({value, label}) => (
                     <ToggleGroup.Item key={value} value={value}
-                                      className={cn('inline-flex h-7 cursor-pointer items-center justify-center gap-2 rounded-full px-3.5 text-[0.8125rem] transition-[color,background-color,box-shadow] duration-200',
+                                      className={cn('inline-flex h-7 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap gap-2 rounded-full px-3.5 text-[0.8125rem] transition-[color,background-color,box-shadow] duration-200',
                                       'text-ink-mute hover:text-ink data-[state=on]:bg-paper data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=on]:bg-rule')}>
                         {label}{' '}
                         <span className="tabular-nums text-ink-mute">{counts[value]}</span>
