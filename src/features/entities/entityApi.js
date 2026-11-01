@@ -7,6 +7,7 @@
 //
 
 import {withProfile} from "@/features/profiles/activeProfile.js";
+import {readAnswer} from "@/lib/readAnswer.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const HEADERS = {'Content-Type': 'application/json'};
@@ -17,7 +18,7 @@ const send = async (path, {method = 'GET', body} = {}) => {
         headers: withProfile(HEADERS),
         ...(body !== undefined ? {body: JSON.stringify(body)} : {}),
     });
-    return await response.json();
+    return await readAnswer(response);
 };
 
 export const EntityApi = {

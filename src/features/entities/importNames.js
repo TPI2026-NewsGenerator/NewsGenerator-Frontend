@@ -34,16 +34,20 @@ export const namesOfSheet = (rows, {skipFirst = false} = {}) => {
 // The names looked for in Wikidata, CHECK_LOT a request, one request after the other: Map name -> the result
 // of the server ({name, status, item?, items?, famous?}). check(lot): the call, answering {results} or {error};
 // onResult(done): once each lot is back; stop(): true to leave off before the next lot. A lot that fails throws,
-// the results already had are in 'results', the same map given again carries on from where it stopped
+// the results already had are in 'results', the same map given again carries on from where it stopped. The
+// server may answer for the first names of a lot only (it stops after 30 s, Wikidata being slow): the others
+// are asked again with the next lot
 export const checkNames = async (names, check, {results = new Map(), onResult = null, stop = null} = {}) => {
-    const wanted = names.filter(name => !results.has(name));
-    for (let i = 0; i < wanted.length; i += CHECK_LOT) {
+    let wanted = names.filter(name => !results.has(name));
+    while (wanted.length > 0) {
         if (stop?.()) break;
-        const lot = wanted.slice(i, i + CHECK_LOT);
+        const lot = wanted.slice(0, CHECK_LOT);
         const data = await check(lot);
         if (data?.error) throw new Error(data.error);
-        lot.forEach((name, j) => data.results?.[j] && results.set(name, data.results[j]));
-        if (lot.some(name => !results.has(name))) throw new Error('The answer of the server is incomplete.');
+        const answered = Array.isArray(data?.results) ? data.results.slice(0, lot.length) : [];
+        if (answered.length === 0) throw new Error('The answer of the server is incomplete.');
+        answered.forEach((result, j) => results.set(lot[j], result));
+        wanted = wanted.slice(answered.length);
         onResult?.(results.size);
     }
     return results;

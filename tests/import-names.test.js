@@ -48,8 +48,18 @@ describe('checkNames', () => {
         expect(check.mock.calls.map(([lot]) => lot[0])).toEqual(['Name 0', 'Name 10', 'Name 10', 'Name 20']);
     });
 
-    it('should refuse an answer that does not tell every name, and leave off when asked to', async () => {
-        await expect(checkNames(['A', 'B'], async () => ({results: [{name: 'A', status: 'word'}]}))).rejects.toThrow('incomplete');
+    it('should ask again the names an answer left out, and refuse an answer that tells none', async () => {
+        // the server stops after 30 s when Wikidata is slow: it tells the first names of a lot only
+        const slow = vi.fn(async (lot) => ({results: lot.slice(0, 2).map(name => ({name, status: 'word'}))}));
+        const results = await checkNames(['A', 'B', 'C', 'D', 'E'], slow);
+        expect([...results.keys()]).toEqual(['A', 'B', 'C', 'D', 'E']);
+        expect(slow.mock.calls.map(([lot]) => lot)).toEqual([['A', 'B', 'C', 'D', 'E'], ['C', 'D', 'E'], ['E']]);
+
+        await expect(checkNames(['A', 'B'], async () => ({results: []}))).rejects.toThrow('incomplete');
+        await expect(checkNames(['A'], async () => ({}))).rejects.toThrow('incomplete');
+    });
+
+    it('should leave off when asked to', async () => {
 
         const check = vi.fn(async (lot) => answer(lot));
         await checkNames(names, check, {stop: () => check.mock.calls.length >= 1});
