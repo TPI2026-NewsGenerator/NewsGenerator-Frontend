@@ -174,7 +174,7 @@ describe('BriefingPage tabs', () => {
         expect(await screen.findByText('137 stories in 24 hours')).toBeInTheDocument();
     });
 
-    it('should translate the title of a news written in another language than the reader reads, with the title as written under it', async () => {
+    it('should translate the title of a news written in another language than the reader reads, the title as written on demand', async () => {
         follows();
         const foreign = [{term: 'VAR', count: 3, hours: 24, limit: 100, news: [
             {title: 'Der VAR entscheidet', url: 'https://x/de-1', link: 'https://x/de-1', source: 'x.de', language: 'de'},
@@ -186,10 +186,12 @@ describe('BriefingPage tabs', () => {
         await renderPage();
         fireEvent.mouseDown(await followingTab());
 
-        // the translation replaces the title, which stays under it in italics, marked as a machine translation
+        // the translation replaces the title, marked as a machine translation; the title as written shown on demand
         expect(await screen.findByRole('link', {name: 'The VAR decides'})).toHaveAttribute('href', 'https://x/de-1');
-        expect(screen.getByText(/“Der VAR entscheidet”/)).toBeInTheDocument();
         expect(screen.getByText(/translated from German/)).toBeInTheDocument();
+        expect(screen.queryByText(/“Der VAR entscheidet”/)).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(screen.getByText(/“Der VAR entscheidet”/)).toBeInTheDocument();
         // only the news in another language are asked, by the link of the feed, in the language of the profile
         expect(translate.translateNews).toHaveBeenCalledTimes(1);
         expect(translate.translateNews).toHaveBeenCalledWith({news: [], titles: ['https://x/de-1']}, 'fr');
@@ -197,7 +199,7 @@ describe('BriefingPage tabs', () => {
         expect(screen.getByRole('link', {name: 'VAR news'})).toBeInTheDocument();
     });
 
-    it('should translate the words of the description around the name too, with the words as written under them', async () => {
+    it('should translate the words of the description around the name too, the words as written on demand', async () => {
         follows();
         const excerpt = '…Der Schiedsrichter nutzte den VAR in der 80. Minute…';
         BriefingApi.following.mockResolvedValue({limit: 100, groups: [{term: 'VAR', count: 2, hours: 24, limit: 100, news: [
@@ -211,9 +213,11 @@ describe('BriefingPage tabs', () => {
         await renderPage();
         fireEvent.mouseDown(await followingTab());
 
-        // the words of the description in the language of the reader, the ones as written in italics under them
+        // the words of the description in the language of the reader, the ones as written in italics under them on demand
         expect(await screen.findByText('…The referee used the VAR in the 80th minute…')).toBeInTheDocument();
         expect(screen.getByText('Penalty after the video')).toBeInTheDocument();
+        expect(screen.queryByText(/“…Der Schiedsrichter nutzte den/)).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
         expect(screen.getByText(/“…Der Schiedsrichter nutzte den/)).toBeInTheDocument();
         expect(screen.getByText(/translated from German/)).toBeInTheDocument();
         // asked once with the title, the passage as the page shows it; the news in the reader's language is not asked

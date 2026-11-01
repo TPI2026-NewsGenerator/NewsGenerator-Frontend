@@ -23,18 +23,20 @@ const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', mo
 
 // A news of the list, with the words of its description. Written in another language than the reader's, its
 // title and those words are translated when the row comes near the screen (the translator of the page, see
-// FollowingNews and search/translation.js), shown marked as translated with the title and the words as written
-// under them in italics; without a translator, as written
+// FollowingNews and search/translation.js), shown marked as translated; the title and the words as written
+// only when the reader asks, under them in italics (always there, they doubled the list: the user, 01.11.2026);
+// without a translator, as written
 const News = ({news}) => {
     const {ref, translation, excerpt} = useTranslation(news.link, news.language, {withDescription: false, excerpt: news.excerpt});
     const translated = Boolean(translation?.title) || Boolean(excerpt);
+    const [original, setOriginal] = useState(false);
     return (
         <li ref={ref} className="body-text">
             <a href={news.url} target="_blank" rel="noreferrer" className="link">
                 {translation?.title ? translation.title : <Marked text={news.title} marks={news.marks?.title}/>}
             </a>
             {/* the title as written, with the places of the terms */}
-            {translation?.title && (
+            {translation?.title && original && (
                 <span lang={translation.language} className="caption mt-0.5 block italic">
                     “<Marked text={news.title} marks={news.marks?.title}/>”
                 </span>
@@ -43,9 +45,11 @@ const News = ({news}) => {
             {news.excerpt && (excerpt ? (
                 <>
                     <span className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80">{excerpt}</span>
-                    <span lang={news.language ?? undefined} className="caption mt-0.5 block italic">
-                        “<Marked text={news.excerpt} marks={news.marks?.excerpt}/>”
-                    </span>
+                    {original && (
+                        <span lang={news.language ?? undefined} className="caption mt-0.5 block italic">
+                            “<Marked text={news.excerpt} marks={news.marks?.excerpt}/>”
+                        </span>
+                    )}
                 </>
             ) : (
                 <span lang={news.language ?? undefined} className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80">
@@ -56,7 +60,14 @@ const News = ({news}) => {
                 {news.source}<LanguageMark code={news.language}/>
                 {news.publishedAt && <> · <time dateTime={news.publishedAt}>{when(news.publishedAt)}</time></>}
                 {news.media > 1 && <> · told by {news.media} media</>}
-                {translated && <span title="Machine translation: it may contain errors"> · translated from {languageLabel(translation?.language ?? news.language)}</span>}
+                {translated && <>
+                    <span title="Machine translation: it may contain errors"> · translated from {languageLabel(translation?.language ?? news.language)}</span>
+                    {' · '}
+                    <button type="button" onClick={() => setOriginal(!original)} aria-expanded={original}
+                            className="cursor-pointer text-action-text hover:underline underline-offset-4">
+                        {original ? 'Hide original' : 'Show original'}
+                    </button>
+                </>}
             </span>
         </li>
     );

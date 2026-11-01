@@ -376,12 +376,13 @@ export const BriefingPage = () => {
                     </p>
                 </div>
 
-                {/* one bar for what the page shows and for the next briefing */}
+                {/* one bar for what the page shows and for the next briefing; the tab of what is followed has
+                    no briefing to write (the user, 01.11.2026): its own bar for the news wanted is in it */}
                 {(tabs || next) && (
                     <Toolbar>
                         {tabs}
                         {reading}
-                        {next}
+                        {tab === 'briefing' && next}
                     </Toolbar>
                 )}
 

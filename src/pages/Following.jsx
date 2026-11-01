@@ -10,6 +10,7 @@
 
 import {useEffect, useState} from "react";
 import {Link} from "react-router-dom";
+import {Search as SearchIcon} from "lucide-react";
 import {Opening, PageShell, Section} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Input, Label} from "@/components/ui/field.jsx";
@@ -138,66 +139,72 @@ export const FollowingPage = () => {
             <Opening kicker="Following" title="What you follow"
                      standfirst="A club, a person, an organisation as Wikidata knows them, or a name or a word as written: every news of your sources that names one is listed in your briefing, in a tab of its own. No relevance, no AI: all of them."/>
 
-            <Section kicker="Find" title="What do you want to follow?">
-                <div className="grid-12">
-                    <div className="col-span-12 md:col-span-8">
-                        <Label htmlFor="entity-search">A club, a person, an organisation, a word</Label>
-                        <Input id="entity-search" type="search" autoComplete="off" placeholder="Roger Federer, Tesla, the World Health Organization, VAR…"
-                               value={query} onChange={event => setQuery(event.target.value)}/>
-                        {text.length >= 2 && (
-                            <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule pb-3">
-                                <span className="min-w-0">
-                                    <span className="font-semibold">“{text}”, as written</span>
-                                    <span className="caption block">
-                                        Every news writing it, as a whole word, in the title or the description: for a word, or a name Wikidata does not know.
-                                    </span>
-                                </span>
-                                {wordFollowed
-                                    ? <span className="folio">Followed</span>
-                                    : <Button size="sm" loading={busy === text} disabled={busy !== null || room === 0}
-                                              onClick={() => followWord(text)} aria-label={`Follow “${text}” as written`}>Follow</Button>}
-                            </div>
-                        )}
-                        {searching && <Working className="mt-3">Asking Wikidata…</Working>}
-                        {shown && !searching && shown.length === 0 && <p className="caption mt-3">Wikidata knows nothing of that name.</p>}
-                        {shown?.length > 0 && (
-                            <ul aria-label="Found in Wikidata" className="mt-1 list-none p-0">
-                                {shown.map(item => (
-                                    <li key={item.qid} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule py-3">
-                                        <span className="min-w-0">
-                                            <Link to={`/following/${item.qid}`} className="link font-semibold">{item.label}</Link>
-                                            {item.description && <span className="caption block">{item.description}</span>}
-                                        </span>
-                                        {qids.has(item.qid)
-                                            ? <span className="folio">Followed</span>
-                                            : <Button size="sm" loading={busy === item.qid} disabled={busy !== null} onClick={() => followItem(item.qid)}
-                                                      aria-label={`Follow ${item.label}`}>Follow</Button>}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
+            {followed && (
+                <div className="page mt-8">
+                    <p className="caption">
+                        {entities.length + words.length} of {limits.total} followed: {entities.length} clubs, people and organisations, {words.length} names or words as written.
+                    </p>
                 </div>
-            </Section>
+            )}
 
-            <Section kicker="Many at once" title="Import a list of names">
-                <div className="grid-12">
-                    <div className="col-span-12 md:col-span-8">
-                        <p className="caption">
-                            An Excel file (.xlsx) with the names one under the other in the first column. Each is looked for in Wikidata and linked
-                            when it has one item, you choose when it has several, and it is followed as written when it has none. You follow {limits.total} names at most.
-                        </p>
-                        <div className="mt-3">
-                            <ImportNames room={room} onImported={imported} disabled={followed === null || busy !== null}/>
+            {/* the field first, as on the search of the news; the import of a list beside it, then what is followed */}
+            <section className="page mt-12 md:mt-16" aria-label="Find what to follow">
+                <div className="max-w-[52rem]">
+                    <Label htmlFor="entity-search">A club, a person, an organisation, a word</Label>
+                    <div className="relative">
+                        <SearchIcon aria-hidden className="pointer-events-none absolute top-1/2 left-4 size-[1.125rem] -translate-y-1/2 text-ink-mute"/>
+                        <Input id="entity-search" type="search" autoComplete="off" placeholder="Roger Federer, Tesla, the World Health Organization, VAR…"
+                               className="h-12 rounded-full pl-11 text-[1.0625rem]"
+                               value={query} onChange={event => setQuery(event.target.value)}/>
+                    </div>
+                    {text.length >= 2 && (
+                        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule pb-3">
+                            <span className="min-w-0">
+                                <span className="font-semibold">“{text}”, as written</span>
+                                <span className="caption block">
+                                    Every news writing it, as a whole word, in the title or the description: for a word, or a name Wikidata does not know.
+                                </span>
+                            </span>
+                            {wordFollowed
+                                ? <span className="folio">Followed</span>
+                                : <Button size="sm" loading={busy === text} disabled={busy !== null || room === 0}
+                                          onClick={() => followWord(text)} aria-label={`Follow “${text}” as written`}>Follow</Button>}
                         </div>
+                    )}
+                    {searching && <Working className="mt-3">Asking Wikidata…</Working>}
+                    {shown && !searching && shown.length === 0 && <p className="caption mt-3">Wikidata knows nothing of that name.</p>}
+                    {shown?.length > 0 && (
+                        <ul aria-label="Found in Wikidata" className="mt-1 list-none p-0">
+                            {shown.map(item => (
+                                <li key={item.qid} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule py-3">
+                                    <span className="min-w-0">
+                                        <Link to={`/following/${item.qid}`} className="link font-semibold">{item.label}</Link>
+                                        {item.description && <span className="caption block">{item.description}</span>}
+                                    </span>
+                                    {qids.has(item.qid)
+                                        ? <span className="folio">Followed</span>
+                                        : <Button size="sm" loading={busy === item.qid} disabled={busy !== null} onClick={() => followItem(item.qid)}
+                                                  aria-label={`Follow ${item.label}`}>Follow</Button>}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {/* many at once: a list of names in a file */}
+                    <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+                        <ImportNames room={room} onImported={imported} disabled={followed === null || busy !== null}/>
+                        <p className="caption min-w-0 flex-1 basis-80">
+                            An Excel file (.xlsx), the names one under the other in the first column. Each is linked to its item of Wikidata
+                            when it has one, you choose when it has several, and it is followed as written when it has none. {limits.total} names at most.
+                        </p>
                     </div>
                 </div>
-            </Section>
+            </section>
 
             {suggested.length > 0 && (
                 <Section kicker="Often on your cards" title="Follow them?">
-                    <div className="grid-12">
-                        <div className="col-span-12 md:col-span-8">
+                    <div className="max-w-[52rem]">
+                        <div>
                             <p className="caption">The people and organisations several cards of your briefings of the last two weeks were about.</p>
                             <ul aria-label="Suggested" className="mt-3 list-none border-t border-rule p-0">
                                 {suggested.map(name => (
@@ -217,8 +224,8 @@ export const FollowingPage = () => {
             )}
 
             <Section kicker="Followed" title="What you follow">
-                <div className="grid-12">
-                    <div className="col-span-12 md:col-span-8">
+                <div className="max-w-[52rem]">
+                    <div>
                         {error && <Notice type="error" onClose={() => setError(null)}>{error}</Notice>}
                         {followed === null && !error && <Working>Loading what you follow…</Working>}
                         {followed && entities.length + words.length === 0 && <p className="caption">Nothing yet: look one up above.</p>}
@@ -265,11 +272,6 @@ export const FollowingPage = () => {
                                     </li>
                                 ))}
                             </ul>
-                        )}
-                        {followed && (
-                            <p className="caption mt-4">
-                                {entities.length + words.length} of {limits.total} followed: {entities.length} clubs, people and organisations, {words.length} names or words as written.
-                            </p>
                         )}
                     </div>
                 </div>
