@@ -14,7 +14,9 @@ const answer = (body, status = 200) => new Response(body, {status});
 describe('readAnswer', () => {
     it('should give the data of an answer in JSON, an error of the server included', async () => {
         expect(await readAnswer(answer('{"results": []}'))).toEqual({results: []});
-        expect(await readAnswer(answer('{"error": "Too many names imported"}', 429))).toEqual({error: 'Too many names imported'});
+        // a call that failed carries its status
+        expect(await readAnswer(answer('{"error": "Too many names imported", "retryAfter": 60}', 429)))
+            .toEqual({error: 'Too many names imported', retryAfter: 60, status: 429});
     });
 
     it('should say a page of HTML came, and the status, not that a token is unexpected', async () => {
@@ -23,6 +25,7 @@ describe('readAnswer', () => {
         expect(error).toContain('with a page, not data');
         expect(error).toContain('Try again');
         expect(error).not.toContain('Unexpected token');
+        expect((await readAnswer(answer('<html>Bad gateway</html>', 502))).status).toBe(502);
     });
 
     it('should say the status of an empty answer, or of a text that is not a page', async () => {

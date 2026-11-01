@@ -7,7 +7,7 @@
 //               at once, the items of Wikidata linked and the other names as written
 //
 
-import {useMemo, useRef, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {Progress, RadioGroup} from "radix-ui";
 import {readSheet} from "read-excel-file/browser";
 import {Button} from "@/components/ui/button.jsx";
@@ -15,7 +15,7 @@ import {Checkbox} from "@/components/ui/field.jsx";
 import {Dialog} from "@/components/ui/overlay.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {EntityApi} from "@/features/entities/entityApi.js";
-import {checkNames, namesOfSheet, planOf} from "@/features/entities/importNames.js";
+import {checkNames, namesOfSheet, planOf, withRetry} from "@/features/entities/importNames.js";
 
 const PREVIEW = 5;
 
@@ -30,9 +30,22 @@ const Choice = ({value, children}) => (
     </label>
 );
 
+// the seconds left to wait, counted down
+const Countdown = ({until}) => {
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+    return <>{Math.max(0, Math.ceil((until - now) / 1000))}</>;
+};
+
 // room: how many more names the profile can follow; onImported(data): what the server answers once they are
-// followed ({entities, words, limits, added, left}); disabled: something else is changing the list
-export const ImportNames = ({room, onImported, disabled = false}) => {
+// followed ({entities, words, limits, added, left}); disabled: something else is changing the list. A call that
+// fails for a reason that passes (Wikidata asked to wait, a restart, a timeout of the tunnel) is asked again by
+// itself after a wait that grows, said on the page, nothing lost: sleep and patienceMs are those of withRetry,
+// given for the tests
+export const ImportNames = ({room, onImported, disabled = false, sleep, patienceMs}) => {
     const input = useRef(null);
     // null: closed; reading, ready (names found), checking, review, importing, done
     const [phase, setPhase] = useState(null);
@@ -43,6 +56,8 @@ export const ImportNames = ({room, onImported, disabled = false}) => {
     const [error, setError] = useState(null);
     const [choices, setChoices] = useState(() => new Map());
     const [outcome, setOutcome] = useState(null);
+    // the wait before a call is asked again: {until, error}
+    const [wait, setWait] = useState(null);
     // the lots in flight when the dialog closes are left off, their answers dropped
     const run = useRef(0);
     const found = useRef(new Map());
@@ -53,6 +68,7 @@ export const ImportNames = ({room, onImported, disabled = false}) => {
 
     const close = () => {
         run.current++;
+        setWait(null);
         setPhase(null);
     };
 
@@ -79,35 +95,60 @@ export const ImportNames = ({room, onImported, disabled = false}) => {
     const look = async () => {
         const turn = ++run.current;
         setError(null);
+        setWait(null);
         setPhase('checking');
         setDone(found.current.size);
         try {
-            await checkNames(names, EntityApi.importCheck, {results: found.current, onResult: count => turn === run.current && setDone(count), stop: () => turn !== run.current});
+            await checkNames(names, EntityApi.importCheck, {
+                results: found.current, stop: () => turn !== run.current, sleep, patienceMs,
+                onResult: count => {
+                    if (turn !== run.current) return;
+                    setWait(null);
+                    setDone(count);
+                },
+                onWait: ({ms, error: why}) => turn === run.current && setWait({until: Date.now() + ms, error: why}),
+            });
             if (turn !== run.current) return;
+            setWait(null);
             setResults(new Map(found.current));
             setPhase('review');
         } catch (err) {
-            if (turn === run.current) setError(err.message);
+            if (turn !== run.current) return;
+            setWait(null);
+            setError(err.message);
         }
     };
 
     const follow = async () => {
         const turn = ++run.current;
         setError(null);
+        setWait(null);
         setPhase('importing');
         try {
-            const data = await EntityApi.importNames({qids: plan.qids, words: plan.words});
-            if (turn !== run.current) return;
-            if (data.error) throw new Error(data.error);
+            // followed again without harm: what is followed already is left as it is
+            const data = await withRetry(() => EntityApi.importNames({qids: plan.qids, words: plan.words}), {
+                stop: () => turn !== run.current, sleep, patienceMs,
+                onWait: ({ms, error: why}) => turn === run.current && setWait({until: Date.now() + ms, error: why}),
+            });
+            if (turn !== run.current || data === null) return;
+            setWait(null);
             setOutcome(data);
             onImported?.(data);
             setPhase('done');
         } catch (err) {
             if (turn !== run.current) return;
+            setWait(null);
             setError(err.message);
             setPhase('review');
         }
     };
+
+    // what stands in the way, and when the call is asked again
+    const waiting = wait && (
+        <Notice title="Wikidata or the server is slow">
+            {wait.error}. Carrying on in <Countdown until={wait.until}/> s by itself, nothing is lost.
+        </Notice>
+    );
 
     const pickFirstOfEach = () => setChoices(new Map(plan.toChoose.map(({name, items}) => [name, items[0].qid])));
 
@@ -152,6 +193,7 @@ export const ImportNames = ({room, onImported, disabled = false}) => {
                 {error
                     ? <Notice type="error">{error}</Notice>
                     : <Working>Looking up in Wikidata…</Working>}
+                {!error && waiting}
                 <Progress.Root value={done} max={names.length} aria-label="Names looked up" className="relative h-px w-full bg-rule">
                     <Progress.Indicator className="h-full bg-ink transition-[width]" style={{width: `${names.length === 0 ? 0 : 100 * done / names.length}%`}}/>
                 </Progress.Root>
@@ -233,7 +275,14 @@ export const ImportNames = ({room, onImported, disabled = false}) => {
             </>
         );
     }
-    if (phase === 'importing') body = <Working>Following them…</Working>;
+    if (phase === 'importing') {
+        body = (
+            <div className="space-y-4">
+                <Working>Following them…</Working>
+                {waiting}
+            </div>
+        );
+    }
     if (phase === 'done' && outcome) {
         const {added, left} = outcome;
         body = (

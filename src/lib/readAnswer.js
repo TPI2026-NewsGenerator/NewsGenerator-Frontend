@@ -8,13 +8,17 @@
 //               "Unexpected token '<', "<!DOCTYPE "... is not valid JSON"
 //
 
-// {error} for an answer that is not JSON, saying what came, else the data
+// {error, status} for an answer that is not JSON, saying what came, else the data. A call that failed carries
+// its status too, for a client that decides whether to ask again (a 502 or a 524 is worth asking again, a 403 is not)
 export const readAnswer = async (response) => {
     const text = await response.text();
+    let data;
     try {
-        return JSON.parse(text);
+        data = JSON.parse(text);
     } catch {
         const page = text.trimStart().startsWith('<');
-        return {error: `The server answered ${response.status}${page ? ' with a page, not data' : ''}: it may be restarting or busy. Try again in a moment.`};
+        return {error: `The server answered ${response.status}${page ? ' with a page, not data' : ''}: it may be restarting or busy. Try again in a moment.`,
+            status: response.status};
     }
+    return !response.ok && data && typeof data === 'object' && !Array.isArray(data) ? {...data, status: response.status} : data;
 };

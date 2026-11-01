@@ -29,9 +29,9 @@ const RESULTS = {
 const answer = (lot) => ({results: lot.map(name => ({name, ...(RESULTS[name] ?? {status: 'word'})}))});
 
 const fileOf = () => new File(['x'], 'names.xlsx');
-const choose = async (rows, room = 50, onImported = vi.fn()) => {
+const choose = async (rows, room = 50, onImported = vi.fn(), props = {}) => {
     sheet.readSheet.mockResolvedValue(rows);
-    render(<ImportNames room={room} onImported={onImported}/>);
+    render(<ImportNames room={room} onImported={onImported} {...props}/>);
     fireEvent.change(screen.getByLabelText('Excel file of names'), {target: {files: [fileOf()]}});
     await screen.findByText('Names found');
     return onImported;
@@ -92,15 +92,89 @@ describe('ImportNames', () => {
         expect(api.importCheck.mock.calls[0][0]).toEqual(['Gianni Infantino']);
     });
 
-    it('should say when Wikidata could not be asked and carry on from there when the reader tries again', async () => {
-        api.importCheck.mockResolvedValueOnce({error: 'Wikidata could not be searched, try again in a moment.'}).mockImplementation(async lot => answer(lot));
-        await choose([['Gianni Infantino']]);
+    it('should carry on by itself when Wikidata asks to wait, saying so, without the reader clicking', async () => {
+        // the wait is held until the test lets it go, to see what the page says meanwhile
+        let release;
+        const sleep = vi.fn(() => new Promise(resolve => { release = resolve; }));
+        api.importCheck.mockResolvedValueOnce({error: 'Wikidata could not be searched, try again in a moment.', status: 502, retryIn: 30000})
+            .mockImplementation(async lot => answer(lot));
+        await choose([['Gianni Infantino']], 50, vi.fn(), {sleep});
         fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
 
-        expect(await screen.findByText(/Wikidata could not be searched/)).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', {name: 'Try again'}));
+        expect(await screen.findByText('Wikidata or the server is slow')).toBeInTheDocument();
+        expect(screen.getByText(/Carrying on in/)).toHaveTextContent('Wikidata could not be searched, try again in a moment.. Carrying on in 30 s by itself, nothing is lost.');
+        expect(sleep).toHaveBeenCalledWith(30000, expect.any(Function));
+        expect(screen.queryByRole('button', {name: 'Try again'})).toBeNull();
+
+        release();
         expect(await screen.findByText('Check before following')).toBeInTheDocument();
         expect(api.importCheck).toHaveBeenCalledTimes(2);
+        expect(screen.queryByText('Wikidata or the server is slow')).toBeNull();
+    });
+
+    it('should carry on when the answer is a page of the tunnel, not data, and with the names a lot left out', async () => {
+        const sleep = vi.fn(async () => {});
+        const names = Array.from({length: 12}, (_, i) => [`Name ${i}`]);
+        api.importCheck
+            .mockResolvedValueOnce({error: 'The server answered 524 with a page, not data: it may be restarting or busy. Try again in a moment.', status: 524})
+            // Wikidata stopped the search after two names of the lot, 20 s to wait
+            .mockImplementationOnce(async lot => ({...answer(lot.slice(0, 2)), retryIn: 20000}))
+            .mockImplementation(async lot => answer(lot));
+        await choose(names, 50, vi.fn(), {sleep});
+        fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
+
+        expect(await screen.findByText('Check before following')).toBeInTheDocument();
+        expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([4000, 20000]);
+        // the lot asked again whole, then from the name after the two told
+        expect(api.importCheck.mock.calls.map(([lot]) => [lot[0], lot.length])).toEqual([['Name 0', 10], ['Name 0', 10], ['Name 2', 10]]);
+        expect(screen.getByText((content, element) => element?.tagName === 'P' && element.textContent.startsWith('12 followed as written'))).toBeInTheDocument();
+    });
+
+    it('should give up after a long time without an answer, keep what it knows, and offer to try again', async () => {
+        const sleep = vi.fn(async () => {});
+        const failing = {error: 'Wikidata could not be searched, try again in a moment.', status: 502};
+        // twelve names: the first lot of ten is told, then nothing answers for longer than the patience
+        api.importCheck.mockImplementationOnce(async lot => answer(lot)).mockResolvedValue(failing);
+        await choose(Array.from({length: 12}, (_, i) => [`Name ${i}`]), 50, vi.fn(), {sleep, patienceMs: 5000});
+        fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
+
+        expect(await screen.findByText(/tried again for/)).toBeInTheDocument();
+        // the ten told are kept: the reader goes on with the two that are left
+        expect(screen.getByText('10 of 12 names')).toBeInTheDocument();
+        api.importCheck.mockReset();
+        api.importCheck.mockImplementation(async lot => answer(lot));
+        fireEvent.click(screen.getByRole('button', {name: 'Try again'}));
+        expect(await screen.findByText('Check before following')).toBeInTheDocument();
+        expect(api.importCheck).toHaveBeenCalledTimes(1);
+        expect(api.importCheck.mock.calls[0][0]).toEqual(['Name 10', 'Name 11']);
+    });
+
+    it('should not ask again what the server refuses, such as a session that has ended', async () => {
+        const sleep = vi.fn(async () => {});
+        api.importCheck.mockResolvedValue({error: 'Forbidden, invalid or expired token... Please try to log in', status: 403});
+        await choose([['Gianni Infantino']], 50, vi.fn(), {sleep});
+        fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
+
+        expect(await screen.findByText(/Forbidden, invalid or expired token/)).toBeInTheDocument();
+        expect(sleep).not.toHaveBeenCalled();
+        expect(api.importCheck).toHaveBeenCalledTimes(1);
+    });
+
+    it('should carry on by itself when the following of the names fails for a reason that passes, nothing followed twice', async () => {
+        const sleep = vi.fn(async () => {});
+        api.importCheck.mockImplementation(async lot => answer(lot));
+        api.importNames.mockResolvedValueOnce({error: 'The server answered 502 with a page, not data: it may be restarting or busy. Try again in a moment.', status: 502})
+            .mockResolvedValue({added: {items: 1, words: 0}, left: {full: 0, missing: 0, invalid: 0}, limits: {total: 300}, entities: [], words: []});
+        const imported = await choose([['Gianni Infantino']], 50, vi.fn(), {sleep});
+        fireEvent.click(screen.getByRole('button', {name: 'Look them up'}));
+        await screen.findByText('Check before following');
+
+        fireEvent.click(screen.getByRole('button', {name: 'Follow 1'}));
+        expect(await screen.findByText('Done')).toBeInTheDocument();
+        expect(api.importNames).toHaveBeenCalledTimes(2);
+        expect(api.importNames).toHaveBeenLastCalledWith({qids: ['Q124138'], words: []});
+        expect(imported).toHaveBeenCalledTimes(1);
+        expect(sleep).toHaveBeenCalledWith(4000, expect.any(Function));
     });
 
     it('should tell how many fit when the list is longer than the place left, and follow only the room left', async () => {
