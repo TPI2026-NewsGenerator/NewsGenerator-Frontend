@@ -177,7 +177,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
     };
 
     return (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink bg-paper">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150">
             {to === null ? (
                 <div className="page flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
                     <p className="folio !text-ink">{count} {count === 1 ? 'story' : 'stories'} ticked</p>
@@ -197,7 +197,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                 return (
                                     <li key={story.storyId} className="border-b border-rule py-1.5 last:border-b-0">
                                         <div className="flex items-center gap-3">
-                                            {ordered.length > 1 && <span aria-hidden className="w-7 shrink-0 font-display text-[1.2rem] leading-none text-ink-mute">{two(at + 1)}</span>}
+                                            {ordered.length > 1 && <span aria-hidden className="w-7 shrink-0 tabular text-[0.9375rem] leading-none font-semibold text-ink-mute">{two(at + 1)}</span>}
                                             <Thumbnail src={shownPicture(story, choice)}/>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block truncate text-[0.9375rem]">{ownTitle(story) ?? story.title}</span>

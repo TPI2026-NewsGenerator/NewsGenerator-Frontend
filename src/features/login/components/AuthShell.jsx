@@ -6,18 +6,23 @@
 //               is signed in
 //
 
+import {ThemeButton} from "@/components/ui/theme-toggle.jsx";
+
 export const AuthShell = ({children}) => (
     <div className="flex min-h-screen flex-col">
-        <header className="border-b-[3px] border-double border-ink">
-            <div className="page flex items-end justify-between gap-6 pt-6 pb-4">
-                <span className="min-w-0 font-display text-[clamp(1.4rem,7.5vw,2rem)] leading-none font-medium tracking-[-0.015em] md:text-[2.6rem]">NewsGenerator</span>
-                <span className="folio hidden sm:block">
-                    {new Date().toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}
-                </span>
+        <header>
+            <div className="page flex h-14 items-center justify-between gap-6 lg:h-16">
+                <span className="min-w-0 text-[1.0625rem] font-semibold tracking-[-0.02em]">NewsGenerator</span>
+                <div className="flex items-center gap-4">
+                    <span className="folio hidden sm:block">
+                        {new Date().toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}
+                    </span>
+                    <ThemeButton/>
+                </div>
             </div>
         </header>
 
-        <main className="page flex-1 pt-14 pb-24 md:pt-24">
+        <main className="page flex-1 pt-16 pb-32 md:pt-28">
             {children}
         </main>
     </div>

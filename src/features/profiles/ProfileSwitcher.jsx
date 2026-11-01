@@ -14,7 +14,7 @@ import {ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {onProfilesChanged, setActiveProfile, useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {cn} from "@/lib/utils.js";
 
-const itemClass = 'flex cursor-pointer items-center gap-2 px-3 py-2 text-[0.9375rem] text-ink outline-none data-[highlighted]:bg-paper-deep';
+const itemClass = 'flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[0.9375rem] text-ink outline-none data-[highlighted]:bg-paper-deep';
 
 // onChoose: called once a profile is chosen (the mobile menu closes). className: of the trigger.
 // admin: may write other profiles (see server/services/utils/admin.js); a reader with one profile
@@ -51,20 +51,20 @@ export const ProfileSwitcher = ({onChoose, className, admin = false}) => {
         <DropdownMenu.Root>
             {/* said a profile, not only its name: next to the name of the reader it read as a second name */}
             <DropdownMenu.Trigger
-                className={cn('inline-flex min-w-0 max-w-[14rem] cursor-pointer items-baseline gap-1.5 text-[0.9375rem] font-semibold tracking-[0.08em] text-ink [font-variant-caps:all-small-caps] hover:text-accent-ink', className)}
+                className={cn('inline-flex h-7 min-w-0 max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-full bg-paper-deep px-3 text-[0.8125rem] text-ink transition-colors duration-200 hover:bg-rule/60', className)}
                 aria-label={`Profile read: ${current.name}. Choose another`}>
-                <span className="folio shrink-0 font-normal">Profile</span>
+                <span className="shrink-0 text-ink-mute">Profile</span>
                 <span className="truncate">{current.name}</span>
-                <ChevronDown aria-hidden className="size-3.5 shrink-0 self-center"/>
+                <ChevronDown aria-hidden className="size-3.5 shrink-0 text-ink-mute"/>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
                 <DropdownMenu.Content align="end" sideOffset={8}
-                                      className="z-50 min-w-[13rem] border border-ink bg-paper py-1 shadow-[4px_4px_0_var(--color-rule)]">
+                                      className="raised z-50 min-w-[13rem] rounded-2xl bg-paper p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.16)] ring-1 ring-rule/60 animate-in fade-in-0 zoom-in-[0.98]">
                     <DropdownMenu.Label className="kicker px-3 pt-2 pb-1">Your profiles</DropdownMenu.Label>
                     <DropdownMenu.RadioGroup value={String(current.id)} onValueChange={choose}>
                         {profiles.map(profile => (
                             <DropdownMenu.RadioItem key={profile.id} value={String(profile.id)} className={itemClass}>
-                                <span aria-hidden className={cn('size-1.5 rounded-full', profile.id === current.id ? 'bg-accent-ink' : 'bg-transparent')}/>
+                                <span aria-hidden className={cn('size-1.5 rounded-full', profile.id === current.id ? 'bg-action' : 'bg-transparent')}/>
                                 <span className="truncate">{profile.name}</span>
                             </DropdownMenu.RadioItem>
                         ))}

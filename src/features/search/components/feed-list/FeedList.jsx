@@ -75,7 +75,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
     if (!newsList) {
         return (
             <section className="page mt-20">
-                <p className="section-head border-t border-ink pt-5">No news found…</p>
+                <p className="section-head">No news found…</p>
             </section>
         );
     }
@@ -84,7 +84,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
     if (newsList.length === 0) {
         return (
             <section className="page mt-20">
-                <p className="section-head border-t border-ink pt-5">
+                <p className="section-head">
                     {mode === 'meaning' ? 'No news answers your search in this period.' : 'No news holds these words in this period.'}
                 </p>
                 <p className="mt-3 max-w-[60ch] text-ink-mute">
@@ -187,7 +187,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
             }
         >
             {showFilterPanel && (
-                <div className="mb-10 border-y border-ink py-6">
+                <div className="mb-10 rounded-2xl bg-paper-deep px-6 py-6">
                     <div className="grid-12 gap-y-6">
                         <div className="col-span-12 sm:col-span-6 md:col-span-3">
                             <Label htmlFor="filter-source">Source</Label>
@@ -213,7 +213,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                         </div>
                     </div>
                     <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-                        <p className="caption max-w-[60ch] italic">
+                        <p className="caption max-w-[60ch]">
                             These describe what was counted, not whether a news is true: a rumour carried by twenty
                             media is still a rumour, and a paper writing "reportedly" is telling you it could not confirm.
                         </p>
@@ -229,7 +229,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
                 {filteredData.map((news, i) => (
                     <li key={news.url} className="lazy-row">
                         {i === firstRelated && (
-                            <p className={`kicker pb-3 ${i > 0 ? 'border-t border-ink pt-8' : 'pt-3'}`}>Close to your search</p>
+                            <p className={`kicker pb-3 ${i > 0 ? 'border-t border-rule pt-8' : 'pt-3'}`}>Close to your search</p>
                         )}
                         <Article id={news.url} onSelect={handleSelect} news={news}/>
                     </li>
@@ -237,7 +237,7 @@ export const FeedList = ({newsList, onGenerate, isGenerating, wider, onWiden, re
             </ul>
 
             {selectedCount > 0 && (
-                <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink bg-paper">
+                <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150">
                     <div className="page flex items-center justify-between gap-4 py-3">
                         <p className="folio !text-ink">
                             {selectedCount} of {MAX_SELECTED} articles chosen

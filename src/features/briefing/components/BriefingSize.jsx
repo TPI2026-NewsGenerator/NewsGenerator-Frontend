@@ -22,11 +22,11 @@ export const BriefingSize = ({size, onChange, disabled = false}) => (
         </p>
         <ToggleGroup.Root type="single" value={String(size)} disabled={disabled}
                           onValueChange={value => value && onChange(Number(value))}
-                          aria-label="Cards" className="mt-2 flex flex-wrap gap-2">
+                          aria-label="Cards" className="mt-2 inline-flex flex-wrap gap-0.5 rounded-full bg-paper-deep p-1">
             {SIZES.map(value => (
                 <ToggleGroup.Item key={value} value={String(value)}
-                                  className={cn('inline-flex h-8 min-w-10 cursor-pointer items-center justify-center border px-3 text-[0.9375rem] font-semibold tabular-nums transition-colors',
-                                      'border-rule text-ink-mute hover:border-ink hover:text-ink data-[state=on]:border-ink data-[state=on]:text-ink',
+                                  className={cn('inline-flex h-7 cursor-pointer items-center justify-center min-w-10 gap-2 rounded-full px-3.5 tabular-nums text-[0.8125rem] transition-[color,background-color,box-shadow] duration-200',
+                                      'text-ink-mute hover:text-ink data-[state=on]:bg-paper data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=on]:bg-rule',
                                       'disabled:cursor-not-allowed disabled:opacity-50')}>
                     {value}
                 </ToggleGroup.Item>

@@ -7,8 +7,10 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
+import {Popover} from "radix-ui";
+import {Search as SearchIcon, X} from "lucide-react";
 import {useAuth} from "@/features/auth/useAuth.js";
-import {PageShell, Opening, Section} from "@/components/layout/Page.jsx";
+import {PageShell, Opening} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {CheckboxGroup, FieldError, Help, Input, Label, Select} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
@@ -388,133 +390,142 @@ export const SearchPage = () => {
         loadSavedSearches();
     }, [loadSavedSearches]);
 
+    // the two ways to search, in a panel the link next to the help opens: in a column of their own, they
+    // made the page two columns beside the form (the user, 01.11.2026)
+    const howToSearch = (
+        <Popover.Root>
+            <Popover.Trigger className="cursor-pointer text-action-text hover:underline underline-offset-4">How to search ›</Popover.Trigger>
+            <Popover.Portal>
+                <Popover.Content align="start" sideOffset={8} collisionPadding={16}
+                                 className="raised z-50 w-[min(26rem,calc(100vw-2rem))] rounded-2xl bg-paper p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)] ring-1 ring-rule/60 outline-none animate-in fade-in-0 zoom-in-[0.98]">
+                    <p className="text-[0.9375rem] font-semibold">A sentence</p>
+                    <p className="caption mt-1">
+                        The AI reads the news closest in meaning to it and keeps the ones that answer it, whatever
+                        their words, then the ones close to it. Several words, a name or a whole question all work.
+                    </p>
+                    <p className="mt-5 text-[0.9375rem] font-semibold">Exact words</p>
+                    <p className="caption mt-1">
+                        As soon as you write quotes, a comma or -word, the news are those holding these words,
+                        in the title, the description or the categories, newest first, without the AI.
+                    </p>
+                    <table className="mt-3 w-full border-collapse text-[0.8125rem]">
+                        <tbody>
+                        {KEYWORD_EXAMPLES.map(([example, meaning]) => (
+                            <tr key={example} className="border-t border-rule align-baseline">
+                                <td className="py-1.5 pr-3 whitespace-nowrap"><code>{example}</code></td>
+                                <td className="py-1.5 text-ink-mute">{meaning}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                    <p className="caption mt-3">
+                        A word without quotes also finds its variants: in <code>referee, VAR</code>, referee finds
+                        "referees". Words of 3 letters or less must match a whole word, so <code>VAR</code> does not find "Alvarez".
+                    </p>
+                </Popover.Content>
+            </Popover.Portal>
+        </Popover.Root>
+    );
+
     return (
         <PageShell user={user} onSignOut={removeAuthCredentials}>
             <Opening
                 kicker="Search"
                 title="Search the news"
                 standfirst="Write what you are looking for in your own words: the AI finds the news that answer it. Choose up to ten and it shows their key passages, in the articles' own words."
-                aside={
-                    <div>
-                        <p className="kicker">Saved searches</p>
-                        {customSearchItems.length === 0
-                            ? <p className="caption mt-2">None yet. Fill the form, then save the search to find it here.</p>
-                            : (
-                                <ul className="mt-2 border-t border-rule">
-                                    {customSearchItems.map(item => (
-                                        <li key={item.id} className="flex items-baseline justify-between gap-3 border-b border-rule py-2">
-                                            <button type="button" onClick={() => applySavedSearch(item)}
-                                                    className={`min-w-0 cursor-pointer text-left hover:text-accent-ink ${formValue.id === item.id ? 'text-accent-ink' : ''}`}>
-                                                {item.title}
-                                            </button>
-                                            <button type="button" onClick={() => removeSavedSearch(item)} aria-label={`Delete ${item.title}`}
-                                                    className="kicker cursor-pointer hover:!text-accent-ink">
-                                                Delete
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                    </div>
-                }
             />
 
-            <Section kicker="The query" title="What to look for">
-                <form className="grid-12 gap-y-12" noValidate onSubmit={event => {
+            {/* one column from the left edge: the field first, the searches saved under it, then the filters */}
+            <section className="page mt-12 md:mt-16" aria-label="What to look for">
+                <form className="max-w-[60rem] space-y-10" noValidate onSubmit={event => {
                     event.preventDefault();
                     handleSubmit();
                 }}>
-                    <div className="col-span-12 space-y-10 md:col-span-8">
-                        <div>
-                            <Label htmlFor="keyword">What are you looking for?</Label>
-                            <Input id="keyword" name="keyword" value={formValue.keyword}
-                                   placeholder="e.g., the new rules on electric cars in Europe"
-                                   onChange={event => setField('keyword', event.target.value)} invalid={Boolean(formError.keyword)}
-                                   aria-describedby="keyword-help"/>
-                            <Help id="keyword-help">
-                                A sentence, in your own words. For exact words, write them "between quotes" or use the other signs on the right.
-                            </Help>
-                            <FieldError>{formError.keyword}</FieldError>
-                        </div>
-
-
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
-                            <div>
-                                <Label htmlFor="language">Display language</Label>
-                                <Select id="language" options={languageOptions} value={formValue.language}
-                                        onChange={event => {
-                                            languageChosen.current = true;
-                                            setFormValue({...formValue, language: event.target.value, category: []});
-                                        }}
-                                        invalid={Boolean(formError.language)} aria-describedby="language-help"/>
-                                <Help id="language-help">Every language is searched, the news written in another are translated into this one</Help>
-                                <FieldError>{formError.language}</FieldError>
+                    <div>
+                        <Label htmlFor="keyword">What are you looking for?</Label>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                            <div className="relative min-w-0 flex-1">
+                                <SearchIcon aria-hidden className="pointer-events-none absolute top-1/2 left-4 size-[1.125rem] -translate-y-1/2 text-ink-mute"/>
+                                <Input id="keyword" name="keyword" value={formValue.keyword}
+                                       placeholder="e.g., the new rules on electric cars in Europe"
+                                       className="h-12 rounded-full pl-11 text-[1.0625rem]"
+                                       onChange={event => setField('keyword', event.target.value)} invalid={Boolean(formError.keyword)}
+                                       aria-describedby="keyword-help"/>
                             </div>
-                            <div>
-                                <Label htmlFor="timeframe">Timeframe</Label>
-                                <Select id="timeframe" options={timeframeOptions} value={formValue.timeframe}
-                                        onChange={event => setField('timeframe', event.target.value)}/>
-                                {formValue.timeframe !== 'c' && <Help>News published in this period</Help>}
+                            <Button variant="primary" type="submit" name="fetchNews" loading={isLoading} className="h-12 px-7 text-[1rem]">Search</Button>
+                        </div>
+                        <Help id="keyword-help" className="max-w-none">
+                            A sentence, in your own words. For exact words, write them "between quotes" or use the other signs. {howToSearch}
+                        </Help>
+                        <FieldError>{formError.keyword}</FieldError>
+
+                        {/* the searches saved, one click to fill the form */}
+                        {customSearchItems.length > 0 && (
+                            <div className="mt-5 flex flex-wrap items-center gap-2">
+                                <p className="kicker mr-1">Saved</p>
+                                {customSearchItems.map(item => (
+                                    <span key={item.id}
+                                          className={`inline-flex h-8 items-center rounded-full pr-1 pl-3.5 text-[0.875rem] transition-colors duration-200 ${formValue.id === item.id ? 'bg-action/12 text-action-text' : 'bg-paper-deep text-ink'}`}>
+                                        <button type="button" onClick={() => applySavedSearch(item)} className="cursor-pointer whitespace-nowrap">
+                                            {item.title}
+                                        </button>
+                                        <button type="button" onClick={() => removeSavedSearch(item)} aria-label={`Delete ${item.title}`} title={`Delete ${item.title}`}
+                                                className="ml-1 inline-flex size-6 cursor-pointer items-center justify-center rounded-full text-ink-mute transition-colors hover:bg-rule/60 hover:text-ink">
+                                            <X aria-hidden className="size-3.5"/>
+                                        </button>
+                                    </span>
+                                ))}
                             </div>
-                            {formValue.timeframe === 'c' && (
-                                <>
-                                    <div>
-                                        <Label htmlFor="range-start">From</Label>
-                                        <Input id="range-start" type="datetime-local" value={localInput(customRange?.[0])}
-                                               max={localInput(new Date())}
-                                               onChange={event => setCustomRange([event.target.value ? new Date(event.target.value) : null, customRange?.[1] ?? null])}/>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="range-end">To</Label>
-                                        <Input id="range-end" type="datetime-local" value={localInput(customRange?.[1])}
-                                               max={localInput(new Date())}
-                                               onChange={event => setCustomRange([customRange?.[0] ?? null, event.target.value ? new Date(event.target.value) : null])}/>
-                                        <Help>News published between these two dates</Help>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        <CheckboxGroup legend="Category"
-                                       options={categoryOptions.map(category => ({value: category, label: capitalize(category)}))}
-                                       value={formValue.category} onChange={category => setField('category', category)}
-                                       invalid={Boolean(formError.category)} error={formError.category}/>
-
-                        <div className="flex flex-wrap gap-3 border-t border-rule pt-6">
-                            <Button variant="primary" type="submit" name="fetchNews" loading={isLoading}>Search</Button>
-                            <Button name="save" onClick={() => setSaveSearchModal(true)}>Save search</Button>
-                        </div>
+                        )}
                     </div>
 
-                    <aside className="col-span-12 md:col-span-3 md:col-start-10 md:border-l md:border-rule md:pl-5">
-                        <p className="kicker">Two ways to search</p>
-                        <p className="mt-2 text-[0.9375rem] font-semibold">A sentence</p>
-                        <p className="caption mt-1">
-                            The AI reads the news closest in meaning to it and keeps the ones that answer it, whatever
-                            their words, then the ones close to it. Several words, a name or a whole question all work.
-                        </p>
-                        <p className="mt-5 text-[0.9375rem] font-semibold">Exact words</p>
-                        <p className="caption mt-1">
-                            As soon as you write quotes, a comma or -word, the news are those holding these words,
-                            in the title, the description or the categories, newest first, without the AI.
-                        </p>
-                        <table className="mt-3 w-full border-collapse text-[0.8125rem]">
-                            <tbody>
-                            {KEYWORD_EXAMPLES.map(([example, meaning]) => (
-                                <tr key={example} className="border-t border-rule align-baseline">
-                                    <td className="py-1.5 pr-3 whitespace-nowrap"><code>{example}</code></td>
-                                    <td className="py-1.5 text-ink-mute">{meaning}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                        <p className="caption mt-3">
-                            A word without quotes also finds its variants: in <code>referee, VAR</code>, referee finds
-                            "referees". Words of 3 letters or less must match a whole word, so <code>VAR</code> does not find "Alvarez".
-                        </p>
-                    </aside>
+                    <div className="flex flex-wrap items-start gap-x-6 gap-y-8">
+                        <div className="w-full sm:w-64">
+                            <Label htmlFor="language">Display language</Label>
+                            <Select id="language" options={languageOptions} value={formValue.language}
+                                    onChange={event => {
+                                        languageChosen.current = true;
+                                        setFormValue({...formValue, language: event.target.value, category: []});
+                                    }}
+                                    invalid={Boolean(formError.language)} aria-describedby="language-help"/>
+                            <Help id="language-help">Every language is searched, the news written in another are translated into this one</Help>
+                            <FieldError>{formError.language}</FieldError>
+                        </div>
+                        <div className="w-full sm:w-64">
+                            <Label htmlFor="timeframe">Timeframe</Label>
+                            <Select id="timeframe" options={timeframeOptions} value={formValue.timeframe}
+                                    onChange={event => setField('timeframe', event.target.value)}/>
+                            {formValue.timeframe !== 'c' && <Help>News published in this period</Help>}
+                        </div>
+                        {formValue.timeframe === 'c' && (
+                            <>
+                                <div className="w-full sm:w-64">
+                                    <Label htmlFor="range-start">From</Label>
+                                    <Input id="range-start" type="datetime-local" value={localInput(customRange?.[0])}
+                                           max={localInput(new Date())}
+                                           onChange={event => setCustomRange([event.target.value ? new Date(event.target.value) : null, customRange?.[1] ?? null])}/>
+                                </div>
+                                <div className="w-full sm:w-64">
+                                    <Label htmlFor="range-end">To</Label>
+                                    <Input id="range-end" type="datetime-local" value={localInput(customRange?.[1])}
+                                           max={localInput(new Date())}
+                                           onChange={event => setCustomRange([customRange?.[0] ?? null, event.target.value ? new Date(event.target.value) : null])}/>
+                                    <Help>News published between these two dates</Help>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    <CheckboxGroup legend="Category" chips
+                                   options={categoryOptions.map(category => ({value: category, label: capitalize(category)}))}
+                                   value={formValue.category} onChange={category => setField('category', category)}
+                                   invalid={Boolean(formError.category)} error={formError.category}/>
+
+                    <div>
+                        <Button name="save" onClick={() => setSaveSearchModal(true)}>Save search</Button>
+                    </div>
                 </form>
-            </Section>
+            </section>
 
             {/* a saved search loaded in the form is replaced by it, unless saved as a new one: said
                 before, a title typed over it renamed the search the reader had */}

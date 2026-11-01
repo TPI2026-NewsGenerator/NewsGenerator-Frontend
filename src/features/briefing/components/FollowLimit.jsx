@@ -30,13 +30,13 @@ export const FollowLimit = ({limit, onChange, disabled = false}) => {
                              onValueChange={([next]) => setValue(next)}
                              onValueCommit={([next]) => next !== limit && onChange(next)}
                              className="relative flex w-44 cursor-pointer touch-none items-center select-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50">
-                    <Slider.Track className="relative h-px grow bg-rule">
-                        <Slider.Range className="absolute h-full bg-ink"/>
+                    <Slider.Track className="relative h-1 grow overflow-hidden rounded-full bg-paper-deep ring-1 ring-rule/50">
+                        <Slider.Range className="absolute h-full bg-action"/>
                     </Slider.Track>
                     <Slider.Thumb aria-label="News wanted for each name you follow" aria-valuetext={`${value} news`}
-                                  className="block size-4 rounded-full border border-ink bg-paper outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"/>
+                                  className="block size-5 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)] ring-1 ring-black/5 outline-none focus-visible:ring-4 focus-visible:ring-action/30"/>
                 </Slider.Root>
-                <span className="text-[0.9375rem] font-semibold tracking-[0.06em] text-ink [font-variant-caps:all-small-caps]">{value} news</span>
+                <span className="text-[0.875rem] text-ink tabular-nums">{value} news</span>
             </div>
         </div>
     );

@@ -128,7 +128,7 @@ export const SettingsPage = () => {
             {error && (
                 <div className="page mt-10">
                     <div className="grid-12">
-                        <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-7 md:col-start-3">{error}</Notice>
+                        <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-8">{error}</Notice>
                     </div>
                 </div>
             )}

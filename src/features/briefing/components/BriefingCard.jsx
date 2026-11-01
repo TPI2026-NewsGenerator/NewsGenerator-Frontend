@@ -70,7 +70,7 @@ const WAYS = {passages: Passages, digest: Digest, points: Points};
 // article's own sentences when the reader asks for it, for the readers to compare the two. text: the
 // points ['...'] or the summary '...'; model: the model that wrote it
 const AiVersion = ({id, format, text, model, source}) => (
-    <div id={id} className="mt-6 border-l-2 border-accent-ink/60 pl-5">
+    <div id={id} className="mt-6 rounded-2xl bg-paper-deep px-5 py-4">
         <p className="kicker !text-accent-ink">Written by the AI</p>
         <div className="body-text mt-3">
             {format === 'points'
@@ -91,7 +91,7 @@ const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month
 // Nobody is said to be right: the reader is told who denies, and where it is written
 const CONTESTED_NOTE = 'One of its articles reports that someone named denies this news. The sentence is the article’s own, found by the AI; it does not say who is right.';
 const Contested = ({denials}) => (
-    <div className="mt-6 border-l-2 border-accent-ink pl-5">
+    <div className="mt-6 rounded-2xl bg-paper-deep px-5 py-4">
         <p className="kicker !text-accent-ink">
             Contested
             <InfoTip label="Contested">{CONTESTED_NOTE}</InfoTip>
@@ -120,7 +120,7 @@ const Contested = ({denials}) => (
 // in another language than the reader's, the original shown with the card's
 const ANGLES_NOTE = 'Close news of the last days, in any language, that the AI read as the same affair seen from another side: what came before or after, a reaction, a background. Judged from their titles: one may only be close.';
 const OtherAngles = ({angles, original}) => (
-    <div className="mt-8 border-l-2 border-rule pl-5">
+    <div className="mt-10">
         <p className="kicker">
             Same affair, other angles
             <InfoTip label="Same affair, other angles">{ANGLES_NOTE}</InfoTip>
@@ -185,7 +185,7 @@ const Picture = ({src, source, illustration = false}) => {
     return (
         <figure className="m-0 mt-5">
             <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}
-                 className={`aspect-[16/9] w-full bg-secondary object-cover ${illustration ? 'object-[50%_25%]' : ''}`}/>
+                 className={`aspect-[16/9] w-full rounded-[18px] bg-paper-deep object-cover ${illustration ? 'object-[50%_25%]' : ''}`}/>
             {source && <figcaption className="caption mt-1.5">{illustration ? 'Illustration' : 'Picture'} — {source}</figcaption>}
         </figure>
     );
@@ -260,10 +260,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     const countries = countryNames(item.countries, {titles: [item.title, item.titleTranslation], languages: [item.language]});
 
     return (
-        <article className="grid-12 border-t border-rule pt-7 pb-14">
+        <article className="grid-12 border-t border-rule pt-10 pb-20">
             <div className="col-span-12 flex items-baseline gap-4 md:col-span-2 md:block">
                 {number !== undefined && (
-                    <p aria-hidden className="font-display text-[2.6rem] leading-none text-ink-mute md:text-[3.4rem]">
+                    <p aria-hidden className="tabular text-[2.25rem] leading-none font-semibold tracking-[-0.04em] text-ink-mute/45 md:text-[3rem]">
                         {String(number).padStart(2, '0')}
                     </p>
                 )}
@@ -294,7 +294,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
                         <span className="kicker">Translated from {languageLabel(item.language)}</span>
                         <button type="button" onClick={() => setOriginal(!original)} aria-expanded={original} aria-controls={`original-${item.storyId}`}
-                                className="cursor-pointer font-semibold tracking-[0.06em] text-ink-mute [font-variant-caps:all-small-caps] underline underline-offset-4 hover:text-ink">
+                                className="cursor-pointer text-action-text hover:underline underline-offset-4">
                             {original ? 'Hide original' : 'Show original'}
                         </button>
                     </p>
@@ -302,7 +302,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {translated && original && item.titleTranslation && (
                     <p lang={item.language ?? undefined} className="caption mt-1 italic">“<Marked text={item.title} marks={marks.title}/>”</p>
                 )}
-                {item.why && <p className="standfirst mt-3 text-ink-mute italic">{item.why}</p>}
+                {item.why && <p className="standfirst mt-3">{item.why}</p>}
                 {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}
                                             illustration={item.thumbnail === item.illustration?.url}/>}
 
@@ -339,7 +339,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {paragraphs.length > 0 && aiText && (
                     <>
                         <button type="button" onClick={() => setShowAi(!showAi)} aria-expanded={showAi} aria-controls={`ai-${item.storyId}`}
-                                className="caption mt-4 cursor-pointer font-semibold tracking-[0.06em] text-ink-mute [font-variant-caps:all-small-caps] underline underline-offset-4 hover:text-ink">
+                                className="mt-4 cursor-pointer text-[0.875rem] text-action-text hover:underline underline-offset-4">
                             {showAi ? 'Hide AI version' : 'Show AI version'}
                         </button>
                         {showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
@@ -356,7 +356,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-8"/>}
             </div>
 
-            <aside className="col-span-12 mt-8 space-y-5 border-t border-rule pt-5 md:col-span-3 md:col-start-10 md:mt-1 md:border-t-0 md:border-l md:pt-0 md:pl-5">
+            <aside className="col-span-12 mt-10 space-y-5 md:col-span-3 md:col-start-10 md:mt-1">
                 {item.imported && (
                     <Margin kicker="Added by you">
                         {item.transferred
@@ -364,7 +364,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                             : 'From its link: not chosen nor checked against other media.'}
                         {onRemove && (
                             <button type="button" onClick={onRemove}
-                                    className="mt-1 block cursor-pointer text-ink-mute underline underline-offset-4 hover:text-ink">Take it out</button>
+                                    className="mt-1 block cursor-pointer text-action-text hover:underline underline-offset-4">Take it out</button>
                         )}
                     </Margin>
                 )}
@@ -376,7 +376,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                         <ul aria-label="Who it is about" className="flex list-none flex-wrap gap-x-3 gap-y-0.5 p-0">
                             {item.names.map(name => (
                                 <li key={`${name.qid ?? ''} ${name.name}`}>
-                                    <Link to={pageOf(name)} className="underline decoration-rule underline-offset-4 hover:text-accent-ink hover:decoration-accent-ink">
+                                    <Link to={pageOf(name)} className="text-action-text hover:underline underline-offset-4">
                                         {name.name}
                                     </Link>
                                 </li>

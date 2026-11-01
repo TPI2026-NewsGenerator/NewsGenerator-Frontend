@@ -129,7 +129,7 @@ export const SignupPage = () => {
                     </p>
                 </div>
 
-                <form className="col-span-12 space-y-10 md:col-span-7 md:col-start-6 md:mt-3 md:border-l md:border-rule md:pl-8"
+                <form className="col-span-12 space-y-10 md:col-span-7 md:col-start-6 md:mt-3"
                       onSubmit={handleSubmit} noValidate>
                     <fieldset className="min-w-0 space-y-7 border-0 p-0">
                         <legend className="section-head mb-8">Your account</legend>

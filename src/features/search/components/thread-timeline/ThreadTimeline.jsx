@@ -36,7 +36,7 @@ const Fact = ({fact, lead, onSelect}) => {
                 {!lead && (
                     <input type="checkbox" checked={isChecked} onChange={toggle}
                            aria-label={`Select “${fact.title}” for its key passages`}
-                           className="size-4 cursor-pointer accent-[var(--accent-ink)]"/>
+                           className="size-4 cursor-pointer accent-[var(--action)]"/>
                 )}
             </div>
             <div>
@@ -69,7 +69,7 @@ export const ThreadTimeline = ({facts, leadUrl, onSelect}) => {
     const last = dateOf(facts[facts.length - 1]);
 
     return (
-        <section className="mt-5 max-w-[70ch] border-l border-ink/40 pl-4" aria-label="The affair">
+        <section className="mt-5 max-w-[70ch] border-l border-rule pl-4" aria-label="The affair">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                 <p className="kicker">The affair · {facts.length} facts, {first} to {last}</p>
                 <Button variant="link" size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>

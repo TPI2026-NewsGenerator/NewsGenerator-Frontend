@@ -14,11 +14,11 @@ import {cn} from "@/lib/utils.js";
 export const ScrollFrame = ({label, className, children}) => (
     <RadixScrollArea.Root type="auto" className="relative overflow-hidden border-y border-rule">
         <RadixScrollArea.Viewport tabIndex={0} aria-label={label}
-                                  className={cn('size-full max-h-[32rem] overscroll-contain pr-4 outline-none focus-visible:ring-1 focus-visible:ring-ink', className)}>
+                                  className={cn('size-full max-h-[32rem] overscroll-contain pr-4 outline-none focus-visible:ring-2 focus-visible:ring-action', className)}>
             {children}
         </RadixScrollArea.Viewport>
         <RadixScrollArea.Scrollbar orientation="vertical" className="flex w-2 touch-none p-px select-none">
-            <RadixScrollArea.Thumb className="relative flex-1 rounded-full bg-ink/45 hover:bg-ink/70"/>
+            <RadixScrollArea.Thumb className="relative flex-1 rounded-full bg-ink/20 hover:bg-ink/40"/>
         </RadixScrollArea.Scrollbar>
         <RadixScrollArea.Corner/>
     </RadixScrollArea.Root>

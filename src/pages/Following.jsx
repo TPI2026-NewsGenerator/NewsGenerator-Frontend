@@ -140,7 +140,7 @@ export const FollowingPage = () => {
 
             <Section kicker="Find" title="What do you want to follow?">
                 <div className="grid-12">
-                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                    <div className="col-span-12 md:col-span-8">
                         <Label htmlFor="entity-search">A club, a person, an organisation, a word</Label>
                         <Input id="entity-search" type="search" autoComplete="off" placeholder="Roger Federer, Tesla, the World Health Organization, VAR…"
                                value={query} onChange={event => setQuery(event.target.value)}/>
@@ -182,7 +182,7 @@ export const FollowingPage = () => {
 
             <Section kicker="Many at once" title="Import a list of names">
                 <div className="grid-12">
-                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                    <div className="col-span-12 md:col-span-8">
                         <p className="caption">
                             An Excel file (.xlsx) with the names one under the other in the first column. Each is looked for in Wikidata and linked
                             when it has one item, you choose when it has several, and it is followed as written when it has none. You follow {limits.total} names at most.
@@ -197,7 +197,7 @@ export const FollowingPage = () => {
             {suggested.length > 0 && (
                 <Section kicker="Often on your cards" title="Follow them?">
                     <div className="grid-12">
-                        <div className="col-span-12 md:col-span-7 md:col-start-3">
+                        <div className="col-span-12 md:col-span-8">
                             <p className="caption">The people and organisations several cards of your briefings of the last two weeks were about.</p>
                             <ul aria-label="Suggested" className="mt-3 list-none border-t border-rule p-0">
                                 {suggested.map(name => (
@@ -218,7 +218,7 @@ export const FollowingPage = () => {
 
             <Section kicker="Followed" title="What you follow">
                 <div className="grid-12">
-                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                    <div className="col-span-12 md:col-span-8">
                         {error && <Notice type="error" onClose={() => setError(null)}>{error}</Notice>}
                         {followed === null && !error && <Working>Loading what you follow…</Working>}
                         {followed && entities.length + words.length === 0 && <p className="caption">Nothing yet: look one up above.</p>}
@@ -227,7 +227,7 @@ export const FollowingPage = () => {
                                 {entities.map(entity => (
                                     <li key={entity.qid} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-rule py-4">
                                         <span className="min-w-0">
-                                            <Link to={`/following/${entity.qid}`} className="font-display text-[1.35rem] leading-tight text-ink no-underline hover:text-accent-ink">
+                                            <Link to={`/following/${entity.qid}`} className="text-[1.25rem] leading-tight font-semibold tracking-[-0.02em] text-ink no-underline hover:text-action-text">
                                                 {entity.short ?? entity.label}
                                             </Link>
                                             <MetaLine className="mt-1">
@@ -253,7 +253,7 @@ export const FollowingPage = () => {
                                 {words.map(word => (
                                     <li key={word} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule py-4">
                                         <span className="min-w-0">
-                                            <Link to={pageOf({name: word})} className="font-display text-[1.35rem] leading-tight text-ink no-underline hover:text-accent-ink">
+                                            <Link to={pageOf({name: word})} className="text-[1.25rem] leading-tight font-semibold tracking-[-0.02em] text-ink no-underline hover:text-action-text">
                                                 “{word}”
                                             </Link>
                                             <MetaLine className="mt-1"><Meta>as written</Meta><Meta>in your briefing</Meta></MetaLine>

@@ -61,13 +61,13 @@ export const SourceList = memo(({found, own, refused, removed, limits, busy, onT
         <div>
             {/* the radix group of the ToggleGroup of shadcn: one of them always chosen */}
             <ToggleGroup.Root type="single" value={show} onValueChange={value => value && setShow(value)}
-                              aria-label="Which sources to show" className="mb-6 flex flex-wrap gap-2">
+                              aria-label="Which sources to show" className="mb-6 inline-flex flex-wrap gap-0.5 rounded-full bg-paper-deep p-1">
                 {SHOWS.filter(({value}) => value !== 'leftOut' || counts.leftOut > 0).map(({value, label}) => (
                     <ToggleGroup.Item key={value} value={value}
-                                      className={cn('inline-flex h-8 cursor-pointer items-center gap-2 border px-3 text-[0.9375rem] font-semibold tracking-[0.06em] [font-variant-caps:all-small-caps] transition-colors',
-                                          'border-rule text-ink-mute hover:border-ink hover:text-ink data-[state=on]:border-ink data-[state=on]:text-ink')}>
+                                      className={cn('inline-flex h-7 cursor-pointer items-center justify-center gap-2 rounded-full px-3.5 text-[0.8125rem] transition-[color,background-color,box-shadow] duration-200',
+                                      'text-ink-mute hover:text-ink data-[state=on]:bg-paper data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=on]:bg-rule')}>
                         {label}{' '}
-                        <span className="font-normal tabular-nums">{counts[value]}</span>
+                        <span className="tabular-nums text-ink-mute">{counts[value]}</span>
                     </ToggleGroup.Item>
                 ))}
             </ToggleGroup.Root>

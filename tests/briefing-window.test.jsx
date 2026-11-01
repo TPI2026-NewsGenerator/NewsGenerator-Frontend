@@ -29,6 +29,8 @@ const ready = (hours) => ({id: 9, status: 'ready', hours, items: [], createdAt: 
 
 const renderPage = () => render(<MemoryRouter><WithSession user={READER}><BriefingPage/></WithSession></MemoryRouter>);
 const bar = () => screen.getByRole('slider', {name: 'The news of the last'});
+// the days of the next briefing are in the panel of the toolbar
+const openPanel = async () => fireEvent.click(await screen.findByRole('button', {name: /^Next briefing/}));
 
 describe('BriefingPage and the news it is written from', () => {
     afterEach(() => {
@@ -38,6 +40,7 @@ describe('BriefingPage and the news it is written from', () => {
     it('should ask the next briefing as the last one was, and say what the last one read', async () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: ready(168)});
         renderPage();
+        await openPanel();
 
         await waitFor(() => expect(bar()).toHaveAttribute('aria-valuenow', '7'));
         expect(bar()).toHaveAttribute('aria-valuetext', '7 days');
@@ -49,6 +52,7 @@ describe('BriefingPage and the news it is written from', () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: ready(48)});
         BriefingApi.start.mockResolvedValue({briefing: {id: 10, status: 'running', step: 'ranking', hours: 120, items: []}});
         renderPage();
+        await openPanel();
 
         await waitFor(() => expect(bar()).toHaveAttribute('aria-valuenow', '2'));
         fireEvent.keyDown(bar(), {key: 'ArrowRight'});
@@ -65,6 +69,7 @@ describe('BriefingPage and the news it is written from', () => {
     it('should ask the news of 2 days before any briefing, and keep to 1 to 7 days', async () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: null});
         renderPage();
+        await openPanel();
 
         await waitFor(() => expect(bar()).toHaveAttribute('aria-valuenow', '2'));
         expect(bar()).toHaveAttribute('aria-valuemin', '1');

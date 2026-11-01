@@ -2,25 +2,27 @@
 //  Author: Fabian Rostello
 //  Date: 28.09.2026
 //  File: button.jsx
-//  Description: The buttons of the pages: ink outlined, never a filled coloured block
+//  Description: The buttons of the pages: one filled blue for the action of a place, a grey pill for the
+//               others, plain text for what is quiet
 //
 
 import {forwardRef} from "react";
+import {Loader2} from "lucide-react";
 import {cn} from "@/lib/utils.js";
 
 const VARIANTS = {
-    primary: 'border border-ink text-ink hover:bg-ink hover:text-paper',
-    quiet: 'border border-rule text-ink hover:border-ink',
-    subtle: 'border border-transparent text-ink-mute hover:text-ink',
-    link: 'link border-0 !px-0 !h-auto',
+    primary: 'bg-action text-white hover:bg-action-hover',
+    quiet: 'bg-paper-deep text-ink hover:bg-rule/60',
+    subtle: 'bg-transparent text-ink-mute hover:text-ink',
+    link: 'link bg-transparent !px-0 !h-auto',
 };
 
 const SIZES = {
-    sm: 'h-8 px-3 text-[0.9375rem]',
-    md: 'h-10 px-5 text-[1.0625rem]',
+    sm: 'h-8 px-3.5 text-[0.875rem]',
+    md: 'h-10 px-5 text-[0.9375rem]',
 };
 
-// loading: the button is disabled and a running rule tells it works
+// loading: the button is disabled and a turning mark tells it works
 export const Button = forwardRef(({variant = 'quiet', size = 'md', loading = false, disabled, className, children, type = 'button', ...props}, ref) => (
     <button
         ref={ref}
@@ -28,14 +30,14 @@ export const Button = forwardRef(({variant = 'quiet', size = 'md', loading = fal
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         className={cn(
-            'relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 bg-transparent font-semibold tracking-[0.06em] [font-variant-caps:all-small-caps] transition-colors',
-            'disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-inherit',
+            'relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full font-normal whitespace-nowrap transition-colors duration-200',
+            'disabled:cursor-not-allowed disabled:opacity-40',
             SIZES[size], VARIANTS[variant], className,
         )}
         {...props}
     >
+        {loading && <Loader2 aria-hidden className="size-4 animate-spin"/>}
         {children}
-        {loading && <span aria-hidden className="working-rule absolute inset-x-0 bottom-0"/>}
     </button>
 ));
 Button.displayName = 'Button';
@@ -49,8 +51,8 @@ export const IconButton = forwardRef(({label, pressed, className, children, ...p
         aria-pressed={pressed}
         title={props.title ?? label}
         className={cn(
-            'inline-flex size-8 shrink-0 cursor-pointer items-center justify-center border border-transparent text-ink-mute transition-colors hover:border-rule hover:text-ink',
-            'aria-pressed:border-ink aria-pressed:text-accent-ink disabled:cursor-not-allowed disabled:opacity-45',
+            'inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-mute transition-colors duration-200 hover:bg-paper-deep hover:text-ink',
+            'aria-pressed:bg-paper-deep aria-pressed:text-action-text disabled:cursor-not-allowed disabled:opacity-40',
             className,
         )}
         {...props}

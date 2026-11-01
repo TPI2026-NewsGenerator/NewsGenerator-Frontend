@@ -70,7 +70,7 @@ export const Term = ({group, heading = true}) => {
     return (
         <section className={heading ? 'border-t border-rule pt-5' : ''}>
             {heading && (
-                <h3 className="font-display text-[1.35rem] leading-tight">
+                <h3 className="text-[1.25rem] leading-tight font-semibold tracking-[-0.02em]">
                     {group.qid ? group.term : `“${group.term}”`} <span className="folio align-middle">{group.count} {group.count === 1 ? 'story' : 'stories'}{group.hours && ` in ${spanOf(group.hours)}`}</span>
                 </h3>
             )}
@@ -151,7 +151,7 @@ export const WatchedNews = ({watched}) => {
             <Tabs.List aria-label="What you follow" className="flex flex-wrap gap-x-6 gap-y-1 border-b border-rule">
                 {watched.map(group => (
                     <Tabs.Trigger key={tabOf(group)} value={tabOf(group)}
-                                  className="-mb-px cursor-pointer border-b-2 border-transparent pt-4 pb-2 text-left font-display text-[1.2rem] leading-tight text-ink-mute transition-colors hover:text-ink data-[state=active]:border-ink data-[state=active]:text-ink">
+                                  className="-mb-px cursor-pointer border-b-2 border-transparent pt-4 pb-2.5 text-left text-[1rem] leading-tight font-medium text-ink-mute transition-colors duration-200 hover:text-ink data-[state=active]:border-ink data-[state=active]:text-ink">
                         {group.term} <span className="folio align-middle">{group.count}</span>
                     </Tabs.Trigger>
                 ))}

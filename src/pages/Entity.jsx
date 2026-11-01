@@ -233,7 +233,7 @@ export const EntityPage = () => {
                                         {named.map(other => (
                                             <li key={other.qid} className="border-b border-rule">
                                                 <button type="button" onClick={() => setChosen(other.qid)} aria-pressed={other.qid === chosen}
-                                                        className={cn('flex w-full cursor-pointer items-baseline justify-between gap-3 py-2 text-left hover:text-accent-ink',
+                                                        className={cn('flex w-full cursor-pointer items-baseline justify-between gap-3 py-2 text-left hover:text-action-text',
                                                             other.qid === chosen ? 'text-ink' : 'text-ink-mute')}>
                                                     <span className="min-w-0">
                                                         <span className={cn('block', other.qid === chosen && 'font-semibold')}>{other.label}</span>

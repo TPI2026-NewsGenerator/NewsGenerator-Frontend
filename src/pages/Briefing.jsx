@@ -6,9 +6,10 @@
 //               of the last 1 to 7 days as they choose
 //
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
-import {Tabs} from "radix-ui";
+import {Popover, Tabs} from "radix-ui";
+import {SlidersHorizontal} from "lucide-react";
 import {PageShell, Opening} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
@@ -31,7 +32,6 @@ import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
-import {useClearance} from "@/lib/useClearance.js";
 import {toast} from "@/lib/toast.js";
 
 const POLL_MS = 3000;
@@ -49,8 +49,8 @@ const steps = (span) => ({
     angles: 'Looking for other angles on each story…',
 });
 
-// a tab of the page, larger than the ones of the terms inside it (see WatchedNews)
-const PAGE_TAB = '-mb-px cursor-pointer border-b-2 border-transparent pt-2 pb-3 font-display text-[1.6rem] leading-tight text-ink-mute transition-colors hover:text-ink data-[state=active]:border-ink data-[state=active]:text-ink';
+// a tab of the page: a segment of the toolbar, the one read raised
+const PAGE_TAB = 'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] text-ink-mute transition-[color,background-color,box-shadow] duration-200 hover:text-ink data-[state=active]:bg-paper data-[state=active]:text-ink data-[state=active]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=active]:bg-rule';
 
 const written = (at) => new Date(at).toLocaleString('en-GB', {weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'});
 
@@ -59,9 +59,6 @@ export const BriefingPage = () => {
     const [profile, setProfile] = useState(undefined);      // undefined: not loaded yet
     const [briefing, setBriefing] = useState(undefined);
     const [error, setError] = useState(null);
-    const asideRef = useRef(null);       // the menu hanging beside the page, and the cards that start under it
-    const listRef = useRef(null);
-    useClearance(asideRef, listRef);
     // the hours of news of the next briefing: the ones of the last until the reader chooses (the default
     // after one of a window no longer offered)
     const [chosen, setChosen] = useState(null);
@@ -268,25 +265,15 @@ export const BriefingPage = () => {
         <>
             {ready && count > 0 && !onlyFound && briefing.analysis && (
                 <div className="grid-12">
-                    <div className="col-span-12 md:col-span-7 md:col-start-3">
+                    <div className="col-span-12 md:col-span-9">
                         <AnalysisNote analysis={briefing.analysis} items={briefing.items}/>
-                    </div>
-                </div>
-            )}
-
-            {ready && count > 0 && (
-                <div className="grid-12">
-                    <div className="col-span-12 md:col-span-7 md:col-start-3">
-                        {shorter
-                            ? <BriefingFormat format={format} onChange={chooseFormat}/>
-                            : <p className="caption">Bullet points and a short summary come with your next briefing: this one has its key passages only.</p>}
                     </div>
                 </div>
             )}
 
             {found > 0 && (
                 <div className="grid-12">
-                    <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-7 md:col-start-3">
+                    <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-9">
                         <Button size="sm" variant={onlyFound ? 'primary' : 'quiet'} aria-pressed={onlyFound}
                                 onClick={() => setFoundView(onlyFound ? null : briefing.id)}>
                             {onlyFound ? 'Show the whole briefing' : `What you follow, found · ${found} ${found === 1 ? 'story' : 'stories'}`}
@@ -301,7 +288,7 @@ export const BriefingPage = () => {
             )}
 
             {ready && count > 0 && (
-                <ol ref={listRef} className="list-none p-0">
+                <ol className="list-none p-0">
                     {/* the stories of the terms followed keep their place in the briefing */}
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId} id={`card-${item.storyId}`} className="scroll-mt-6">
@@ -322,7 +309,7 @@ export const BriefingPage = () => {
 
     const terms = hasTerms && (
         <div className="grid-12">
-            <section className="col-span-12 md:col-span-7 md:col-start-3" aria-labelledby="watched-head">
+            <section className="col-span-12 md:col-span-9" aria-labelledby="watched-head">
                 <h2 id="watched-head" className="section-head">What you follow</h2>
                 <p className="caption mt-2">
                     The news of your sources that name one, whatever their relevance, not chosen by the AI. They are searched
@@ -330,7 +317,7 @@ export const BriefingPage = () => {
                 </p>
                 {ready && found > 0 && (
                     <p className="caption mt-1">
-                        <button type="button" onClick={showFound} className="cursor-pointer text-accent-ink underline underline-offset-4 hover:text-ink">
+                        <button type="button" onClick={showFound} className="cursor-pointer text-action-text hover:underline underline-offset-4">
                             {found === 1 ? '1 story of your briefing names them' : `${found} stories of your briefing name them`}
                         </button>
                     </p>
@@ -342,111 +329,151 @@ export const BriefingPage = () => {
         </div>
     );
 
+    // the reading of the cards, in the toolbar while the tab of the briefing is read
+    const reading = tab === 'briefing' && ready && count > 0 && shorter && <BriefingFormat format={format} onChange={chooseFormat}/>;
+    // the next briefing: shown while the profile is asked too (it came after the briefing, and the controls
+    // appearing then pushed the cards down, the user 16.10.2026); none without a profile
+    // its days and cards, kept from a briefing to the next, in a panel the pill opens: beside the tabs and the
+    // way to read, they took the toolbar to two lines on a laptop (the user, 01.11.2026)
+    const next = profile !== null && (
+        <div className="flex items-center gap-3 md:ml-auto">
+            <Popover.Root>
+                <Popover.Trigger aria-label={`Next briefing: the news of the last ${spanOf(hours)}, ${size} cards. Change`}
+                                 className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full bg-paper-deep px-3.5 text-[0.8125rem] whitespace-nowrap text-ink transition-colors duration-200 hover:bg-rule/60 data-[state=open]:bg-rule/60">
+                    <SlidersHorizontal aria-hidden className="size-3.5 text-ink-mute" strokeWidth={1.75}/>
+                    {spanOf(hours)} · {size} cards
+                </Popover.Trigger>
+                <Popover.Portal>
+                    {/* opened on the bar: on its first "i", the focus opened its tip over the panel */}
+                    <Popover.Content align="end" sideOffset={8} collisionPadding={16}
+                                     onOpenAutoFocus={event => {
+                                         event.preventDefault();
+                                         event.currentTarget.querySelector('[role="slider"]')?.focus();
+                                     }}
+                                     className="raised z-50 w-72 space-y-5 rounded-2xl bg-paper p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)] ring-1 ring-rule/60 outline-none animate-in fade-in-0 zoom-in-[0.98]">
+                        <p className="text-[0.9375rem] font-semibold tracking-[-0.01em]">Next briefing</p>
+                        <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
+                        <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
+                    </Popover.Content>
+                </Popover.Portal>
+            </Popover.Root>
+            <Button variant="primary" size="sm" onClick={start} loading={running} disabled={running}>
+                New briefing
+            </Button>
+        </div>
+    );
+    const tabs = hasTerms && (
+        <Tabs.List aria-label="Your briefing and what you follow" className="inline-flex gap-0.5 rounded-full bg-paper-deep p-1">
+            <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
+            <Tabs.Trigger value="terms" className={PAGE_TAB}>
+                Following{watchedCount !== null && <> <span className="tabular-nums text-ink-mute">{watchedCount}</span></>}
+            </Tabs.Trigger>
+        </Tabs.List>
+    );
+
     return (
         <PageShell user={user} onSignOut={logout}>
             <Opening
                 kicker="The briefing"
                 title="Your briefing"
                 standfirst="The stories of the last 1 to 7 days closest to your interests, chosen by the AI. A story you sent by e-mail in the last two days counts as read: it comes back only when something new happened."
-                // shown while the profile is asked too: it comes after the briefing, and the column
-                // appearing then pushed the cards down (the user, 16.10.2026); none without a profile.
-                // Hanging beside the page: taller than the title, it left a gap under it and pushed the
-                // tabs down (the user, 29.10.2026); the cards start under it (useClearance)
-                hanging asideRef={asideRef}
-                aside={profile !== null && (
-                    <div className="space-y-4">
-                        {ready && (
-                            <div>
-                                <p className="kicker">This edition</p>
-                                <p className="folio mt-1 !text-ink">Written {written(briefing.finishedAt ?? briefing.createdAt)}</p>
-                                <p className="folio mt-0.5">
-                                    The news of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)}{count > 0 && `, ${count} ${count === 1 ? 'story' : 'stories'}`}
-                                </p>
-                            </div>
-                        )}
-                        <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
-                        <BriefingSize size={size} onChange={chooseSize} disabled={running}/>
-                        <div className="flex flex-wrap gap-2">
-                            <Button variant="primary" onClick={start} loading={running} disabled={running}>
-                                New briefing
-                            </Button>
-                        </div>
-                        {mail && ready && count > 0 && (
-                            <p className="caption max-w-[32ch]">
-                                Tick the stories to send them by e-mail, or{' '}
-                                <button type="button" onClick={() => tick(briefing.items.map(item => item.storyId))}
-                                        className="cursor-pointer underline underline-offset-4 hover:text-ink">tick them all</button>.
-                            </p>
-                        )}
-                        {mail && ready && <AddNews key={briefing.id} onAdd={addNews}/>}
-                    </div>
-                )}
             />
 
-            {/* room under the last card for the bar of the e-mail */}
-            <div className={`page mt-12 space-y-8 md:mt-16${ticked.length > 0 ? ' pb-20' : ''}`}>
-                <div className="grid-12">
-                    <div className="col-span-12 space-y-8 md:col-span-7 md:col-start-3">
-                        {error && <Notice type="error" onClose={() => setError(null)}>{error}</Notice>}
-
-                        {profile === null && (
-                            <Notice title="First, your profile">
-                                Tell us what you want to read first: <Link className="link" to="/profile">write your profile</Link>.
-                                The briefing is chosen from it, and the sources are found for it.
-                            </Notice>
-                        )}
-
-                        {briefing === undefined && !error && <Working>Opening your briefing…</Working>}
-
-                        {running && <Working>{steps(spanOf(briefing.hours ?? DEFAULT_HOURS))[briefing.step] ?? 'Working…'}</Working>}
-
-                        {briefing?.status === 'failed' && (
-                            <Notice type="error">The last briefing could not be written: {briefing.error}</Notice>
-                        )}
-
-                        {ready && count === 0 && (
-                            <Notice title="Nothing today">
-                                No story of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} really fits your profile. A short briefing is better than an off-topic one:
-                                try again later, or <Link className="link" to="/profile">widen your profile</Link>.
-                            </Notice>
-                        )}
-                    </div>
+            {/* the briefing and the news of the terms followed, one tab each, the briefing first; without a
+                term followed, the page has the briefing only and no tab */}
+            <Tabs.Root value={tab} onValueChange={chooseTab}>
+                <div className="page mt-8">
+                    <p className="caption min-h-[1.45em]">
+                        {ready && <>
+                            Written {written(briefing.finishedAt ?? briefing.createdAt)} · The news of the
+                            last {spanOf(briefing.hours ?? DEFAULT_HOURS)}{count > 0 && `, ${count} ${count === 1 ? 'story' : 'stories'}`}
+                        </>}
+                    </p>
                 </div>
 
-                {hasTerms ? (
-                    // the briefing and the news of the terms followed, one tab each, the briefing first
-                    <Tabs.Root value={tab} onValueChange={chooseTab} className="space-y-8">
-                        <div className="grid-12">
-                            <Tabs.List aria-label="Your briefing and what you follow"
-                                       className="col-span-12 flex flex-wrap gap-x-8 gap-y-1 border-b border-ink md:col-span-7 md:col-start-3">
-                                <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
-                                <Tabs.Trigger value="terms" className={PAGE_TAB}>
-                                    Following{watchedCount !== null && <> <span className="folio align-middle">{watchedCount}</span></>}
-                                </Tabs.Trigger>
-                            </Tabs.List>
+                {/* one bar for what the page shows and for the next briefing, kept under the masthead while
+                    the cards are read (on a phone it wraps: it stays in the flow there) */}
+                {(tabs || next) && (
+                    <div className="z-30 mt-4 border-y border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150 md:sticky md:top-14 lg:top-16">
+                        <div className="page flex min-h-14 flex-wrap items-center gap-x-5 gap-y-3 py-2.5">
+                            {tabs}
+                            {reading}
+                            {next}
                         </div>
-                        <Tabs.Content value="briefing" className="space-y-8 outline-none">{cards}</Tabs.Content>
-                        <Tabs.Content value="terms" className="outline-none">{terms}</Tabs.Content>
-                    </Tabs.Root>
-                ) : cards}
-
-                {/* the cards ticked are sent from the tab of the briefing */}
-                {mail && ready && ticked.length > 0 && tab === 'briefing' && (
-                    <MailBar accountEmail={user?.email} sending={sending} onSend={email} onClear={() => tick([])}
-                             format={shorter ? format : null}
-                             onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
-                             stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
-                                 ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
-                                     thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
-                                     contested: item.contested ?? [],
-                                     ai: item.ai ?? null,
-                                     own: {points: withoutOriginalMarks(item.pointsTranslation || item.points || null), digest: withoutOriginalMarks(item.digestTranslation || item.digest || null),
-                                         passages: withoutOriginalMarks(item.translation || item.summary || null)},
-                                     analysis: briefing.analysis?.status === 'ready' ? briefing.analysis.cards?.[item.storyId] ?? null : null,
-                                     angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source})),
-                                     official: (item.official ?? []).map(post => ({party: post.party, title: post.translation ?? post.title}))}] : [])}/>
+                    </div>
                 )}
-            </div>
+
+                {/* room under the last card for the bar of the e-mail */}
+                <div className={`page mt-10 space-y-8 md:mt-12${ticked.length > 0 ? ' pb-20' : ''}`}>
+                    {mail && ready && tab === 'briefing' && (
+                        <div className="grid-12 gap-y-6">
+                            {count > 0 && (
+                                <p className="caption col-span-12 self-end md:col-span-6">
+                                    Tick the stories to send them by e-mail, or{' '}
+                                    <button type="button" onClick={() => tick(briefing.items.map(item => item.storyId))}
+                                            className="cursor-pointer text-action-text hover:underline underline-offset-4">tick them all</button>.
+                                </p>
+                            )}
+                            <div className="col-span-12 md:col-span-3 md:col-start-10">
+                                <AddNews key={briefing.id} onAdd={addNews}/>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid-12">
+                        <div className="col-span-12 space-y-8 empty:hidden md:col-span-9">
+                            {/* a briefing written before the shorter ways (12.10.2026): nothing to choose in the toolbar */}
+                            {tab === 'briefing' && ready && count > 0 && !shorter && (
+                                <p className="caption">Bullet points and a short summary come with your next briefing: this one has its key passages only.</p>
+                            )}
+
+                            {error && <Notice type="error" onClose={() => setError(null)}>{error}</Notice>}
+
+                            {profile === null && (
+                                <Notice title="First, your profile">
+                                    Tell us what you want to read first: <Link className="link" to="/profile">write your profile</Link>.
+                                    The briefing is chosen from it, and the sources are found for it.
+                                </Notice>
+                            )}
+
+                            {briefing === undefined && !error && <Working>Opening your briefing…</Working>}
+
+                            {running && <Working>{steps(spanOf(briefing.hours ?? DEFAULT_HOURS))[briefing.step] ?? 'Working…'}</Working>}
+
+                            {briefing?.status === 'failed' && (
+                                <Notice type="error">The last briefing could not be written: {briefing.error}</Notice>
+                            )}
+
+                            {ready && count === 0 && (
+                                <Notice title="Nothing today">
+                                    No story of the last {spanOf(briefing.hours ?? DEFAULT_HOURS)} really fits your profile. A short briefing is better than an off-topic one:
+                                    try again later, or <Link className="link" to="/profile">widen your profile</Link>.
+                                </Notice>
+                            )}
+                        </div>
+                    </div>
+
+                    <Tabs.Content value="briefing" className="space-y-8 outline-none">{cards}</Tabs.Content>
+                    {hasTerms && <Tabs.Content value="terms" className="outline-none">{terms}</Tabs.Content>}
+
+                    {/* the cards ticked are sent from the tab of the briefing */}
+                    {mail && ready && ticked.length > 0 && tab === 'briefing' && (
+                        <MailBar accountEmail={user?.email} sending={sending} onSend={email} onClear={() => tick([])}
+                                 format={shorter ? format : null}
+                                 onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
+                                 stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
+                                     ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
+                                         thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
+                                         contested: item.contested ?? [],
+                                         ai: item.ai ?? null,
+                                         own: {points: withoutOriginalMarks(item.pointsTranslation || item.points || null), digest: withoutOriginalMarks(item.digestTranslation || item.digest || null),
+                                             passages: withoutOriginalMarks(item.translation || item.summary || null)},
+                                         analysis: briefing.analysis?.status === 'ready' ? briefing.analysis.cards?.[item.storyId] ?? null : null,
+                                         angles: (item.angles ?? []).map(angle => ({title: angle.titleTranslation ?? angle.title, source: angle.source})),
+                                         official: (item.official ?? []).map(post => ({party: post.party, title: post.translation ?? post.title}))}] : [])}/>
+                    )}
+                </div>
+            </Tabs.Root>
         </PageShell>
     );
 };

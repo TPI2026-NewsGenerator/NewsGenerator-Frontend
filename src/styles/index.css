@@ -1,37 +1,51 @@
-/* Editorial design: paper and ink, one oxblood accent, a serif display face (Fraunces) and a text
-   face (Source Serif 4), structure drawn with hairline rules on a 12-column grid. */
+/* Minimal design (the React Bits Pro skill "apple-minimal", adapted to an app): one grotesque face (Inter),
+   two neutrals and one blue for what acts, a scale that is big or small and nothing between, hairlines
+   instead of boxes, and space instead of rules. */
 
-@import "@fontsource-variable/fraunces/opsz.css";
-@import "@fontsource-variable/fraunces/opsz-italic.css";
-@import "@fontsource-variable/source-serif-4/opsz.css";
-@import "@fontsource-variable/source-serif-4/opsz-italic.css";
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource-variable/inter/opsz-italic.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* dark: the system's, unless the reader chose light; or the one the reader chose (see lib/theme.js) */
+@custom-variant dark {
+    @media (prefers-color-scheme: dark) {
+        &:not(:is(.light *)) {
+            @slot;
+        }
+    }
+    &:is(.dark *) {
+        @slot;
+    }
+}
 
 /* the fallback takes the size of the webfont, so the page does not move when the font arrives */
 @font-face {
-    font-family: "Serif Fallback";
-    src: local("Georgia");
-    size-adjust: 104%;
-    ascent-override: 92%;
-    descent-override: 24%;
+    font-family: "Sans Fallback";
+    src: local("Arial");
+    size-adjust: 107%;
+    ascent-override: 90%;
+    descent-override: 22%;
 }
 
 @theme {
-    --font-display: "Fraunces Variable", "Serif Fallback", Georgia, serif;
-    --font-text: "Source Serif 4 Variable", "Serif Fallback", Georgia, serif;
+    --font-display: "Inter Variable", "Sans Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-text: "Inter Variable", "Sans Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ease-out-quint: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
     --font-sans: var(--font-text);
     --font-heading: var(--font-display);
     --color-paper: var(--paper);
+    --color-paper-deep: var(--paper-deep);
     --color-ink: var(--ink);
     --color-ink-mute: var(--ink-mute);
     --color-rule: var(--rule);
+    --color-action: var(--action);
+    --color-action-hover: var(--action-hover);
+    --color-action-text: var(--action-text);
     --color-accent-ink: var(--accent-ink);
     --color-ring: var(--ring);
     --color-input: var(--input);
@@ -51,19 +65,26 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
-    --radius-sm: 0;
-    --radius-md: 0;
-    --radius-lg: 0;
-    --radius-xl: 0;
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --radius-xl: 18px;
+    --radius-2xl: 22px;
 }
 
-/* the shadcn names point at the same paper and ink, so a component added later fits in */
+/* paper: the page; paper-deep: the one other tone (a selected row, a quiet button, the footer);
+   action: links and what is pressed, nothing else; accent-ink: what warns (an error, a text the AI wrote).
+   The shadcn names point at the same tones, so a component added later fits in */
 :root {
-    --paper: #FBF9F4;
-    --ink: #1A1815;
-    --ink-mute: #6B655C;
-    --rule: #DAD3C7;
-    --accent-ink: #A6301F;
+    --paper: #FFFFFF;
+    --paper-deep: #F5F5F7;
+    --ink: #1D1D1F;
+    --ink-mute: #6E6E73;
+    --rule: #D2D2D7;
+    --action: #0071E3;
+    --action-hover: #0077ED;
+    --action-text: #0066CC;
+    --accent-ink: #BF4800;
 
     --background: var(--paper);
     --foreground: var(--ink);
@@ -71,43 +92,69 @@
     --card-foreground: var(--ink);
     --popover: var(--paper);
     --popover-foreground: var(--ink);
-    --primary: var(--ink);
-    --primary-foreground: var(--paper);
-    --secondary: #F3EFE6;
+    --primary: var(--action);
+    --primary-foreground: #FFFFFF;
+    --secondary: var(--paper-deep);
     --secondary-foreground: var(--ink);
-    --muted: #F3EFE6;
+    --muted: var(--paper-deep);
     --muted-foreground: var(--ink-mute);
-    --accent: #F3EFE6;
+    --accent: var(--paper-deep);
     --accent-foreground: var(--ink);
     --destructive: var(--accent-ink);
     --border: var(--rule);
     --input: var(--rule);
-    --ring: var(--accent-ink);
-    --radius: 0;
+    --ring: var(--action);
+    --radius: 12px;
+    color-scheme: light dark;
 }
 
+/* the native parts (scrollbars, a select's list) follow the theme chosen */
+:root.light {
+    color-scheme: light;
+}
+
+:root.dark {
+    color-scheme: dark;
+}
+
+/* dark is its own design: a very dark grey (true black read too hard), the fill of a button stays the light blue, the lighter blue is for
+   text links only */
 @media (prefers-color-scheme: dark) {
     :root:not(.light) {
-        --paper: #17150F;
-        --ink: #ECE7DC;
-        --ink-mute: #9A9384;
-        --rule: #35312A;
-        --accent-ink: #E0654F;
-        --secondary: #221F18;
-        --muted: #221F18;
-        --accent: #221F18;
+        --paper: #1C1C1E;
+        --paper-deep: #2C2C2E;
+        --ink: #F5F5F7;
+        --ink-mute: #98989D;
+        --rule: #3A3A3C;
+        --action-text: #2997FF;
+        --accent-ink: #FF9F0A;
     }
 }
 
 .dark {
-    --paper: #17150F;
-    --ink: #ECE7DC;
-    --ink-mute: #9A9384;
-    --rule: #35312A;
-    --accent-ink: #E0654F;
-    --secondary: #221F18;
-    --muted: #221F18;
-    --accent: #221F18;
+    --paper: #1C1C1E;
+    --paper-deep: #2C2C2E;
+    --ink: #F5F5F7;
+    --ink-mute: #98989D;
+    --rule: #3A3A3C;
+    --action-text: #2997FF;
+    --accent-ink: #FF9F0A;
+}
+
+/* what floats over the page (a dialog, a menu, a panel, a note) is a step lighter in the dark, its greys
+   with it, as the dark surfaces of Apple are: on the page's own grey it did not stand out */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light) .raised {
+        --paper: #2C2C2E;
+        --paper-deep: #3A3A3C;
+        --rule: #48484A;
+    }
+}
+
+.dark .raised {
+    --paper: #2C2C2E;
+    --paper-deep: #3A3A3C;
+    --rule: #48484A;
 }
 
 @layer base {
@@ -125,9 +172,10 @@
         color: var(--ink);
         font-family: var(--font-text);
         font-size: 1.0625rem;
-        line-height: 1.6;
+        line-height: 1.55;
+        letter-spacing: -0.005em;
         font-optical-sizing: auto;
-        font-variant-numeric: oldstyle-nums proportional-nums;
+        font-feature-settings: "cv11", "ss03";
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -135,7 +183,8 @@
     h1, h2, h3, h4 {
         font-family: var(--font-display);
         font-optical-sizing: auto;
-        font-weight: 450;
+        font-weight: 600;
+        letter-spacing: -0.02em;
         margin: 0;
     }
 
@@ -144,18 +193,19 @@
     }
 
     ::selection {
-        background: color-mix(in srgb, var(--accent-ink) 22%, transparent);
+        background: color-mix(in srgb, var(--action) 22%, transparent);
     }
 
     code {
-        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
         font-size: 0.85em;
-        padding: 0.05em 0.3em;
-        background: var(--secondary);
+        padding: 0.1em 0.35em;
+        border-radius: 6px;
+        background: var(--paper-deep);
     }
 
     :focus-visible {
-        outline: 2px solid var(--accent-ink);
+        outline: 2px solid var(--action);
         outline-offset: 2px;
     }
 }
@@ -168,41 +218,44 @@
 
     /* on a phone every span is the whole width: a wide gutter would only push the text out */
     .grid-12 {
-        @apply grid grid-cols-12 gap-x-3 md:gap-x-6 xl:gap-x-8;
+        @apply grid grid-cols-12 gap-x-3 md:gap-x-6 xl:gap-x-10;
     }
 
+    /* the head of a page: semibold, never bold, tighter as it grows */
     .display {
         font-family: var(--font-display);
         font-size: clamp(2.5rem, 6vw, 5rem);
-        line-height: 1.04;
-        letter-spacing: -0.01em;
-        font-weight: 420;
+        line-height: 1.02;
+        letter-spacing: -0.035em;
+        font-weight: 600;
     }
 
     .section-head {
         font-family: var(--font-display);
-        font-size: clamp(1.6rem, 3vw, 2.5rem);
-        line-height: 1.1;
-        letter-spacing: -0.005em;
-        font-weight: 480;
+        font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+        line-height: 1.08;
+        letter-spacing: -0.028em;
+        font-weight: 600;
     }
 
     .story-head {
         font-family: var(--font-display);
-        font-size: clamp(1.45rem, 2.4vw, 2.1rem);
-        line-height: 1.12;
-        letter-spacing: -0.005em;
-        font-weight: 460;
+        font-size: clamp(1.375rem, 2.2vw, 1.875rem);
+        line-height: 1.15;
+        letter-spacing: -0.022em;
+        font-weight: 600;
     }
 
     .standfirst {
-        font-size: clamp(1.1rem, 1.6vw, 1.4rem);
-        line-height: 1.4;
-        max-width: 50ch;
+        font-size: clamp(1.1875rem, 1.6vw, 1.3125rem);
+        line-height: 1.45;
+        letter-spacing: -0.01em;
+        color: var(--ink-mute);
+        max-width: 46ch;
     }
 
     .body-text {
-        font-size: 1.125rem;
+        font-size: 1.0625rem;
         line-height: 1.6;
         max-width: 66ch;
     }
@@ -211,41 +264,33 @@
         margin-top: 1em;
     }
 
-    /* real small caps, never uppercase text made smaller */
+    /* a label: small and quiet, in the case it is written */
     .kicker {
-        font-size: 0.9375rem;
-        font-weight: 600;
-        font-variant-caps: all-small-caps;
-        letter-spacing: 0.1em;
-        line-height: 1.2;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        line-height: 1.3;
         color: var(--ink-mute);
     }
 
+    /* the eyebrow over the head of a page or a dialog: the one place in capitals */
     .kicker-rule {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .kicker-rule::before {
-        content: "";
-        width: 3rem;
-        height: 1px;
-        background: var(--ink);
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
     }
 
     .caption {
         font-size: 0.8125rem;
-        line-height: 1.4;
-        letter-spacing: 0.01em;
+        line-height: 1.45;
         color: var(--ink-mute);
     }
 
     .folio {
-        font-size: 0.8125rem;
-        font-weight: 500;
+        font-size: 0.75rem;
+        font-weight: 400;
         line-height: 1.3;
-        letter-spacing: 0.02em;
         color: var(--ink-mute);
     }
 
@@ -254,25 +299,19 @@
     }
 
     .link {
-        color: var(--accent-ink);
-        text-decoration: underline;
-        text-decoration-thickness: 1px;
-        text-underline-offset: 4px;
+        color: var(--action-text);
+        text-decoration: none;
+        transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .link:hover {
-        text-decoration-thickness: 2px;
+        text-decoration: underline;
+        text-underline-offset: 3px;
     }
 
-    /* the one drop cap of a page, on the first paragraph of its main text */
-    .lede::first-letter {
-        float: left;
-        font-family: var(--font-display);
-        font-size: 5.1em;
-        line-height: 0.76;
-        margin: 0.07em 0.08em 0 -0.02em;
-        color: var(--accent-ink);
-        font-weight: 500;
+    /* the first paragraph of a main text: once a drop cap, now only a little larger */
+    .lede {
+        font-size: 1.125em;
     }
 
     /* a long list of news: the rows off the screen are not laid out */
@@ -282,16 +321,18 @@
     }
 }
 
+/* the server works: a short bar runs along a hairline */
 @keyframes rule-run {
-    from { transform: scaleX(0); }
-    to { transform: scaleX(1); }
+    from { transform: translateX(-100%); }
+    to { transform: translateX(250%); }
 }
 
 .working-rule {
-    height: 1px;
-    background: var(--ink);
-    transform-origin: left;
-    animation: rule-run 2.4s ease-in-out infinite alternate;
+    height: 2px;
+    width: 40%;
+    border-radius: 2px;
+    background: var(--action);
+    animation: rule-run 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -300,5 +341,11 @@
         animation-iteration-count: 1 !important;
         transition-duration: 0.001ms !important;
         scroll-behavior: auto !important;
+    }
+
+    .working-rule {
+        width: 100%;
+        transform: none;
+        opacity: 0.6;
     }
 }

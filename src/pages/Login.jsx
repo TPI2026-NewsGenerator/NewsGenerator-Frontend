@@ -89,7 +89,7 @@ export const LoginPage = () => {
                     </p>
                 </div>
 
-                <div className="col-span-12 md:col-span-4 md:col-start-9 md:mt-3 md:border-l md:border-rule md:pl-8">
+                <div className="col-span-12 md:col-span-4 md:col-start-9 md:mt-3">
                     <h2 className="section-head">Login</h2>
                     <form className="mt-8 space-y-7" onSubmit={handleSubmit} noValidate>
                         <div>

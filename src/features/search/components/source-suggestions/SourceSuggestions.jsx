@@ -123,18 +123,18 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
 
             {news !== null && news.length > 0 && (
                 <div className="grid-12">
-                    <p className="caption col-span-12 max-w-[60ch] md:col-span-7 md:col-start-3">
+                    <p className="caption col-span-12 max-w-[60ch] md:col-span-8">
                         {news.length} news your sources could not find. They open at the publisher:
                         the server cannot read them, so they have no key passages.
                     </p>
-                    <ul className="col-span-12 mt-4 border-t border-rule md:col-span-10 md:col-start-3">
+                    <ul className="col-span-12 mt-4 border-t border-rule md:col-span-12">
                         {news.map(item => (
                             <li key={item.url} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule py-3">
                                 <MetaLine className="w-full sm:w-56 sm:shrink-0">
                                     <Meta tone="ink">{item.name}</Meta>
                                     <Meta>{publishedAgo(item.publishedAt)}</Meta>
                                 </MetaLine>
-                                <a href={item.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 hover:text-accent-ink">{item.title}</a>
+                                <a href={item.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 hover:text-action-text">{item.title}</a>
                             </li>
                         ))}
                     </ul>
@@ -143,7 +143,7 @@ export const SourceSuggestions = ({api, search, categories, onImported}) => {
 
             {news !== null && sources.length > 0 && (
                 <div className="grid-12 mt-12">
-                    <div className="col-span-12 md:col-span-10 md:col-start-3">
+                    <div className="col-span-12 md:col-span-12">
                         <p className="caption max-w-[60ch]">
                             {missing} media published on this subject without being in your sources.
                             Looking for the feed of a site costs several requests, so only the {tried} publishing

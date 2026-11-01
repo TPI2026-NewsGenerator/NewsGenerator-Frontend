@@ -25,7 +25,7 @@ export const Marked = ({text, marks}) => {
         if (!part) return null;
         const inItalic = italic ? <i>{part}</i> : part;
         return segment.marked
-            ? <mark key={`${i}-${j}`} className="rounded-[2px] bg-accent-ink/15 text-inherit [box-decoration-break:clone]">{inItalic}</mark>
+            ? <mark key={`${i}-${j}`} className="rounded-[3px] bg-[#FFE066]/45 dark:bg-[#FFD60A]/25 text-inherit [box-decoration-break:clone]">{inItalic}</mark>
             : <Fragment key={`${i}-${j}`}>{inItalic}</Fragment>;
     }));
 };

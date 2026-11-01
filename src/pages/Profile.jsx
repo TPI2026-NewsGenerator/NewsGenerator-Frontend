@@ -46,7 +46,7 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
     return (
         <li className="grid-12 gap-y-3 border-b border-rule py-6">
             <div className="col-span-12 flex items-baseline gap-3 md:col-span-1 md:block">
-                <p aria-hidden className="font-display text-[1.8rem] leading-none text-ink-mute">{String(number).padStart(2, '0')}</p>
+                <p aria-hidden className="tabular text-[1.75rem] leading-none font-semibold tracking-[-0.04em] text-ink-mute/45">{String(number).padStart(2, '0')}</p>
                 <Meta className="md:mt-2 md:block">{secondary ? 'secondary' : 'main'}</Meta>
             </div>
             <div className="col-span-12 md:col-span-7">
@@ -391,7 +391,7 @@ export const ProfilePage = () => {
             {data === null && !error && (
                 <div className="page mt-10">
                     <div className="grid-12">
-                        <Working className="col-span-12 md:col-span-7 md:col-start-3">Opening your profile…</Working>
+                        <Working className="col-span-12 md:col-span-8">Opening your profile…</Working>
                     </div>
                 </div>
             )}
@@ -399,7 +399,7 @@ export const ProfilePage = () => {
             {error && (
                 <div className="page mt-10">
                     <div className="grid-12">
-                        <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-7 md:col-start-3">{error}</Notice>
+                        <Notice type="error" onClose={() => setError(null)} className="col-span-12 md:col-span-8">{error}</Notice>
                     </div>
                 </div>
             )}
@@ -513,7 +513,7 @@ export const ProfilePage = () => {
                                       onChange={event => setForm({...form, text: event.target.value})}/>
                         </>)}
                     </div>
-                    <aside className="col-span-12 md:col-span-3 md:col-start-10 md:mt-8 md:border-l md:border-rule md:pl-5">
+                    <aside className="col-span-12 md:col-span-3 md:col-start-10 md:mt-8">
                         <p className="kicker">For example</p>
                         <p className="caption mt-2 max-w-[30ch] italic">“{PLACEHOLDER}”</p>
                     </aside>

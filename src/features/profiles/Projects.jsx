@@ -37,7 +37,7 @@ const Project = ({project, busy, onEnd, onRemove}) => {
     return (
         <li className="border-b border-rule py-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h3 className="font-display text-[1.4rem] leading-tight">{project.name}</h3>
+                <h3 className="text-[1.25rem] leading-tight font-semibold tracking-[-0.02em]">{project.name}</h3>
                 <Meta>{project.running
                     ? project.endsOn ? `read until ${dayLabel(project.endsOn)}` : 'read until you delete it'
                     : `ended on ${dayLabel(project.endsOn)}: no longer read`}</Meta>
@@ -91,7 +91,7 @@ export const Projects = ({projects, max = 5, language, busy, change}) => {
                     {projects.length >= max && <Help>At most {max} projects: delete one first.</Help>}
                 </div>
             ) : (
-                <div className="space-y-5 border-t border-ink pt-6">
+                <div className="space-y-5 border-t border-rule pt-6">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
                             <Label htmlFor="project-name">Its name</Label>

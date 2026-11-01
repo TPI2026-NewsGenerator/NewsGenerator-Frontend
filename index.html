@@ -12,7 +12,16 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#17150F" />
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)" />
+
+    <!-- the theme the reader chose (see src/lib/theme.js), set before the page is drawn: no flash -->
+    <script>
+      try {
+        var theme = localStorage.getItem('theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.classList.add(theme);
+      } catch (e) {}
+    </script>
 
     <!-- what a shared link shows (WhatsApp, iMessage, Slack...): their robots read this page, the
          news stay behind the accounts -->

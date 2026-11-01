@@ -23,8 +23,8 @@ const PREVIEW = 5;
 const Choice = ({value, children}) => (
     <label className="flex cursor-pointer items-start gap-2.5 py-1 text-[0.9375rem] leading-snug">
         <RadioGroup.Item value={value}
-                         className="mt-[0.2em] inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full border border-ink/50 bg-transparent outline-none hover:border-ink data-[state=checked]:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">
-            <RadioGroup.Indicator className="block size-2 rounded-full bg-ink"/>
+                         className="mt-[0.2em] inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full border border-ink-mute/60 bg-paper outline-none hover:border-ink-mute data-[state=checked]:border-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action">
+            <RadioGroup.Indicator className="block size-2 rounded-full bg-action"/>
         </RadioGroup.Item>
         <span>{children}</span>
     </label>

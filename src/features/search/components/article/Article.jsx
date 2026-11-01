@@ -50,11 +50,11 @@ export const Article = memo(({id, onSelect, news}) => {
     return (
         <article ref={ref} onClick={handleRowClick}
                  className={cn('grid-12 cursor-pointer gap-y-4 py-7 transition-colors',
-                     isChecked ? 'bg-secondary shadow-[inset_3px_0_0_var(--accent-ink)]' : 'hover:bg-secondary/60')}>
+                     isChecked ? 'bg-paper-deep' : 'hover:bg-paper-deep/60')}>
             <div className="col-span-1 flex justify-center pt-1">
                 <input type="checkbox" checked={isChecked} onChange={toggle}
                        aria-label={`Select “${news.title}” for its key passages`}
-                       className="size-4 cursor-pointer accent-[var(--accent-ink)]"/>
+                       className="size-4 cursor-pointer accent-[var(--action)]"/>
             </div>
 
             {news.thumbnail && (
@@ -80,7 +80,7 @@ export const Article = memo(({id, onSelect, news}) => {
                         </Meta>
                     )}
                 </MetaLine>
-                <h3 className="mt-2 font-display text-[1.45rem] leading-[1.15] font-medium text-balance">
+                <h3 className="mt-2 text-[1.3125rem] leading-[1.2] font-semibold tracking-[-0.02em] text-balance">
                     {translated ? translation.title : news.title}
                 </h3>
                 {/* a translated title shows the one as written under it, as the cards of the briefing */}

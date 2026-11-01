@@ -57,16 +57,16 @@ const when = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB',
 // [{date, title, titleTranslation, medium, url}]}; pending: the card was picked, its analysis not written yet
 export const CardAnalysis = ({id, analysis, pending, model}) => {
     const [open, setOpen] = useState(false);
-    if (pending) return <p className="caption mt-4 italic">AI analysis being prepared…</p>;
+    if (pending) return <p className="caption mt-4">AI analysis being prepared…</p>;
     if (!analysis) return null;
     return (
         <>
             <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={id}
-                    className="caption mt-4 cursor-pointer font-semibold tracking-[0.06em] text-accent-ink [font-variant-caps:all-small-caps] underline underline-offset-4 hover:text-ink">
+                    className="mt-4 cursor-pointer text-[0.875rem] text-action-text hover:underline underline-offset-4">
                 {open ? 'Hide the AI analysis' : 'Show the AI analysis'}
             </button>
             {open && (
-                <div id={id} className="mt-3 border-l-2 border-accent-ink/60 pl-5">
+                <div id={id} className="mt-3 rounded-2xl bg-paper-deep px-5 py-4">
                     {analysis.why.length > 0 && (
                         <Part title="Why it matters">
                             <ul className="body-text mt-2 list-disc space-y-2 pl-5 marker:text-ink-mute">
