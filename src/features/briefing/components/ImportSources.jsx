@@ -3,15 +3,17 @@
 //  Date: 01.10.2026
 //  File: ImportSources.jsx
 //  Description: A list of sites the reader imports from a file of theirs (Excel, CSV, OPML or text):
-//               its addresses are read here, the server finds the feed of each, the reader chooses
+//               its addresses are read here (for an Excel file with several sheets or columns of
+//               addresses, the ones the reader names), the server finds the feed of each, the reader
+//               chooses
 //
 
-import {useRef, useState} from "react";
+import {useMemo, useRef, useState} from "react";
 import {Button} from "@/components/ui/button.jsx";
-import {Checkbox} from "@/components/ui/field.jsx";
+import {Checkbox, Label, Select} from "@/components/ui/field.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
-import {addressesOfFile} from "@/features/briefing/importFile.js";
+import {openFile} from "@/features/briefing/importFile.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 
 const CHECKED_AT_ONCE = 25;     // the server takes 25 sites a request, about 15 seconds
@@ -41,8 +43,21 @@ const joined = (previous, sites) => {
 };
 const shortAddress = (site) => site.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
 
+// the value of "All sheets" and of "Every column" in the lists of an Excel file
+const EVERY = 'every';
+const pickOf = (sheet, column) => ({
+    sheet: sheet === EVERY ? null : Number(sheet),
+    column: sheet === EVERY || column === EVERY ? null : Number(column),
+});
+const addressesLabel = (count) => `${count} address${count === 1 ? '' : 'es'}`;
+
 // category: the one the sources go to, chosen above. needCategory: says when it is missing
 export const ImportSources = ({api, language, category, needCategory, onAdded}) => {
+    // an Excel file with several sheets or columns of addresses, the reader naming the one that lists the
+    // sites: {fileName, opened}, and their choice among its lists
+    const [choosing, setChoosing] = useState(null);
+    const [sheet, setSheet] = useState(EVERY);
+    const [column, setColumn] = useState(EVERY);
     const [fileName, setFileName] = useState('');
     const [total, setTotal] = useState(0);
     const [results, setResults] = useState([]);
@@ -56,6 +71,11 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
     const input = useRef(null);
     const run = useRef(0);      // a file picked meanwhile, or a stop, ends the check of this one
     const list = useRef({addresses: [], collected: []});
+
+    // what the choice of the reader reads: the sheets, the columns of the one chosen, the addresses
+    const sheets = choosing?.opened.sheets ?? [];
+    const columns = sheet === EVERY ? [] : sheets[Number(sheet)]?.columns ?? [];
+    const chosen = useMemo(() => choosing?.opened.addresses(pickOf(sheet, column)), [choosing, sheet, column]);
 
     // the addresses of the file from 'from' on, after the lines of the ones checked before
     const check = async (from) => {
@@ -87,20 +107,10 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         setIsChecking(false);
     };
 
-    const handleFile = async (event) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file) return;
-
-        let read;
-        try {
-            read = await addressesOfFile(file);
-        } catch (error) {
-            toast.error(error.message);
-            return;
-        }
+    // the addresses read in a file, checked from the first
+    const begin = async (name, read) => {
         if (read.addresses.length === 0) {
-            toast.error(`No address of a website in ${file.name}.`);
+            toast.error(`No address of a website in ${name}.`);
             return;
         }
         if (read.more > 0) {
@@ -108,7 +118,7 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         }
 
         list.current = {addresses: read.addresses, collected: []};
-        setFileName(file.name);
+        setFileName(name);
         setTotal(read.addresses.length);
         setBesideFeed(read.besideFeed ?? 0);
         setChecked(0);
@@ -116,6 +126,41 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
         setSelected([]);
         setFailed([]);
         await check(0);
+    };
+
+    const handleFile = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        let opened;
+        try {
+            opened = await openFile(file);
+        } catch (error) {
+            toast.error(error.message);
+            return;
+        }
+        setChoosing(null);
+        // several places to read the sites from: the reader says which one, our best guess ticked
+        if (opened.sheets.length > 1 || opened.sheets[0]?.columns.length > 1) {
+            setSheet(String(opened.guess.sheet));
+            setColumn(String(opened.guess.column));
+            setChoosing({fileName: file.name, opened});
+            return;
+        }
+        await begin(file.name, opened.addresses());
+    };
+
+    const handleChosen = async () => {
+        const {fileName: name} = choosing;
+        const read = chosen;
+        setChoosing(null);
+        await begin(name, read);
+    };
+
+    const changeSheet = (event) => {
+        setSheet(event.target.value);
+        setColumn(event.target.value === EVERY ? EVERY : String(sheets[Number(event.target.value)].best));
     };
 
     const stop = () => {
@@ -176,9 +221,52 @@ export const ImportSources = ({api, language, category, needCategory, onAdded}) 
                 <input ref={input} type="file" accept={ACCEPT} className="hidden" onChange={handleFile} aria-label="A file listing websites"/>
                 <p className="caption">
                     A file of yours listing websites or feeds: Excel (.xlsx), CSV, OPML or text. Their addresses are
-                    read in your browser, wherever they are in it, and the feed of each site is found.
+                    read in your browser, wherever they are in it (in an Excel file with several sheets or columns of
+                    addresses, you choose the one listing your sites), and the feed of each site is found.
                 </p>
             </div>
+
+            {choosing && (
+                <div className="mt-4 max-w-xl space-y-4">
+                    <p>
+                        <strong className="[overflow-wrap:anywhere]">{choosing.fileName}</strong> holds addresses in several
+                        places. Choose the sheet and the column that list your sites.
+                    </p>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="import-sheet">Sheet</Label>
+                            <Select id="import-sheet" value={sheet} onChange={changeSheet}
+                                    options={[
+                                        ...sheets.map((each, at) => ({value: String(at), label: `${each.name}: ${addressesLabel(each.count)}`})),
+                                        ...(sheets.length > 1 ? [{value: EVERY, label: 'All sheets'}] : []),
+                                    ]}/>
+                        </div>
+                        <div>
+                            <Label htmlFor="import-column">Column</Label>
+                            <Select id="import-column" value={column} onChange={event => setColumn(event.target.value)}
+                                    options={[
+                                        ...columns.map(each => ({value: String(each.index), label: `${each.label}: ${addressesLabel(each.count)}`})),
+                                        ...(sheet === EVERY || columns.length > 1 ? [{value: EVERY, label: 'Every column'}] : []),
+                                    ]}/>
+                        </div>
+                    </div>
+                    <p className="caption">
+                        {column === EVERY
+                            ? 'Every address of a row is read, the feed of a row taken rather than its site.'
+                            : 'A column of sites: the server finds the feed of each. A column of feeds: each is checked as it is.'}
+                    </p>
+                    <p className="caption [overflow-wrap:anywhere]">
+                        {addressesLabel(chosen.addresses.length + chosen.more)}, such as {chosen.addresses.slice(0, 3).map(shortAddress).join(', ')}
+                        {chosen.more > 0 && `. The first ${chosen.addresses.length} are taken, the others are left out`}.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="primary" size="sm" onClick={handleChosen} disabled={chosen.addresses.length === 0}>
+                            Find the feeds of {addressesLabel(chosen.addresses.length)}
+                        </Button>
+                        <Button size="sm" variant="subtle" onClick={() => setChoosing(null)}>Cancel</Button>
+                    </div>
+                </div>
+            )}
 
             {isChecking && (
                 <div className="mt-4 flex flex-wrap items-end gap-4">

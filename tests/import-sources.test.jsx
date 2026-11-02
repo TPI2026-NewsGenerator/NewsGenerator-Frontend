@@ -3,12 +3,13 @@
 //  Date: 01.10.2026
 //  File: import-sources.test.jsx
 //  Description: A list of sites imported from a file: checked a part at a time, the feeds ready
-//               ticked, the chosen ones added
+//               ticked, the chosen ones added; for an Excel file, the sheet and the column named first
 //
 
 import '@testing-library/jest-dom';
 import {describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {strToU8, zipSync} from 'fflate';
 import {ImportSources} from '@/features/briefing/components/ImportSources.jsx';
 
 // a site read from its page comes with no address (the one of the bridge of the server), only its key
@@ -137,6 +138,83 @@ describe('ImportSources', () => {
         await screen.findByText('www.kicker.de');
         expect(server.checkSites).toHaveBeenCalledWith(['https://www.kicker.de/news', 'https://www.kicker.de', 'https://www.irishfa.com/rss'], 'en');
         expect(screen.getByText('1 site of your list left out: the feed given on the same line is checked instead.')).toBeInTheDocument();
+    });
+
+    describe('an Excel file with several sheets and columns', () => {
+        // "Sources" lists the sites (B) and the feeds of some (C); "Notes" lists a page
+        const workbook = () => {
+            const cell = (reference, text) => `<c r="${reference}" t="inlineStr"><is><t>${text}</t></is></c>`;
+            const sheet = (rows) => strToU8(`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>`);
+            return zipSync({
+                'xl/worksheets/sheet1.xml': sheet(
+                    `<row r="1">${cell('A1', 'Name')}${cell('B1', 'Site')}${cell('C1', 'Feed')}</row>`
+                    + `<row r="2">${cell('A2', 'Kicker')}${cell('B2', 'https://www.kicker.de')}${cell('C2', 'https://www.irishfa.com/rss')}</row>`
+                    + `<row r="3">${cell('A3', 'Vi')}${cell('B3', 'https://www.vi.nl')}</row>`),
+                'xl/worksheets/sheet2.xml': sheet(`<row r="1">${cell('A1', 'https://www.uefa.com')}</row>`),
+            });
+        };
+        const pickWorkbook = (container) => {
+            const input = container.querySelector('input[type="file"]');
+            fireEvent.change(input, {target: {files: [new File([workbook()], 'sources.xlsx')]}});
+        };
+
+        it('should ask which sheet and which column list the sites, then check that column only', async () => {
+            const server = api();
+            const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+            pickWorkbook(container);
+
+            // nothing is checked before the reader has chosen: the column with the most addresses is ready
+            expect(await screen.findByLabelText('Sheet')).toHaveValue('0');
+            expect(screen.getByLabelText('Column')).toHaveValue('1');
+            expect(screen.getByText(/2 addresses, such as kicker.de, vi.nl/)).toBeInTheDocument();
+            expect(server.checkSites).not.toHaveBeenCalled();
+
+            fireEvent.change(screen.getByLabelText('Column'), {target: {value: '2'}});
+            expect(screen.getByText(/1 address, such as irishfa.com\/rss/)).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', {name: 'Find the feeds of 1 address'}));
+
+            await waitFor(() => expect(server.checkSites).toHaveBeenCalledWith(['https://www.irishfa.com/rss'], 'en'));
+            expect(screen.queryByLabelText('Sheet')).not.toBeInTheDocument();
+        });
+
+        it('should offer the columns of the sheet chosen, and read all of them for all sheets', async () => {
+            const server = api();
+            const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+            pickWorkbook(container);
+
+            fireEvent.change(await screen.findByLabelText('Sheet'), {target: {value: '1'}});
+            expect(screen.getByLabelText('Column')).toHaveValue('0');
+            expect(screen.getAllByRole('option', {name: /Column A/})).toHaveLength(1);
+            expect(screen.queryByRole('option', {name: 'Every column'})).not.toBeInTheDocument();
+
+            fireEvent.change(screen.getByLabelText('Sheet'), {target: {value: 'every'}});
+            expect(screen.getByLabelText('Column')).toHaveValue('every');
+            fireEvent.click(screen.getByRole('button', {name: 'Find the feeds of 3 addresses'}));
+            await waitFor(() => expect(server.checkSites).toHaveBeenCalledWith(
+                ['https://www.irishfa.com/rss', 'https://www.vi.nl', 'https://www.uefa.com'], 'en'));
+        });
+
+        it('should check nothing when the reader cancels', async () => {
+            const server = api();
+            const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+            pickWorkbook(container);
+
+            fireEvent.click(await screen.findByRole('button', {name: 'Cancel'}));
+            expect(screen.queryByLabelText('Sheet')).not.toBeInTheDocument();
+            expect(server.checkSites).not.toHaveBeenCalled();
+        });
+
+        it('should check at once a workbook with a single column of addresses', async () => {
+            const server = api();
+            const cell = (reference, text) => `<c r="${reference}" t="inlineStr"><is><t>${text}</t></is></c>`;
+            const bytes = zipSync({'xl/worksheets/sheet1.xml': strToU8('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+                + `<row r="1">${cell('A1', 'Site')}</row><row r="2">${cell('A2', 'https://www.kicker.de')}</row></sheetData></worksheet>`)});
+            const {container} = render(<ImportSources api={server} language="en" category="sport" needCategory={() => true}/>);
+            fireEvent.change(container.querySelector('input[type="file"]'), {target: {files: [new File([bytes], 'one.xlsx')]}});
+
+            await waitFor(() => expect(server.checkSites).toHaveBeenCalledWith(['https://www.kicker.de'], 'en'));
+            expect(screen.queryByLabelText('Sheet')).not.toBeInTheDocument();
+        });
     });
 
     it('should add nothing without a category', async () => {
