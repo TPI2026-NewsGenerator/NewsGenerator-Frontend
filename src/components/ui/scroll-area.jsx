@@ -10,11 +10,14 @@ import {ScrollArea as RadixScrollArea} from "radix-ui";
 import {cn} from "@/lib/utils.js";
 
 // the list inside scrolls past 'className' height (max-h-…), with a hairline scrollbar; the frame can
-// be reached with the keyboard and named for the screen readers (label)
+// be reached with the keyboard and named for the screen readers (label). Radix wraps the list in a
+// "display: table" box, as wide as the widest line: one long address made every row wider than the frame
+// and what was on the right of the rows (their marks, the button to remove them) was cut off, out of
+// reach. Made a block, the list is as wide as the frame and its lines wrap
 export const ScrollFrame = ({label, className, children}) => (
     <RadixScrollArea.Root type="auto" className="relative overflow-hidden border-y border-rule">
         <RadixScrollArea.Viewport tabIndex={0} aria-label={label}
-                                  className={cn('size-full max-h-[32rem] overscroll-contain pr-4 outline-none focus-visible:ring-2 focus-visible:ring-action', className)}>
+                                  className={cn('size-full max-h-[32rem] overscroll-contain pr-4 outline-none focus-visible:ring-2 focus-visible:ring-action [&>div]:!block', className)}>
             {children}
         </RadixScrollArea.Viewport>
         <RadixScrollArea.Scrollbar orientation="vertical" className="flex w-2 touch-none p-px select-none">

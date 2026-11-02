@@ -15,6 +15,20 @@ export const cn = (...inputs) => twMerge(clsx(inputs));
 // server sends none (url null) for the sources of the reader, and it is said in words instead
 export const feedAddress = (url) => url === null || /[?&]action=display\b/.test(url ?? '') ? 'read from its web page' : url;
 
+// Where a source reads from, short enough to tell the feeds of one site apart: "/rss/sport" when the feed
+// is on the site itself, else its host and its route ("feeds.bbci.co.uk/sport/rss.xml"). The route is
+// kept as it is, "/rss" and "/rss/" are two addresses. A site read from its page has none
+export const feedRoute = (url, site) => {
+    if (url === null || /[?&]action=display\b/.test(url ?? '')) return 'read from its web page';
+    try {
+        const {host, pathname, search} = new URL(url);
+        const bare = (name) => String(name ?? '').replace(/^www\./i, '').toLowerCase();
+        return `${bare(host) === bare(site) ? '' : host}${pathname}${search}`;
+    } catch {
+        return url;
+    }
+};
+
 const folded = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 // whether every word of a filter the reader typed is in one of these texts, whatever the case and the

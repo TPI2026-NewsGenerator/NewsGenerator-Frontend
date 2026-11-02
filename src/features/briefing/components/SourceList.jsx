@@ -14,7 +14,7 @@ import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {ScrollFrame} from "@/components/ui/scroll-area.jsx";
 import {ListFilter} from "@/components/ui/list-filter.jsx";
-import {cn, feedAddress, matchesQuery} from "@/lib/utils.js";
+import {cn, feedAddress, feedRoute, matchesQuery} from "@/lib/utils.js";
 import {sourceRows} from "@/features/briefing/sourceRows.js";
 
 const SHOWS = [
@@ -87,7 +87,11 @@ export const SourceList = memo(({found, own, refused, removed, limits, busy, onT
                                     {row.trusted ? <FaStar/> : <FaRegStar/>}
                                 </IconButton>
                             )}
-                            <span className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{row.site}</span>
+                            {/* the route of the feed under the name: a site can have several feeds, 20min.ch has three */}
+                            <span className="min-w-0 flex-[1_1_14rem]">
+                                <span className="block font-semibold [overflow-wrap:anywhere]">{row.site}</span>
+                                <span className="caption block [overflow-wrap:anywhere]" title={feedAddress(row.url)}>{feedRoute(row.url, row.site)}</span>
+                            </span>
                             <MetaLine>
                                 {row.removed
                                     ? <Meta tone="accent" title="You removed it: it is not read for your briefing, and not found for you again">removed by you</Meta>
@@ -112,7 +116,6 @@ export const SourceList = memo(({found, own, refused, removed, limits, busy, onT
                                     </Meta>
                                 )}
                             </MetaLine>
-                            <span className="caption hidden max-w-[30%] truncate md:inline" title={feedAddress(row.url)}>{feedAddress(row.url)}</span>
                             {row.leftOut && (
                                 <Button size="sm" disabled={busy} onClick={() => onKeep(row)}
                                         title="Bring it back for good: it is never left out again">

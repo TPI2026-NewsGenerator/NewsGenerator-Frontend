@@ -11,6 +11,7 @@ import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {SourceList} from '@/features/briefing/components/SourceList.jsx';
 import {sourceRows} from '@/features/briefing/sourceRows.js';
 import {AddSources} from '@/features/briefing/components/AddSources.jsx';
+import {feedRoute} from '@/lib/utils.js';
 
 const limits = {profileFeeds: 60, relevanceDays: 14};
 // the key is opaque for the client (a hash of the address on the server): any string unique per feed
@@ -128,6 +129,21 @@ describe('SourceList', () => {
         expect(told.onKeep).toHaveBeenCalledWith(expect.objectContaining({url: null, leftOut: expect.objectContaining({key: 'k-bridge'})}));
     });
 
+    it('should tell the feeds of one site apart by their route, and show two addresses that differ by a slash', () => {
+        render(<SourceList found={[]} refused={[]} limits={limits} {...handlers()}
+                           own={[own(1, '20min.ch', {url: 'https://partner-feeds.20min.ch/rss/20minuten/schweiz'}),
+                                 own(2, '20min.ch', {key: 'k-2', url: 'https://www.20min.ch/sitemaps/fr/news.xml'}),
+                                 own(3, 'sportal.bg', {url: 'https://www.sportal.bg/rss'}),
+                                 own(4, 'sportal.bg', {key: 'k-4', url: 'https://sportal.bg/rss/'})]}/>);
+
+        expect(screen.getAllByText('20min.ch')).toHaveLength(2);
+        // on another host than the site: with its host; on the site: its route only, the slash kept
+        expect(screen.getByText('partner-feeds.20min.ch/rss/20minuten/schweiz')).toBeInTheDocument();
+        expect(screen.getByText('/sitemaps/fr/news.xml')).toBeInTheDocument();
+        expect(screen.getByText('/rss')).toBeInTheDocument();
+        expect(screen.getByText('/rss/')).toBeInTheDocument();
+    });
+
     it('should say which sources give far more news than the others, and only those', () => {
         render(<SourceList found={[found(1, 'si.com', {newsPerDay: 740, flood: true})]}
                            own={[own(7, 'agenzianova.com', {newsPerDay: 7440, flood: true}), own(8, 'arbitre.fr', {newsPerDay: 12, flood: false})]}
@@ -240,5 +256,19 @@ describe('AddSources', () => {
         await waitFor(() => expect(screen.queryByText('Le Matin')).not.toBeInTheDocument());
         // the one that failed stays, to be added again
         expect(screen.getByText('RTS')).toBeInTheDocument();
+    });
+});
+
+describe('feedRoute', () => {
+    it('should give the route on the site itself, with the host when it is another one', () => {
+        expect(feedRoute('https://www.derstandard.at/rss/sport?x=1', 'derstandard.at')).toBe('/rss/sport?x=1');
+        expect(feedRoute('https://feeds.bbci.co.uk/sport/football/rss.xml', 'bbc.com')).toBe('feeds.bbci.co.uk/sport/football/rss.xml');
+        expect(feedRoute('https://WWW.Sofoot.com/rss/', 'sofoot.com')).toBe('/rss/');
+    });
+
+    it('should say a source read from its page, and give back what is no address', () => {
+        expect(feedRoute(null, 'lequipe.fr')).toBe('read from its web page');
+        expect(feedRoute('http://rss-bridge/?action=display&bridge=CssSelectorBridge', 'lequipe.fr')).toBe('read from its web page');
+        expect(feedRoute('not an address', 'x.com')).toBe('not an address');
     });
 });
