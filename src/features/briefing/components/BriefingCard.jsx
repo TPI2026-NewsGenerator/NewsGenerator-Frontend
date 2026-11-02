@@ -287,6 +287,9 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     // the translation is shown, the original only when the reader opens it
     const translated = Boolean(item.titleTranslation) || translation.length > 0;
     const [original, setOriginal] = useState(false);
+    // its title without the bait of its medium (item.titleAsPublished is the title as it was, see the server's
+    // neutral-titles.js), shown as published on demand
+    const [asPublished, setAsPublished] = useState(false);
     // the AI version of the points or the summary, absent from the key passages and the briefings before 15.10.2026
     const aiText = format === 'points' ? item.ai?.points : format === 'digest' ? item.ai?.summary : null;
     const [showAi, setShowAi] = useState(false);
@@ -339,7 +342,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {/* written in another language: translated, the original shown on demand */}
                 {translated && (
                     <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
-                        <span className="kicker">Translated from {languageLabel(item.language)}</span>
+                        <span className="kicker">Translated from {languageLabel(item.language)}{item.titleAsPublished && ', title shortened'}</span>
                         <button type="button" onClick={() => setOriginal(!original)} aria-expanded={original} aria-controls={`original-${item.storyId}`}
                                 className="cursor-pointer text-action-text hover:underline underline-offset-4">
                             {original ? 'Hide original' : 'Show original'}
@@ -347,7 +350,22 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     </p>
                 )}
                 {translated && original && item.titleTranslation && (
-                    <p lang={item.language ?? undefined} className="caption mt-1 italic">“<Marked text={item.title} marks={marks.title}/>”</p>
+                    <p lang={item.language ?? undefined} className="caption mt-1 italic">
+                        “{item.titleAsPublished ?? <Marked text={item.title} marks={marks.title}/>}”
+                    </p>
+                )}
+                {/* not translated: the title was shortened, the bait of its medium taken out, as published on demand */}
+                {item.titleAsPublished && !item.titleTranslation && (
+                    <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
+                        <span className="kicker">Title shortened</span>
+                        <button type="button" onClick={() => setAsPublished(!asPublished)} aria-expanded={asPublished} aria-controls={`published-${item.storyId}`}
+                                className="cursor-pointer text-action-text hover:underline underline-offset-4">
+                            {asPublished ? 'Hide the title as published' : 'Show the title as published'}
+                        </button>
+                    </p>
+                )}
+                {item.titleAsPublished && !item.titleTranslation && asPublished && (
+                    <p id={`published-${item.storyId}`} lang={item.language ?? undefined} className="caption mt-1 italic">“{item.titleAsPublished}”</p>
                 )}
                 {item.why && <p className="standfirst mt-3">{item.why}</p>}
                 {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}

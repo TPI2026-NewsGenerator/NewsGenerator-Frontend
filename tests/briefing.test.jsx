@@ -43,6 +43,33 @@ describe('coverageLabel of the texts read', () => {
     });
 });
 
+describe('BriefingCard, a title without the bait of its medium', () => {
+    it('should say the title was shortened and show it as published on demand', () => {
+        render(<BriefingCard item={item({title: 'Messi signe à Miami', titleAsPublished: 'Information incroyable ! Messi signe à Miami'})}/>);
+        expect(screen.getByRole('heading', {name: 'Messi signe à Miami'})).toBeInTheDocument();
+        expect(screen.getByText('Title shortened')).toBeInTheDocument();
+        expect(screen.queryByText(/Information incroyable/)).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show the title as published'}));
+        expect(screen.getByText(/Information incroyable ! Messi signe à Miami/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Hide the title as published'}));
+        expect(screen.queryByText(/Information incroyable/)).toBeNull();
+    });
+
+    it('should show the title as published as the original of a translated one, and say it was shortened', () => {
+        render(<BriefingCard item={item({title: 'Messi signe à Miami', titleTranslation: 'Messi signs in Miami', language: 'fr',
+            titleAsPublished: 'Information incroyable ! Messi signe à Miami'})}/>);
+        expect(screen.getByText(/Translated from French, title shortened/)).toBeInTheDocument();
+        fireEvent.click(screen.getAllByRole('button', {name: 'Show original'})[0]);
+        expect(screen.getByText(/Information incroyable ! Messi signe à Miami/)).toBeInTheDocument();
+    });
+
+    it('should say nothing of a title left as it was', () => {
+        render(<BriefingCard item={item()}/>);
+        expect(screen.queryByText('Title shortened')).toBeNull();
+    });
+});
+
 describe('BriefingCard', () => {
     it('should show why the story was chosen, its summary and its sources', () => {
         render(<BriefingCard item={item()}/>);

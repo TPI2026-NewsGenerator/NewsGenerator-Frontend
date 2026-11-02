@@ -7,12 +7,14 @@
 //               word followed
 //
 
-import {useMemo, useState} from "react";
+import {useContext, useMemo, useState} from "react";
 import {Link} from "react-router-dom";
 import {Tabs} from "radix-ui";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
+import {Button} from "@/components/ui/button.jsx";
 import {Input, Label, Select} from "@/components/ui/field.jsx";
 import {Marked} from "@/components/news/Marked.jsx";
+import {MailAddContext} from "@/features/briefing/mailAdd.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {spanOf} from "@/features/briefing/windows.js";
 import {useTranslation} from "@/features/search/translation.js";
@@ -20,6 +22,43 @@ import {useTranslation} from "@/features/search/translation.js";
 const SHOWN = 8;
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
+
+// What puts a news of the list in the e-mail of the briefing (see mailAdd.js): the card that already tells it,
+// to tick for the e-mail, or the news added at the end of the briefing, ticked. Nothing for a reader who cannot
+// send e-mails, nor outside the page of the briefing
+const MailAdd = ({news}) => {
+    const mailAdd = useContext(MailAddContext);
+    const [adding, setAdding] = useState(false);
+    if (!mailAdd) return null;
+    const card = mailAdd.cardOf(news);
+    if (card) {
+        const ticked = mailAdd.isTicked(card);
+        return (
+            <span className="caption mt-1 block">
+                {card.imported ? 'Added to the briefing' : `Card ${mailAdd.numberOf(card)} of the briefing`}
+                {' · '}
+                <button type="button" onClick={() => mailAdd.tick(card, !ticked)} aria-pressed={ticked}
+                        className="cursor-pointer text-action-text hover:underline underline-offset-4">
+                    {ticked ? 'Ticked for the e-mail, untick' : 'Tick it for the e-mail'}
+                </button>
+            </span>
+        );
+    }
+    const add = async () => {
+        setAdding(true);
+        try {
+            await mailAdd.add(news);
+        } finally {
+            setAdding(false);
+        }
+    };
+    return (
+        <span className="mt-1.5 block">
+            <Button size="sm" variant="quiet" onClick={add} loading={adding} disabled={adding}>Add to the e-mail</Button>
+            {adding && <span className="caption ml-2">Reading the page and choosing its key passages…</span>}
+        </span>
+    );
+};
 
 // A news of the list, with the words of its description. Written in another language than the reader's, its
 // title and those words are translated when the row comes near the screen (the translator of the page, see
@@ -69,6 +108,7 @@ const News = ({news}) => {
                     </button>
                 </>}
             </span>
+            <MailAdd news={news}/>
         </li>
     );
 };

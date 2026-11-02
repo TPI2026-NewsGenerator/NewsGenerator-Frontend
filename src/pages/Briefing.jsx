@@ -30,6 +30,7 @@ import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
+import {cardTelling, MailAddContext} from "@/features/briefing/mailAdd.js";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
@@ -234,6 +235,16 @@ export const BriefingPage = () => {
     const running = briefing?.status === 'running';
     const ready = briefing?.status === 'ready';
     const count = ready ? briefing.items.length : 0;
+    // what the tab of the news followed needs to put one in the e-mail (the user, 03.11.2026): the card that
+    // tells it, or the news added as a card. Only for a reader who can send e-mails
+    const mailAdd = useMemo(() => mail && ready ? {
+        cardOf: news => cardTelling(briefing.items, news),
+        numberOf: card => briefing.items.indexOf(card) + 1,
+        isTicked: card => ticked.includes(card.storyId),
+        tick: (card, checked) => tickOne(card.storyId, checked),
+        add: news => addNews(news.url),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    } : null, [mail, ready, briefing, ticks]);
     // the stories naming a term the profile follows (item.found), shown alone on demand, the briefing as
     // written otherwise
     const found = ready ? briefing.items.filter(item => item.found?.length > 0).length : 0;
@@ -323,7 +334,9 @@ export const BriefingPage = () => {
                     </p>
                 )}
                 <div className="mt-6">
-                    <FollowingNews following={following} limit={watchLimit} onLimit={chooseWatchLimit} translator={translator}/>
+                    <MailAddContext.Provider value={mailAdd}>
+                        <FollowingNews following={following} limit={watchLimit} onLimit={chooseWatchLimit} translator={translator}/>
+                    </MailAddContext.Provider>
                 </div>
             </section>
         </div>

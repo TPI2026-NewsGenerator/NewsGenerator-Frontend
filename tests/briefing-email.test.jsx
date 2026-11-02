@@ -415,7 +415,9 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
         // France out, Germany in
         fireEvent.click(within(group).getByRole('checkbox', {name: 'France'}));
-        fireEvent.change(within(group).getByRole('combobox', {name: 'Add a country to “First story”'}), {target: {value: 'DE'}});
+        // found by a few letters of its name, accents and case aside
+        fireEvent.change(within(group).getByRole('combobox', {name: 'Add a country to “First story”'}), {target: {value: 'GERM'}});
+        fireEvent.click(within(group).getByRole('button', {name: 'Germany'}));
         expect([...group.querySelectorAll('input[type=checkbox]')].map(box => [box.parentElement.parentElement.textContent, box.checked]))
             .toEqual([['France', false], ['Switzerland', true], ['Germanyadded by you', true]]);
         expect(screen.getByText(/· countries changed/)).toBeInTheDocument();
