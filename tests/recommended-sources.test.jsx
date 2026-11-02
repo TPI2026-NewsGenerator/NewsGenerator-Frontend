@@ -26,7 +26,7 @@ describe('RecommendedSources', () => {
         render(<RecommendedSources api={api} expired={expired} reloadKey="done"/>);
 
         expect(await screen.findByText('goal.com')).toBeInTheDocument();
-        expect(screen.getAllByText('9 of 40 news on your interests')).toHaveLength(2);
+        expect(screen.getAllByText('9 of 40 news on your interests (22.5%)')).toHaveLength(2);
         expect(screen.getByText('“tribuna.com first title”')).toBeInTheDocument();
     });
 

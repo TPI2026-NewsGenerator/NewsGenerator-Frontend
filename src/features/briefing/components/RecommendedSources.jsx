@@ -10,6 +10,7 @@ import {useEffect, useState} from "react";
 import {Button} from "@/components/ui/button.jsx";
 import {Meta, MetaLine, Notice, Working} from "@/components/ui/text.jsx";
 import {toast} from "@/lib/toast.js";
+import {percent} from "@/lib/utils.js";
 
 // api: FeedApi. reloadKey: asked again when it changes (a discovery done, the interests changed).
 // onAdded: told when sources were added, they join the ones added by hand
@@ -90,7 +91,7 @@ export const RecommendedSources = ({api, expired, reloadKey, onAdded}) => {
                             </MetaLine>
                         </div>
                         <div className="col-span-12 md:col-span-6">
-                            <Meta tone="ink">{source.relevant} of {source.news} news on your interests</Meta>
+                            <Meta tone="ink">{source.relevant} of {source.news} news on your interests ({percent(source.relevant, source.news)})</Meta>
                             {/* once each: a programme publishes its episodes under one title (RTS "Mise au Point") */}
                             {[...new Set(source.samples ?? [])].map(title => (
                                 <p key={title} className="caption mt-1 italic [overflow-wrap:anywhere]">“{title}”</p>

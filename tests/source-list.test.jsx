@@ -11,7 +11,7 @@ import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {SourceList} from '@/features/briefing/components/SourceList.jsx';
 import {sourceRows} from '@/features/briefing/sourceRows.js';
 import {AddSources} from '@/features/briefing/components/AddSources.jsx';
-import {feedRoute} from '@/lib/utils.js';
+import {feedRoute, percent} from '@/lib/utils.js';
 
 const limits = {profileFeeds: 60, relevanceDays: 14};
 // the key is opaque for the client (a hash of the address on the server): any string unique per feed
@@ -127,6 +127,55 @@ describe('SourceList', () => {
         expect(screen.getByText('read from its web page')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', {name: 'Keep it'}));
         expect(told.onKeep).toHaveBeenCalledWith(expect.objectContaining({url: null, leftOut: expect.objectContaining({key: 'k-bridge'})}));
+    });
+
+    it('should say how many news of an added source are on the interests, to choose between two feeds of one site', () => {
+        render(<SourceList found={[]} refused={[]} limits={limits} {...handlers()}
+                           own={[own(1, 'agenzianova.com', {url: 'https://www.agenzianova.com/news/feed/', news: 1064, relevant: 126}),
+                                 own(2, 'agenzianova.com', {key: 'k-2', url: 'https://www.agenzianova.com/rss/news', news: 13808, relevant: 1403}),
+                                 own(3, 'goal.com', {news: 40, relevant: 0}),
+                                 own(4, 'quiet.example', {news: 0, relevant: 0})]}/>);
+
+        expect(screen.getByText('126 of 1,064 news on your interests (11.8%)')).toBeInTheDocument();
+        expect(screen.getByText('1,403 of 13,808 news on your interests (10.2%)')).toBeInTheDocument();
+        expect(screen.getByText('nothing on your interests lately')).toBeInTheDocument();
+        expect(screen.getByText('no news in 14 days')).toBeInTheDocument();
+        expect(screen.queryByText('counting…')).not.toBeInTheDocument();
+    });
+
+    it('should say it the same way for a source found for the profile, as the server tells its news', () => {
+        render(<SourceList found={[found(1, 'goal.com', {news: 80, relevant: 20}), found(2, 'tribuna.com', {news: 50, relevant: 0}), found(3, 'old.com', {relevant: 4})]}
+                           own={[]} refused={[]} limits={limits} {...handlers()}/>);
+
+        expect(screen.getByText('20 of 80 news on your interests (25%)')).toBeInTheDocument();
+        expect(screen.getByText('nothing on your interests lately')).toBeInTheDocument();
+        // a server that does not tell its news yet: how many only
+        expect(screen.getByText('4 news on your interests')).toBeInTheDocument();
+    });
+
+    it('should say the server is counting for a source not counted yet, and only then', () => {
+        const {rerender} = render(<SourceList found={[]} refused={[]} limits={limits} {...handlers()} counting own={[own(1, 'arbitre.fr')]}/>);
+        expect(screen.getByText('counting…')).toBeInTheDocument();
+
+        rerender(<SourceList found={[]} refused={[]} limits={limits} {...handlers()} counting={false} own={[own(1, 'arbitre.fr')]}/>);
+        expect(screen.queryByText('counting…')).not.toBeInTheDocument();
+    });
+
+    it('should sort by the news on the interests, the most first, the ones not counted last, and offer it only with counts', () => {
+        const sites = () => screen.getAllByRole('listitem').map(item => item.querySelector('span.font-semibold').textContent);
+        const {rerender} = render(<SourceList found={[]} refused={[]} limits={limits} {...handlers()}
+                                              own={[own(1, 'a.example', {news: 10, relevant: 1}), own(2, 'b.example', {news: 10, relevant: 9}),
+                                                    own(3, 'c.example'), own(4, 'd.example', {news: 10, relevant: 5})]}/>);
+        expect(sites()).toEqual(['a.example', 'b.example', 'c.example', 'd.example']);
+
+        fireEvent.click(screen.getByRole('radio', {name: 'On your interests'}));
+        expect(sites()).toEqual(['b.example', 'd.example', 'a.example', 'c.example']);
+
+        fireEvent.click(screen.getByRole('radio', {name: 'Name'}));
+        expect(sites()).toEqual(['a.example', 'b.example', 'c.example', 'd.example']);
+
+        rerender(<SourceList found={[]} refused={[]} limits={limits} {...handlers()} own={[own(1, 'a.example')]}/>);
+        expect(screen.queryByRole('radio', {name: 'On your interests'})).not.toBeInTheDocument();
     });
 
     it('should tell the feeds of one site apart by their route, and show two addresses that differ by a slash', () => {
@@ -270,5 +319,20 @@ describe('feedRoute', () => {
         expect(feedRoute(null, 'lequipe.fr')).toBe('read from its web page');
         expect(feedRoute('http://rss-bridge/?action=display&bridge=CssSelectorBridge', 'lequipe.fr')).toBe('read from its web page');
         expect(feedRoute('not an address', 'x.com')).toBe('not an address');
+    });
+});
+
+describe('percent', () => {
+    it('should write the share of some news among others', () => {
+        expect(percent(126, 1064)).toBe('11.8%');
+        expect(percent(1403, 13808)).toBe('10.2%');
+        expect(percent(9, 40)).toBe('22.5%');
+        expect(percent(40, 40)).toBe('100%');
+        expect(percent(0, 40)).toBe('0%');
+    });
+
+    it('should not round a few among many down to nothing', () => {
+        expect(percent(1, 5000)).toBe('<0.1%');
+        expect(percent(3, 2000)).toBe('0.2%');
     });
 });

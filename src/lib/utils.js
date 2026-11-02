@@ -29,6 +29,12 @@ export const feedRoute = (url, site) => {
     }
 };
 
+// The share of some news among others as the pages write it: "11.8%", and "<0.1%" for a few among many
+export const percent = (part, whole) => {
+    const share = 100 * part / whole;
+    return share > 0 && share < 0.1 ? '<0.1%' : `${share.toLocaleString('en-GB', {maximumFractionDigits: 1})}%`;
+};
+
 const folded = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 // whether every word of a filter the reader typed is in one of these texts, whatever the case and the

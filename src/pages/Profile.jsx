@@ -28,6 +28,10 @@ import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
 const POLL_MS = 5000;
+// the news on the interests of the sources added by hand are counted by the server in the background, about
+// 50 s for 1500 sources: the list is asked again every 15 s until they are there, 12 times at most
+const COUNT_MS = 15000;
+const COUNT_TRIES = 12;
 const DISCOVERY = {
     idle: {label: 'not started'},
     running: {label: 'looking for sources…'},
@@ -235,12 +239,27 @@ export const ProfilePage = () => {
             clearTimeout(timer);
         };
     }, [discovering, apply]);
-    // the sources added by hand ('profile' ones come with the profile, with how many news are on it)
+    // the sources added by hand ('profile' ones come with the profile, with how many news are on it). Each comes
+    // with its news of the last days and how many are on the interests, once the server has counted them
+    const [ownCounting, setOwnCounting] = useState(false);
     useEffect(() => {
         if (!user) return;
-        FeedApi.getUserFeeds()
-            .then(answer => setOwn((answer.feeds ?? []).filter(feed => (feed.origin ?? 'user') === 'user')))
+        let stopped = false;
+        let timer;
+        const load = (attempt) => FeedApi.getUserFeeds()
+            .then(answer => {
+                if (stopped) return;
+                setOwn((answer.feeds ?? []).filter(feed => (feed.origin ?? 'user') === 'user'));
+                const counting = answer.relevance?.ready === false && attempt < COUNT_TRIES;
+                setOwnCounting(counting);
+                if (counting) timer = setTimeout(() => load(attempt + 1), COUNT_MS);
+            })
             .catch(err => console.error("Failed to fetch sources", err));
+        load(0);
+        return () => {
+            stopped = true;
+            clearTimeout(timer);
+        };
     }, [user, ownVersion, active]);
 
     // the changes of the sources, stable: the list is not drawn again when the profile is asked again
@@ -637,7 +656,7 @@ export const ProfilePage = () => {
                         </div>
                     )}
                     <SourceList found={data.sources} own={own} refused={data.refusedSources} removed={data.removedSources}
-                                limits={limits} busy={busy}
+                                limits={limits} busy={busy} counting={ownCounting}
                                 onTrust={trust} onRemove={remove} onKeep={keep} onRestore={restore}/>
                 </Section>
             )}
