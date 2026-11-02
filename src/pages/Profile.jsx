@@ -8,7 +8,7 @@
 //
 
 import {useCallback, useEffect, useState} from "react";
-import {Link, useLocation, useNavigate, useSearchParams} from "react-router-dom";
+import {useLocation, useNavigate, useSearchParams} from "react-router-dom";
 import {PageShell, Opening, Section, LocalNav} from "@/components/layout/Page.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {Help, Input, Label, Select, Textarea} from "@/components/ui/field.jsx";
@@ -401,13 +401,13 @@ export const ProfilePage = () => {
                 </div>
             )}
 
-            {/* the sections of the page, eight when all are there: one click to each, kept on top */}
+            {/* the sections of the page, six when all are there: one click to each, kept on top. The account is in the
+                settings and the names followed on their page (/following): not here */}
             {!creating && data && <LocalNav label="The sections of your profile" sections={[
                 ...(data.profile ? [{id: 'this-profile', label: 'This profile'}] : []),
-                ...(user ? [{id: 'account', label: 'Account'}] : []),
                 {id: 'words', label: 'Your words'},
                 ...(data.interests?.length > 0 ? [{id: 'interests', label: 'Interests'}] : []),
-                ...(data.profile ? [{id: 'terms', label: 'Following'}, {id: 'projects', label: 'Projects'}] : []),
+                ...(data.profile ? [{id: 'projects', label: 'Projects'}] : []),
                 {id: 'sources', label: 'Sources'},
                 {id: 'add-sources', label: 'Add sources'},
             ]}/>}
@@ -479,28 +479,6 @@ export const ProfilePage = () => {
                                 <Button variant="subtle" onClick={() => setDeleting(false)}>Keep it</Button>
                                 <Button variant="primary" onClick={removeProfile}>Delete it</Button>
                             </>}/>
-                </Section>
-            )}
-
-            {/* the account is not of one profile: changed in the settings (the user, 12.10.2026: from here too) */}
-            {user && (
-                <Section id="account" kicker="Your account" title="Username, email and password"
-                         intro="You sign in with your username and password; the stories of your briefing you send by e-mail go to your email."
-                         aside={<Button onClick={() => navigate('/settings')}>Change them</Button>}>
-                    <dl className="grid-12 gap-y-4">
-                        <div className="col-span-12 md:col-span-4">
-                            <dt className="kicker">Username</dt>
-                            <dd className="body-text mt-1 break-words">{user.username}</dd>
-                        </div>
-                        <div className="col-span-12 md:col-span-5">
-                            <dt className="kicker">Email</dt>
-                            <dd className="body-text mt-1 break-words">{user.email || 'none'}</dd>
-                        </div>
-                        <div className="col-span-12 md:col-span-3">
-                            <dt className="kicker">Password</dt>
-                            <dd className="body-text mt-1"><span aria-hidden>••••••••••</span><span className="sr-only">hidden</span></dd>
-                        </div>
-                    </dl>
                 </Section>
             )}
 
@@ -584,16 +562,6 @@ export const ProfilePage = () => {
                             <p className="caption mt-2">What you said you don't want: never an interest, your briefing leaves it out.</p>
                         </div>
                     )}
-                </Section>
-            )}
-
-            {data?.profile && (
-                <Section id="terms" kicker="Always shown" title="What you follow"
-                         intro="A person, a club, an organisation, a word: every news of your sources that names one is listed in your briefing, in a tab of its own, whatever the AI chose for the cards.">
-                    <p className="body-text">
-                        {data.profile.watchTerms?.length > 0 && <>Names and words as written: {data.profile.watchTerms.join(', ')}. </>}
-                        <Link className="link" to="/following">Follow a club, a person, an organisation or a word</Link>
-                    </p>
                 </Section>
             )}
 
