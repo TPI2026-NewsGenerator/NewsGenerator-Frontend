@@ -22,6 +22,15 @@ const send = async (path, {method = 'GET', body} = {}) => {
     return await readAnswer(response);
 };
 
+// the time zone of the reader's browser ("Europe/Paris"), for the hours of the e-mail; none when it does not tell
+const browserTimeZone = () => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+    } catch {
+        return undefined;
+    }
+};
+
 export const BriefingApi = {
     // the last briefing, {briefing: null} before the first one
     getLatest: () => send('/briefing'),
@@ -42,7 +51,8 @@ export const BriefingApi = {
     // given; ai: the storyIds of the cards sent in their AI version; texts: {storyId: [paragraph]}, the
     // points or paragraphs the reader wrote instead of the card's in that way; countries: {storyId: [code]}, the
     // countries (codes ISO 3166-1) the reader chose for some cards instead of the ones found, [] for none; theme:
-    // 'light' (the default, not sent) or 'dark', the colours of the e-mail
+    // 'light' (the default, not sent) or 'dark', the colours of the e-mail. The hours of the e-mail are the ones of the
+    // time zone of this browser, always sent
     email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai, texts, countries, theme) => {
         const some = (map) => map && Object.keys(map).length > 0;
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
@@ -50,7 +60,7 @@ export const BriefingApi = {
             headers: withProfile(HEADERS),
             body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
                 ...(format ? {format} : {}), ...(ai?.length ? {ai} : {}), ...(some(texts) ? {texts} : {}), ...(some(countries) ? {countries} : {}),
-                ...(theme === 'dark' ? {theme} : {})}),
+                ...(theme === 'dark' ? {theme} : {}), ...(browserTimeZone() ? {timeZone: browserTimeZone()} : {})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },
