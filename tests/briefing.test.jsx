@@ -201,17 +201,40 @@ describe('BriefingCard ways of reading', () => {
     });
 });
 
+describe('BriefingCard topic', () => {
+    // the feeds give "sport", the page shows it as a name (the user, 02.11.2026)
+    it('should show the topic of the card with a capital letter', () => {
+        render(<BriefingCard item={item({topic: 'sport'})} number={1}/>);
+        expect(screen.getByText('Sport')).toBeInTheDocument();
+        expect(screen.queryByText('sport')).toBeNull();
+    });
+});
+
 describe('BriefingCard contested', () => {
     const denial = {by: 'Manchester City', sentence: 'Manchester City denies any wrongdoing.', language: 'en', translation: null,
         source: 'bbc.com', url: 'https://bbc.com/city', publishedAt: '2026-09-24T09:00:00.000Z'};
 
-    it('should quote who denies the news and where, with a machine translation marked as such', () => {
-        render(<BriefingCard item={item({contested: [{...denial, translation: 'Manchester City nie toute faute.'}]})}/>);
+    it('should quote who denies the news and where', () => {
+        render(<BriefingCard item={item({contested: [denial]})}/>);
         expect(screen.getByText('Contested')).toBeInTheDocument();
         expect(screen.getByText('Manchester City denies:')).toBeInTheDocument();
-        expect(screen.getByText('“Manchester City denies any wrongdoing.”')).toBeInTheDocument();
-        expect(screen.getByText('Machine translation: “Manchester City nie toute faute.”')).toBeInTheDocument();
+        expect(screen.getByText('Manchester City denies any wrongdoing.')).toBeInTheDocument();
+        expect(screen.queryByText(/Machine translation/)).toBeNull();
         expect(screen.getByRole('link', {name: 'bbc.com'})).toHaveAttribute('href', 'https://bbc.com/city');
+    });
+
+    // the reader reads English: the quote of a French article is its translation, the original on demand (the user, 02.11.2026)
+    it('should quote an article written in another language in the language of the reader, its original on demand', () => {
+        render(<BriefingCard item={item({contested: [{...denial, by: 'FIFA', language: 'fr', sentence: 'La FIFA, de son côté, nie toute faute.',
+            translation: 'FIFA, for its part, denies any fault.', source: 'walfoot.be', url: 'https://walfoot.be/1'}]})}/>);
+        expect(screen.getByText('“FIFA, for its part, denies any fault.”')).toBeInTheDocument();
+        expect(screen.queryByText('La FIFA, de son côté, nie toute faute.')).toBeNull();
+        expect(screen.getByText('Machine translation from French')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(screen.getByText('“La FIFA, de son côté, nie toute faute.”')).toHaveAttribute('lang', 'fr');
+        fireEvent.click(screen.getByRole('button', {name: 'Hide original'}));
+        expect(screen.queryByText('La FIFA, de son côté, nie toute faute.')).toBeNull();
     });
 
     it('should say nothing on a card nobody denies, or of a briefing made before', () => {
@@ -222,13 +245,23 @@ describe('BriefingCard contested', () => {
 });
 
 describe('BriefingCard official source', () => {
-    it('should quote a statement an article reports, with the medium and a machine translation', () => {
-        render(<BriefingCard item={item({official: [{party: 'FPF', title: 'A FPF publicou um comunicado.', translation: 'La FPF a publié un communiqué.',
+    it('should quote a statement an article reports, with the medium, in the language of the reader, the original on demand', () => {
+        render(<BriefingCard item={item({official: [{party: 'FPF', title: 'A FPF publicou um comunicado.', translation: 'The FPF published a statement.',
             language: 'pt', url: 'https://www.abola.pt/1', source: 'abola.pt', channel: 'reported', publishedAt: null}]})}/>);
         expect(screen.getByText('FPF')).toBeInTheDocument();
-        expect(screen.getByText('“A FPF publicou um comunicado.”')).toBeInTheDocument();
-        expect(screen.getByText('Machine translation: “La FPF a publié un communiqué.”')).toBeInTheDocument();
+        expect(screen.getByText('“The FPF published a statement.”')).toBeInTheDocument();
+        expect(screen.queryByText(/A FPF publicou/)).toBeNull();
+        expect(screen.getByText('Machine translation from Portuguese')).toBeInTheDocument();
         expect(screen.getByRole('link', {name: 'abola.pt'})).toHaveAttribute('href', 'https://www.abola.pt/1');
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(screen.getByText('“A FPF publicou um comunicado.”')).toHaveAttribute('lang', 'pt');
+    });
+
+    it('should show the title of a post of a party in the language of the reader, with the original as its title', () => {
+        render(<BriefingCard item={item({official: [{party: 'UEFA', title: 'Ceferin candidat', translation: 'Ceferin candidate',
+            url: 'https://uefa.com/1', channel: 'site', publishedAt: null}]})}/>);
+        expect(screen.getByRole('link', {name: 'Ceferin candidate'})).toHaveAttribute('title', 'Ceferin candidat');
     });
 });
 

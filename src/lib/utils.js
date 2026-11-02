@@ -11,6 +11,10 @@ import {twMerge} from "tailwind-merge";
 
 export const cn = (...inputs) => twMerge(clsx(inputs));
 
+// a word with its first letter in capitals: the topic of a card is stored as the feeds write it ("sport"),
+// the page shows it as a name (the user, 02.11.2026)
+export const capitalized = (text) => typeof text === 'string' && text ? text[0].toLocaleUpperCase() + text.slice(1) : text;
+
 // A site without a feed is read from its web page through our RSS-Bridge: its address is ours, so the
 // server sends none (url null) for the sources of the reader, and it is said in words instead
 export const feedAddress = (url) => url === null || /[?&]action=display\b/.test(url ?? '') ? 'read from its web page' : url;

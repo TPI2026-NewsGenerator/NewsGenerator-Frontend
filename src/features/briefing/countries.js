@@ -19,6 +19,27 @@ export const countryName = (code, locale = 'en') => {
     }
 };
 
+// codes that are no country: the European Union, the eurozone, the United Nations, outlying Oceania,
+// pseudo-locales, unknown (as server country-names.js)
+const NOT_COUNTRIES = new Set(['EU', 'EZ', 'UN', 'QO', 'XA', 'XB', 'ZZ']);
+const regionOf = (code) => {
+    try {
+        return new Intl.Locale(`und-${code}`).region;
+    } catch {
+        return null;
+    }
+};
+
+// Every country the e-mail can name, by name in 'locale': [{code, name}]. The codes Intl has a name for, an
+// old code (FX, DD, SU) left to the one of today
+export const allCountries = (locale = 'en') => {
+    const letters = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+    return letters.flatMap(a => letters.map(b => a + b))
+        .filter(code => !NOT_COUNTRIES.has(code) && regionOf(code) === code && countryName(code, locale) !== code)
+        .map(code => ({code, name: countryName(code, locale)}))
+        .sort((a, b) => a.name.localeCompare(b.name, locale));
+};
+
 // a text in small letters, without accents, its words between spaces
 const plain = (text) => ` ${String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ')} `;
 

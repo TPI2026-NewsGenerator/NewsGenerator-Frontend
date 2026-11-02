@@ -23,7 +23,7 @@ import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
 import {countryNames} from "@/features/briefing/countries.js";
 import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
-import {cn} from "@/lib/utils.js";
+import {cn, capitalized} from "@/lib/utils.js";
 import {pageOf} from "@/features/entities/entityApi.js";
 
 // Who the article credits for what it reports, read by the AI while it summarizes. It describes the
@@ -89,24 +89,49 @@ const DOT = "after:ml-2 after:text-[0.8125rem] after:text-ink-mute/60 after:cont
 
 const when = (at) => new Date(at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
 
-// Someone named who denies the news, in the words of one of its articles, a machine translation under
-// it when written in another language than the reader's (see server/services/utils/contested.js).
-// Nobody is said to be right: the reader is told who denies, and where it is written
+// What an article quotes, in the language of the reader: the machine translation when it is written in
+// another one, said so, the sentence as written shown on demand, as the title of the card is (the user,
+// 02.11.2026: everything in the language of the reader, the original never first). original: the card's
+// "Show original" is open, which opens it here too; id: the original's place on the page
+const Translated = ({original: opened, language, id, className, children}) => {
+    const [own, setOwn] = useState(null);
+    const original = own ?? opened;
+    return (
+        <>
+            <p className={cn('caption mt-1 flex flex-wrap items-baseline gap-x-3', className)}>
+                <span>Machine translation from {languageLabel(language)}</span>
+                <button type="button" onClick={() => setOwn(!original)} aria-expanded={original} aria-controls={id}
+                        className="cursor-pointer text-action-text hover:underline underline-offset-4">
+                    {original ? 'Hide original' : 'Show original'}
+                </button>
+            </p>
+            {original && <p id={id} lang={language ?? undefined} className="caption mt-1 italic">“{children}”</p>}
+        </>
+    );
+};
+
+// Someone named who denies the news, in the words of one of its articles, translated into the reader's
+// language when written in another (see server/services/utils/contested.js). Nobody is said to be right:
+// the reader is told who denies, and where it is written
 const CONTESTED_NOTE = 'One of its articles reports that someone named denies this news. The sentence is the article’s own, found by the AI; it does not say who is right.';
-const Contested = ({denials}) => (
+const Contested = ({denials, original}) => (
     <div className="mt-6 rounded-2xl bg-paper-deep px-5 py-4">
         <p className="kicker !text-accent-ink">
             Contested
             <InfoTip label="Contested">{CONTESTED_NOTE}</InfoTip>
         </p>
         <ul className="mt-3 space-y-4">
-            {denials.map(denial => (
+            {denials.map((denial, i) => (
                 <li key={denial.url + denial.sentence}>
                     <p className="body-text"><span className="font-semibold">{denial.by} denies:</span>{' '}
-                        <span lang={denial.language ?? undefined}>“<Marked text={denial.sentence} marks={denial.marks?.sentence}/>”</span>
+                        “{denial.translation
+                            ? <Marked text={denial.translation} marks={denial.marks?.translation}/>
+                            : <span lang={denial.language ?? undefined}><Marked text={denial.sentence} marks={denial.marks?.sentence}/></span>}”
                     </p>
                     {denial.translation && (
-                        <p className="caption mt-1 italic">Machine translation: “<Marked text={denial.translation} marks={denial.marks?.translation}/>”</p>
+                        <Translated original={original} language={denial.language} id={`denial-${i}-${denial.url}`}>
+                            <Marked text={denial.sentence} marks={denial.marks?.sentence}/>
+                        </Translated>
                     )}
                     <p className="caption mt-1">
                         — <a href={denial.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">{denial.source}</a>
@@ -154,23 +179,29 @@ const OtherAngles = ({angles, original}) => (
 
 // The posts where a party the news is about (a club, a body, a company) said it itself, on its website
 // or an open account of its own, found and read by the AI (see server/services/utils/official-sources.js).
-// Its title is the party's own, in the party's language. Or its statement one of the card's articles
-// reports (channel 'reported', see statements.js): the sentence quoted, its translation under it
+// Its title is the party's own, translated into the reader's language when it is in another (briefings
+// since 18.10.2026). Or its statement one of the card's articles reports (channel 'reported', see
+// statements.js): the sentence quoted in the reader's language, the original on demand
 const OFFICIAL_NOTE = 'A party this news is about said it itself: published on its own website or account, as Wikidata lists them, or in a statement one of the articles reports, quoted as written. Found and read by the AI, which may be wrong: the link is the reference. X and Instagram can’t be read, so most news have none.';
-const OfficialSource = ({posts}) => (
+const OfficialSource = ({posts, original}) => (
     <Margin kicker={<>Official sources <InfoTip label="Official sources">{OFFICIAL_NOTE}</InfoTip></>}>
         <ul className="space-y-2">
-            {posts.map(post => post.channel === 'reported' ? (
+            {posts.map((post, i) => post.channel === 'reported' ? (
                 <li key={post.url + post.party}>
                     <span className="font-semibold">{post.party}</span> said it, reported by{' '}
                     <a href={post.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink-mute">{post.source}</a>:{' '}
-                    <span lang={post.language ?? undefined}>“{post.title}”</span>
-                    {post.translation && <span className="mt-1 block italic text-ink-mute">Machine translation: “{post.translation}”</span>}
+                    <span lang={post.translation ? undefined : post.language ?? undefined}>“{post.translation ?? post.title}”</span>
+                    {post.translation && (
+                        <Translated original={original} language={post.language} id={`official-${i}-${post.url}`} className="!text-ink-mute">
+                            {post.title}
+                        </Translated>
+                    )}
                 </li>
             ) : (
                 <li key={post.url}>
                     <span className="font-semibold">{post.party}</span> said it:{' '}
-                    <a href={post.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink-mute">{post.title}</a>
+                    <a href={post.url} target="_blank" rel="noreferrer" title={post.translation ? post.title : undefined}
+                       className="underline underline-offset-2 hover:text-ink-mute">{post.translation ?? post.title}</a>
                     {post.publishedAt && <span className="text-ink-mute">, <time dateTime={post.publishedAt}>{when(post.publishedAt)}</time></span>}
                 </li>
             ))}
@@ -264,7 +295,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
 
     // what the card is about and when, in the column beside it, or one line over its title on a phone
     const metas = [
-        item.topic && <p key="topic" className="kicker !text-ink">{item.topic}</p>,
+        item.topic && <p key="topic" className="kicker !text-ink">{capitalized(item.topic)}</p>,
         countries.length > 0 && <p key="countries" className="caption font-medium !text-ink">{countries.join(' · ')}</p>,
         item.publishedAt && <p key="at" className="caption"><time dateTime={item.publishedAt}>{when(item.publishedAt)}</time></p>,
         item.language && <p key="language" className="leading-none md:leading-normal"><LanguageMark code={item.language} className="ml-0"/></p>,
@@ -366,7 +397,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <div><CardAnalysis id={`analysis-${item.storyId}`} analysis={analysis} pending={analysisPending && !analysis} model={analysisModel}/></div>
                 )}
 
-                {item.contested?.length > 0 && <Contested denials={item.contested}/>}
+                {item.contested?.length > 0 && <Contested denials={item.contested} original={original}/>}
                 {item.angles?.length > 0 && <OtherAngles angles={item.angles} original={original}/>}
 
                 {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-8"/>}
@@ -386,7 +417,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 )}
                 {item.project && <Margin kicker="For your project">{item.project}</Margin>}
                 {item.followUp && <FollowUp followUp={item.followUp}/>}
-                {item.official?.length > 0 && <OfficialSource posts={item.official}/>}
+                {item.official?.length > 0 && <OfficialSource posts={item.official} original={original}/>}
                 {item.names?.length > 0 && (
                     <Margin kicker="Who it is about">
                         <ul aria-label="Who it is about" className="flex list-none flex-wrap gap-x-3 gap-y-0.5 p-0">
@@ -419,7 +450,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 )}
                 {item.hedged && (
                     <Margin kicker="Not confirmed" tone="accent">
-                        unconfirmed: “{item.hedged}”
+                        unconfirmed: “{item.hedgedTranslation ?? item.hedged}”
                         <InfoTip label="unconfirmed">The article says itself, in these words, that this is not confirmed yet.</InfoTip>
                     </Margin>
                 )}

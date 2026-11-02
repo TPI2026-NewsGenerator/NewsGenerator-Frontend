@@ -12,6 +12,8 @@ import {ArrowDown, ArrowUp} from "lucide-react";
 import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Checkbox, FieldError, Input, Label, Textarea} from "@/components/ui/field.jsx";
 import {MailAside} from "@/features/briefing/components/MailAside.jsx";
+import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
+import {MailTheme} from "@/features/briefing/components/MailTheme.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {FORMATS} from "@/features/briefing/formats.js";
@@ -46,16 +48,17 @@ const takenOut = (removed = {}) => [
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
-// thumbnailSource, ai, analysis, contested, angles, official}] (number: their place in the briefing; ai: the points
+// thumbnailSource, countries, ai, analysis, contested, angles, official}] (number: their place in the briefing;
+// countries: the codes ISO 3166-1 the server found for them; ai: the points
 // and the summary written by the AI, see BriefingCard AiVersion; own: {points, digest} the same of the
 // article as published, its paragraphs split by a blank line); accountEmail: the address
 // of the account; format: the way the page shows the sentences of the cards (see formats.js), the one of
 // the e-mail until the reader chooses another, null for a briefing that has the key passages only;
-// onSend(to, storyIds, pictures, titles, removed, format, ai): sends them in this order with the pictures
+// onSend(to, storyIds, pictures, titles, removed, format, ai, texts, countries, theme): sends them in this order with the pictures
 // and the titles the reader changed, without the denials, angles, official sources and analysis lines they took out, their sentences in
 // the way chosen, the ones of 'ai' (storyIds) in their AI version, the ones of 'texts' ({storyId:
-// [paragraph]}) as the reader wrote them, true when sent; onPictures(storyId): {pictures}, the ones of a
-// story; onClear: unticks them all
+// [paragraph]}) as the reader wrote them, 'countries' ({storyId: [code]}) as the reader chose them, in the
+// 'theme' (light, the one at first, or dark) the reader chose for the colours of the e-mail, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks them all
 export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onClear}) => {
     const [to, setTo] = useState(null);         // null: the address is not asked yet
     const [way, setWay] = useState(format);     // the way the sentences are shown in the e-mail
@@ -65,6 +68,8 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
     const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official, why, next, timeline}: the places taken out
     const [inAi, setInAi] = useState({});       // storyId -> true: sent in its AI version
     const [texts, setTexts] = useState({});     // storyId -> {way: the sentences as the reader changes them}
+    const [countries, setCountries] = useState({});     // storyId -> the country codes chosen, when they are not the ones found
+    const [theme, setTheme] = useState('light');        // the colours of the e-mail
     const [galleries, setGalleries] = useState({});     // storyId -> its pictures, null while asked
     const [editing, setEditing] = useState(null);       // the storyId whose title and picture are being changed
     const [error, setError] = useState(null);
@@ -90,6 +95,8 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
         setRemoved({});
         setInAi({});
         setTexts({});
+        setCountries({});
+        setTheme('light');
         setEditing(null);
         setWay(format);
         setTo(accountEmail ?? '');
@@ -145,6 +152,17 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
     };
     const writeText = (storyId, text) => setTexts(current => ({...current, [storyId]: {...current[storyId], [shown]: text}}));
 
+    // the countries the e-mail shows for a story: the ones the reader chose, else the ones found; the ones
+    // found again, or null, are no choice (the e-mail then leaves out the ones its title names)
+    const countriesOf = (story) => countries[story.storyId] ?? story.countries ?? [];
+    const chooseCountries = (story, codes) => setCountries(current => {
+        const next = {...current};
+        const found = story.countries ?? [];
+        if (codes === null || (codes.length === found.length && codes.every(code => found.includes(code)))) delete next[story.storyId];
+        else next[story.storyId] = codes;
+        return next;
+    });
+
     const choose = (storyId, choice) => setChoices(current => {
         const next = {...current};
         if (choice === undefined) delete next[storyId];
@@ -173,7 +191,8 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
             .map(story => [story.storyId, removed[story.storyId]]));
         const ai = ordered.filter(story => inAi[story.storyId] && aiTextOf(story, way)).map(story => story.storyId);
         const rewritten = Object.fromEntries(ordered.map(story => [story.storyId, ownText(story)]).filter(([, paragraphs]) => paragraphs));
-        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left, way ?? undefined, ai, rewritten)) setTo(null);
+        const chosen = Object.fromEntries(ordered.filter(story => countries[story.storyId]).map(story => [story.storyId, countries[story.storyId]]));
+        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left, way ?? undefined, ai, rewritten, chosen, theme)) setTo(null);
     };
 
     return (
@@ -205,6 +224,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                     {two(story.number)} in the briefing
                                                     {ownTitle(story) && ' · title changed'}
                                                     {ownText(story) && ` · ${WAY_NAMES[shown]} changed`}
+                                                    {countries[story.storyId] && ' · countries changed'}
                                                     {choice?.kind === 'none' && (choice.small ? ' · its picture too small, left out' : ' · no picture')}
                                                     {choice?.auto && ' · its picture too small, a sharper one of the story instead'}
                                                     {choice && choice.kind !== 'none' && !choice.auto && ' · picture changed'}
@@ -277,6 +297,7 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                         </Button>
                                                     )}
                                                 </div>
+                                                <MailCountries story={story} chosen={countriesOf(story)} onChange={codes => chooseCountries(story, codes)}/>
                                                 <MailAside story={story} removed={removed[story.storyId]}
                                                            onChange={next => setRemoved(current => ({...current, [story.storyId]: next}))}/>
                                                 <MailPicture story={story} choice={choice} pictures={galleries[story.storyId] ?? null}
@@ -294,6 +315,9 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                             <BriefingFormat label="In the e-mail, as" format={way} onChange={setWay} disabled={sending}/>
                         </div>
                     )}
+                    <div className="mb-3">
+                        <MailTheme theme={theme} onChange={setTheme} disabled={sending}/>
+                    </div>
                     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
                         <div className="min-w-0 flex-1 basis-64">
                             <Label htmlFor="mail-to">Send the {count === 1 ? 'story' : `${count} stories`} to</Label>
