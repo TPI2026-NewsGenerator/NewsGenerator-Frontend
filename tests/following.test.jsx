@@ -113,6 +113,16 @@ describe('FollowingPage', () => {
         await waitFor(() => expect(EntityApi.addWord).toHaveBeenCalledWith('LFF'));
         await waitFor(() => expect(screen.queryByRole('list', {name: 'Suggested'})).toBeNull());
     });
+
+    it('should show what is followed before the names suggested to follow', async () => {
+        EntityApi.suggestions.mockResolvedValueOnce({names: [{name: 'Gianni Infantino', qid: 'Q124138', kind: 'person', cards: 3}]});
+        renderFollowing();
+
+        const followed = await screen.findByRole('heading', {name: 'What you follow', level: 2});
+        const suggested = await screen.findByRole('heading', {name: 'Follow them?'});
+        // the section of what is followed comes first in the page, the suggestions after it
+        expect(followed.compareDocumentPosition(suggested) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
 });
 
 describe('EntityPage', () => {

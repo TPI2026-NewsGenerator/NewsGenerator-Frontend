@@ -201,28 +201,6 @@ export const FollowingPage = () => {
                 </div>
             </section>
 
-            {suggested.length > 0 && (
-                <Section kicker="Often on your cards" title="Follow them?">
-                    <div className="max-w-[52rem]">
-                        <div>
-                            <p className="caption">The people and organisations several cards of your briefings of the last two weeks were about.</p>
-                            <ul aria-label="Suggested" className="mt-3 list-none border-t border-rule p-0">
-                                {suggested.map(name => (
-                                    <li key={`${name.qid ?? ''} ${name.name}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule py-3">
-                                        <span className="min-w-0">
-                                            <Link to={pageOf(name)} className="link font-semibold">{name.name}</Link>
-                                            <span className="caption block">on {name.cards} cards</span>
-                                        </span>
-                                        <Button size="sm" loading={busy === (name.qid ?? name.name)} disabled={busy !== null}
-                                                onClick={() => followSuggested(name)} aria-label={`Follow ${name.name}`}>Follow</Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </Section>
-            )}
-
             <Section kicker="Followed" title="What you follow">
                 <div className="max-w-[52rem]">
                     <div>
@@ -276,6 +254,28 @@ export const FollowingPage = () => {
                     </div>
                 </div>
             </Section>
+
+            {suggested.length > 0 && (
+                <Section kicker="Often on your cards" title="Follow them?">
+                    <div className="max-w-[52rem]">
+                        <div>
+                            <p className="caption">The people and organisations several cards of your briefings of the last two weeks were about.</p>
+                            <ul aria-label="Suggested" className="mt-3 list-none border-t border-rule p-0">
+                                {suggested.map(name => (
+                                    <li key={`${name.qid ?? ''} ${name.name}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule py-3">
+                                        <span className="min-w-0">
+                                            <Link to={pageOf(name)} className="link font-semibold">{name.name}</Link>
+                                            <span className="caption block">on {name.cards} cards</span>
+                                        </span>
+                                        <Button size="sm" loading={busy === (name.qid ?? name.name)} disabled={busy !== null}
+                                                onClick={() => followSuggested(name)} aria-label={`Follow ${name.name}`}>Follow</Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </Section>
+            )}
         </PageShell>
     );
 };
