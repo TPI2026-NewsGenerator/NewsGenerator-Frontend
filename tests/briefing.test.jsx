@@ -67,6 +67,42 @@ describe('BriefingCard, a title without the bait of its medium', () => {
     it('should say nothing of a title left as it was', () => {
         render(<BriefingCard item={item()}/>);
         expect(screen.queryByText('Title shortened')).toBeNull();
+        expect(screen.queryByText(/Title rewritten by the AI/)).toBeNull();
+    });
+});
+
+// a title the AI rewrote (the user, 03.11.2026): its own caption and button, not the "Show original" of a translation
+describe('BriefingCard, a title rewritten by the AI', () => {
+    const PUBLISHED = 'Historic: from this matchday onwards referees will speak after the matches';
+
+    it('should say the AI rewrote the title and show the title as published on demand', () => {
+        render(<BriefingCard item={item({title: 'From this matchday onwards referees will speak after the matches', titleAsPublished: PUBLISHED, titleRewritten: true})}/>);
+        expect(screen.getByRole('heading', {name: 'From this matchday onwards referees will speak after the matches'})).toBeInTheDocument();
+        expect(screen.getByText(/Title rewritten by the AI/)).toBeInTheDocument();
+        expect(screen.queryByText('Title shortened')).toBeNull();
+        expect(screen.queryByText(/Historic/)).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show the title as published'}));
+        expect(screen.getByText(`“${PUBLISHED}”`)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Hide the title as published'}));
+        expect(screen.queryByText(/Historic/)).toBeNull();
+    });
+
+    it('should keep the button of the title as published apart from the "Show original" of the translation', () => {
+        render(<BriefingCard item={item({title: 'Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen', titleTranslation: 'From this matchday onwards referees will speak',
+            language: 'de', titleAsPublished: 'Historisch: Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen', titleRewritten: true})}/>);
+        expect(screen.getByText(/Translated from German/)).toBeInTheDocument();
+        expect(screen.queryByText(/title shortened/)).toBeNull();
+        expect(screen.getByText(/Title rewritten by the AI/)).toBeInTheDocument();
+
+        // "Show original" shows the title of the card in its language, rewritten: not the one as published
+        fireEvent.click(screen.getAllByRole('button', {name: 'Show original'})[0]);
+        expect(screen.getByText('“Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen”')).toBeInTheDocument();
+        expect(screen.queryByText(/Historisch/)).toBeNull();
+
+        // the title as published has a button of its own
+        fireEvent.click(screen.getByRole('button', {name: 'Show the title as published'}));
+        expect(screen.getByText('“Historisch: Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen”')).toBeInTheDocument();
     });
 });
 

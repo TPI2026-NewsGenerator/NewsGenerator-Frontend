@@ -84,6 +84,9 @@ export const BriefingApi = {
     },
     // {pictures: [{url, source}]}: the pictures of a card the reader can put in the e-mail instead
     pictures: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/pictures`),
+    // {title} or {title: null, reason}: the neutral title the AI proposes for a card, for the editor of the e-mail; reason
+    // 'same' when the title is neutral already, 'unsafe' when the proposal changed what it says (none is shown then)
+    neutralTitle: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/neutral-title`, {method: 'POST'}),
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {

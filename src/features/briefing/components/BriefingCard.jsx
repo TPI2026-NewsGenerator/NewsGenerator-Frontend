@@ -225,6 +225,9 @@ const Picture = ({src, source, illustration = false}) => {
     );
 };
 
+// What the AI did to a title it rewrote (the user, 03.11.2026), told by the "i" next to "Title rewritten by the AI"
+const REWRITTEN_NOTE = 'The AI judged that this title carried a judgment or an emphasis of its medium, rewrote it, and a second check found that it tells exactly the same fact. The title as published is one click away. A word can still be lost: the sentences of the card are the reference.';
+
 // A card sent by e-mail in the last two days it follows (see server/services/utils/repeats.js): the same
 // story with news since, read from them, or a new step of its affair. followUp: {title, shownAt, evolved}
 const FOLLOW_UP_NOTE = 'A story you sent by e-mail in the last two days counts as read: it is not shown again, unless news published since tell something new. Judged by the AI from their titles.';
@@ -249,6 +252,8 @@ const Margin = ({kicker, tone, children}) => (
 // story of the page, whose passages open with the drop cap. item.summary: the key sentences of the
 // article as published, a paragraph per passage; item.translation: their machine translation.
 // item.titleTranslation: the title in the language of the reader, when written in another (item.language).
+// item.titleRewritten: the AI rewrote the title (a judgment inside its sentences), item.titleAsPublished is the title as the medium
+// wrote it, shown on demand with a button of its own, not the "Show original" of the translation; absent before 03.11.2026.
 // item.lead: the article of the title and the passages, absent from the briefings made before it was
 // sent: their first article then. item.contested: who denies the news, quoted, absent from the older ones.
 // item.angles: news of the same affair telling something else, absent from the older ones.
@@ -342,7 +347,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {/* written in another language: translated, the original shown on demand */}
                 {translated && (
                     <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
-                        <span className="kicker">Translated from {languageLabel(item.language)}{item.titleAsPublished && ', title shortened'}</span>
+                        <span className="kicker">Translated from {languageLabel(item.language)}{item.titleAsPublished && !item.titleRewritten && ', title shortened'}</span>
                         <button type="button" onClick={() => setOriginal(!original)} aria-expanded={original} aria-controls={`original-${item.storyId}`}
                                 className="cursor-pointer text-action-text hover:underline underline-offset-4">
                             {original ? 'Hide original' : 'Show original'}
@@ -351,11 +356,27 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 )}
                 {translated && original && item.titleTranslation && (
                     <p lang={item.language ?? undefined} className="caption mt-1 italic">
-                        “{item.titleAsPublished ?? <Marked text={item.title} marks={marks.title}/>}”
+                        {/* the original of the translation: the title of the card in its language; the title as published, when the AI
+                            rewrote it, has its own button below, so the two originals are not mistaken for each other */}
+                        “{item.titleRewritten ? <Marked text={item.title} marks={marks.title}/> : item.titleAsPublished ?? <Marked text={item.title} marks={marks.title}/>}”
                     </p>
                 )}
+                {/* the AI rewrote the title, a judgment of its medium inside its sentences, and a second opinion found it says the same
+                    fact: the title as published on demand, in the language it was written in */}
+                {item.titleRewritten && item.titleAsPublished && (
+                    <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
+                        <span className="kicker">Title rewritten by the AI <InfoTip label="Title rewritten by the AI">{REWRITTEN_NOTE}</InfoTip></span>
+                        <button type="button" onClick={() => setAsPublished(!asPublished)} aria-expanded={asPublished} aria-controls={`published-${item.storyId}`}
+                                className="cursor-pointer text-action-text hover:underline underline-offset-4">
+                            {asPublished ? 'Hide the title as published' : 'Show the title as published'}
+                        </button>
+                    </p>
+                )}
+                {item.titleRewritten && item.titleAsPublished && asPublished && (
+                    <p id={`published-${item.storyId}`} lang={item.language ?? undefined} className="caption mt-1 italic">“{item.titleAsPublished}”</p>
+                )}
                 {/* not translated: the title was shortened, the bait of its medium taken out, as published on demand */}
-                {item.titleAsPublished && !item.titleTranslation && (
+                {item.titleAsPublished && !item.titleRewritten && !item.titleTranslation && (
                     <p className="caption mt-2 flex flex-wrap items-baseline gap-x-3">
                         <span className="kicker">Title shortened</span>
                         <button type="button" onClick={() => setAsPublished(!asPublished)} aria-expanded={asPublished} aria-controls={`published-${item.storyId}`}
@@ -364,7 +385,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                         </button>
                     </p>
                 )}
-                {item.titleAsPublished && !item.titleTranslation && asPublished && (
+                {item.titleAsPublished && !item.titleRewritten && !item.titleTranslation && asPublished && (
                     <p id={`published-${item.storyId}`} lang={item.language ?? undefined} className="caption mt-1 italic">“{item.titleAsPublished}”</p>
                 )}
                 {item.why && <p className="standfirst mt-3">{item.why}</p>}

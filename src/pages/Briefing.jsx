@@ -457,6 +457,7 @@ export const BriefingPage = () => {
                         <MailBar accountEmail={user?.email} sending={sending} onSend={email} onClear={() => tick([])}
                                  format={shorter ? format : null}
                                  onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
+                                 onNeutralTitle={storyId => BriefingApi.neutralTitle(briefing.id, storyId)}
                                  stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
                                      ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
                                          thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,

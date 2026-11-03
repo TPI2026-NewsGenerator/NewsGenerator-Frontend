@@ -13,7 +13,7 @@ import {MemoryRouter} from "react-router-dom";
 import {WithSession} from "./session.jsx";
 
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    BriefingApi: {getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), pictures: vi.fn(async () => ({pictures: [
+    BriefingApi: {getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
         {url: 'https://cdn.example/first.jpg', source: 'media1.fr'}, {url: 'https://cdn.example/other.jpg', source: 'kicker.de'},
     ]}))},
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},
@@ -443,6 +443,79 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: []}, 'light'));
+    });
+
+    // the AI proposes a neutral title, the reader reads it against the title of the card and uses it or not (the user, 03.11.2026)
+    describe('neutral title', () => {
+        const openEditor = async (title = 'Incredible news! The council votes the budget') => {
+            const items = [{...card(1, title)}, {...card(2, 'Second story')}];
+            BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
+            render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+            await screen.findByText(title);
+            fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+            fireEvent.click(screen.getByRole('button', {name: `Edit “${title}” in the e-mail`}));
+        };
+        const ASK = {name: /Suggest a neutral title/};
+        const PROPOSAL = {name: 'Neutral title proposed by the AI'};
+
+        it('should show the proposal against the title, what is taken out struck and what is put in underlined', async () => {
+            BriefingApi.neutralTitle.mockResolvedValue({title: 'The council approves the budget'});
+            await openEditor();
+            fireEvent.click(screen.getByRole('button', ASK));
+            const proposal = await screen.findByRole('group', PROPOSAL);
+            expect(BriefingApi.neutralTitle).toHaveBeenCalledWith(9, 1);
+            expect(within(proposal).getByText('Incredible').className).toContain('line-through');
+            expect(within(proposal).getByText('news!').className).toContain('line-through');
+            expect(within(proposal).getByText('approves').className).toContain('underline');
+        });
+
+        it('should put the proposal in the title field only when the reader uses it, and send it as the title of the e-mail', async () => {
+            BriefingApi.neutralTitle.mockResolvedValue({title: 'The council votes the budget'});
+            await openEditor();
+            const field = screen.getByLabelText('Its title in the e-mail');
+            fireEvent.click(screen.getByRole('button', ASK));
+            await screen.findByRole('group', PROPOSAL);
+            expect(field).toHaveValue('Incredible news! The council votes the budget');
+
+            fireEvent.click(screen.getByRole('button', {name: 'Use this title'}));
+            expect(field).toHaveValue('The council votes the budget');
+            expect(screen.queryByRole('group', PROPOSAL)).toBeNull();
+            expect(screen.getByText(/· title changed/)).toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'The council votes the budget'}, {}, undefined, [], {}, {}, 'light'));
+        });
+
+        it('should leave the title as it is when the reader keeps it', async () => {
+            BriefingApi.neutralTitle.mockResolvedValue({title: 'The council votes the budget'});
+            await openEditor();
+            fireEvent.click(screen.getByRole('button', ASK));
+            await screen.findByRole('group', PROPOSAL);
+            fireEvent.click(screen.getByRole('button', {name: 'Keep the title'}));
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('Incredible news! The council votes the budget');
+            expect(screen.queryByText(/· title changed/)).toBeNull();
+        });
+
+        it('should say when the title is neutral already, and when the AI changed what it says so nothing is shown', async () => {
+            BriefingApi.neutralTitle.mockResolvedValueOnce({title: null, reason: 'same'});
+            await openEditor('The council votes the budget');
+            fireEvent.click(screen.getByRole('button', ASK));
+            expect(await screen.findByText('This title is neutral already: nothing to change.')).toBeInTheDocument();
+
+            BriefingApi.neutralTitle.mockResolvedValueOnce({title: null, reason: 'unsafe'});
+            fireEvent.click(screen.getByRole('button', ASK));
+            expect(await screen.findByText(/changed what the title says, so it is not shown/)).toBeInTheDocument();
+            expect(screen.queryByRole('group', PROPOSAL)).toBeNull();
+        });
+
+        it('should say when the AI could not be asked, and leave the title alone', async () => {
+            BriefingApi.neutralTitle.mockRejectedValue(new Error('The AI did not answer.'));
+            await openEditor();
+            fireEvent.click(screen.getByRole('button', ASK));
+            expect(await screen.findByRole('alert')).toHaveTextContent('No neutral title: The AI did not answer.');
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('Incredible news! The council votes the budget');
+        });
     });
 
     // light at first, dark when the reader chooses it, and the choice is for that e-mail only (the user, 02.11.2026)

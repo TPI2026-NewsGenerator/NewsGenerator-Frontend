@@ -13,6 +13,7 @@ import {Button, IconButton} from "@/components/ui/button.jsx";
 import {Checkbox, FieldError, Input, Label, Textarea} from "@/components/ui/field.jsx";
 import {MailAside} from "@/features/briefing/components/MailAside.jsx";
 import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
+import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
 import {MailTheme} from "@/features/briefing/components/MailTheme.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
@@ -58,8 +59,10 @@ const takenOut = (removed = {}) => [
 // and the titles the reader changed, without the denials, angles, official sources and analysis lines they took out, their sentences in
 // the way chosen, the ones of 'ai' (storyIds) in their AI version, the ones of 'texts' ({storyId:
 // [paragraph]}) as the reader wrote them, 'countries' ({storyId: [code]}) as the reader chose them, in the
-// 'theme' (light, the one at first, or dark) the reader chose for the colours of the e-mail, true when sent; onPictures(storyId): {pictures}, the ones of a story; onClear: unticks them all
-export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onClear}) => {
+// 'theme' (light, the one at first, or dark) the reader chose for the colours of the e-mail, true when sent; onPictures(storyId): {pictures}, the ones of a story;
+// onNeutralTitle(storyId): {title} or {title: null, reason}, the neutral title the AI proposes for a story, shown against its title (see MailNeutralTitle),
+// none offered without it; onClear: unticks them all
+export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onNeutralTitle, onClear}) => {
     const [to, setTo] = useState(null);         // null: the address is not asked yet
     const [way, setWay] = useState(format);     // the way the sentences are shown in the e-mail
     const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
@@ -260,6 +263,11 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                                 onClick={() => setTitles(current => ({...current, [story.storyId]: story.title}))}>
                                                             Back to its own title
                                                         </Button>
+                                                    )}
+                                                    {/* the AI proposes, the reader reads it against the title and uses it or not */}
+                                                    {onNeutralTitle && (
+                                                        <MailNeutralTitle story={story} onAsk={onNeutralTitle} disabled={sending}
+                                                                          onUse={title => setTitles(current => ({...current, [story.storyId]: title}))}/>
                                                     )}
                                                 </div>
                                                 <div className="mt-2 border border-rule p-3">
