@@ -326,6 +326,14 @@ export const BriefingPage = () => {
                     The news of your sources that name one, whatever their relevance, not chosen by the AI. They are searched
                     when you open this tab, back to 30 days until each has the number you want. <Link className="link" to="/following">Change them</Link>.
                 </p>
+                {/* for a reader who can send e-mails: where the button of each news is, and what it needs */}
+                {mail && (
+                    <p className="caption mt-1">
+                        {ready
+                            ? 'Under each news, “Add to the e-mail” puts it in the e-mail of your briefing (or ticks its card if the briefing tells it already): the bar to send it comes at the bottom of the page.'
+                            : 'To put these news in an e-mail, write a briefing first: they are added to it.'}
+                    </p>
+                )}
                 {ready && found > 0 && (
                     <p className="caption mt-1">
                         <button type="button" onClick={showFound} className="cursor-pointer text-action-text hover:underline underline-offset-4">
@@ -452,8 +460,9 @@ export const BriefingPage = () => {
                     <Tabs.Content value="briefing" className="space-y-8 outline-none">{cards}</Tabs.Content>
                     {hasTerms && <Tabs.Content value="terms" className="outline-none">{terms}</Tabs.Content>}
 
-                    {/* the cards ticked are sent from the tab of the briefing */}
-                    {mail && ready && ticked.length > 0 && tab === 'briefing' && (
+                    {/* the cards ticked are sent from the bar, in the tab of the briefing and in the one of what you follow, where a
+                        news is put in the e-mail (the user, 03.11.2026: the bar was not there after "Add to the e-mail") */}
+                    {mail && ready && ticked.length > 0 && (
                         <MailBar accountEmail={user?.email} sending={sending} onSend={email} onClear={() => tick([])}
                                  format={shorter ? format : null}
                                  onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}

@@ -82,5 +82,17 @@ describe('The news of the names followed, in the e-mail', () => {
         await renderTab(false);
         expect(screen.queryByRole('button', {name: 'Add to the e-mail'})).toBeNull();
         expect(screen.queryByText(/Card 2 of the briefing/)).toBeNull();
+        expect(screen.queryByText(/Under each news/)).toBeNull();
+    });
+
+    // the bar to send the e-mail was only in the tab of the briefing: after "Add to the e-mail" nothing showed it (the user, 03.11.2026)
+    it('should show the bar of the e-mail in this tab as soon as a news is ticked, and say where the buttons are', async () => {
+        await renderTab();
+        expect(screen.getByText(/Under each news, “Add to the e-mail” puts it in the e-mail of your briefing/)).toBeInTheDocument();
+        expect(screen.queryByText(/stor(y|ies) ticked/)).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Tick it for the e-mail'}));
+        expect(await screen.findByText(/1 story ticked/)).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Send email'})).toBeInTheDocument();
     });
 });
