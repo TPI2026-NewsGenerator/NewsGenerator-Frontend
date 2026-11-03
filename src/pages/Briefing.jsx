@@ -471,6 +471,8 @@ export const BriefingPage = () => {
                                  onNeutralTitle={storyId => BriefingApi.neutralTitle(briefing.id, storyId)}
                                  stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
                                      ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
+                                         // the title as the medium wrote it, when the card's was shortened or rewritten (the editor offers it), and its language
+                                         titleAsPublished: item.titleAsPublished ?? null, titleLanguage: item.language ?? null, titleTranslated: Boolean(item.titleTranslation),
                                          thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                          countries: item.countries ?? [],
                                          contested: item.contested ?? [],

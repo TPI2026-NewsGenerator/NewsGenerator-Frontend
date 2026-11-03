@@ -18,6 +18,7 @@ import {MailTheme} from "@/features/briefing/components/MailTheme.jsx";
 import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {FORMATS} from "@/features/briefing/formats.js";
+import {languageLabel} from "@/features/briefing/profileWords.js";
 import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooSmall, usePictureSizes} from "@/features/briefing/mailPictures.js";
 
 // one address, as the server checks it (server/services/utils/account-rules.js)
@@ -48,7 +49,7 @@ const takenOut = (removed = {}) => [
     [(removed.why?.length ?? 0) + (removed.next?.length ?? 0) + (removed.timeline?.length ?? 0), 'analysis line', 'analysis lines'],
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 
-// stories: the cards ticked, in the order of the briefing, [{storyId, title, number, thumbnail,
+// stories: the cards ticked, in the order of the briefing, [{storyId, title, titleAsPublished, titleLanguage, titleTranslated, number, thumbnail,
 // thumbnailSource, countries, ai, analysis, contested, angles, official}] (number: their place in the briefing;
 // countries: the codes ISO 3166-1 the server found for them; ai: the points
 // and the summary written by the AI, see BriefingCard AiVersion; own: {points, digest} the same of the
@@ -263,6 +264,21 @@ export const MailBar = ({stories, accountEmail, format = null, sending, onSend, 
                                                                 onClick={() => setTitles(current => ({...current, [story.storyId]: story.title}))}>
                                                             Back to its own title
                                                         </Button>
+                                                    )}
+                                                    {/* the title of the card is not the one the medium wrote when its bait was taken out or the AI rewrote it
+                                                        (the user, 03.11.2026): the title as published is there to put back, as the medium wrote it (in its
+                                                        language when the card is translated: it is not translated) */}
+                                                    {story.titleAsPublished && (
+                                                        <div className="mt-2">
+                                                            <p className="caption">
+                                                                Title as published{story.titleTranslated && story.titleLanguage ? ` (${languageLabel(story.titleLanguage)}, not translated)` : ''}:{' '}
+                                                                <span lang={story.titleLanguage ?? undefined} className="italic">“{story.titleAsPublished}”</span>
+                                                            </p>
+                                                            <Button size="sm" variant="link" className="mt-1" disabled={sending || (titles[story.storyId] ?? story.title) === story.titleAsPublished}
+                                                                    onClick={() => setTitles(current => ({...current, [story.storyId]: story.titleAsPublished}))}>
+                                                                Use the title as published
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                     {/* the AI proposes, the reader reads it against the title and uses it or not */}
                                                     {onNeutralTitle && (

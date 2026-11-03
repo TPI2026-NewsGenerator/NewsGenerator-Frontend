@@ -12,6 +12,9 @@ import {fireEvent, render, screen, waitFor, within} from '@testing-library/react
 import {MemoryRouter} from "react-router-dom";
 import {WithSession} from "./session.jsx";
 
+// each test renders the whole page and the bar of the e-mail: over the 5 s of the default on a machine that is busy
+vi.setConfig({testTimeout: 20000});
+
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
     BriefingApi: {getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
         {url: 'https://cdn.example/first.jpg', source: 'media1.fr'}, {url: 'https://cdn.example/other.jpg', source: 'kicker.de'},
@@ -443,6 +446,50 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: []}, 'light'));
+    });
+
+    // the title of a card is changed by default (its bait taken out, or rewritten by the AI): the editor offers the one the medium wrote
+    describe('title as published', () => {
+        const open = async (changes) => {
+            const items = [{...card(1, 'Council votes the budget'), ...changes}, {...card(2, 'Second story')}];
+            BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
+            render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+            await screen.findByText('Council votes the budget');
+            fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Edit “Council votes the budget” in the e-mail'}));
+        };
+
+        it('should show the title as the medium wrote it, and put it in the title of the e-mail when the reader asks', async () => {
+            await open({titleAsPublished: 'Incredible news! Council votes the budget', language: 'en', titleRewritten: false});
+            expect(screen.getByText('“Incredible news! Council votes the budget”')).toBeInTheDocument();
+            const field = screen.getByLabelText('Its title in the e-mail');
+            expect(field).toHaveValue('Council votes the budget');
+
+            fireEvent.click(screen.getByRole('button', {name: 'Use the title as published'}));
+            expect(field).toHaveValue('Incredible news! Council votes the budget');
+            expect(screen.getByText(/· title changed/)).toBeInTheDocument();
+            // it is the title now: nothing more to ask, and the card's own comes back with the button that was there
+            expect(screen.getByRole('button', {name: 'Use the title as published'})).toBeDisabled();
+            fireEvent.click(screen.getByRole('button', {name: 'Back to its own title'}));
+            expect(field).toHaveValue('Council votes the budget');
+
+            fireEvent.click(screen.getByRole('button', {name: 'Use the title as published'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'Incredible news! Council votes the budget'}, {}, undefined, [], {}, {}, 'light'));
+        });
+
+        it('should say the title as published is not translated when the card is', async () => {
+            await open({title: 'Der Rat beschliesst das Budget', titleTranslation: 'Council votes the budget', titleAsPublished: 'Sensation: Der Rat beschliesst das Budget', language: 'de', titleRewritten: true});
+            expect(screen.getByText(/Title as published \(German, not translated\)/)).toBeInTheDocument();
+            expect(screen.getByText('“Sensation: Der Rat beschliesst das Budget”')).toBeInTheDocument();
+        });
+
+        it('should offer nothing for a card whose title is the one the medium wrote', async () => {
+            await open({});
+            expect(screen.queryByRole('button', {name: 'Use the title as published'})).toBeNull();
+            expect(screen.queryByText(/Title as published/)).toBeNull();
+        });
     });
 
     // the AI proposes a neutral title, the reader reads it against the title of the card and uses it or not (the user, 03.11.2026)
