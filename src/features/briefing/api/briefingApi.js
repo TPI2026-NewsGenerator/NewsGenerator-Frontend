@@ -64,9 +64,10 @@ export const BriefingApi = {
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },
-    // a news added at the end of the briefing by its link: answers {item, analysis}, its card and, when it was
-    // copied from another briefing of the reader with its analysis, that analysis ({why, next, timeline}),
-    // else null (see importNews on the server)
+    // a news added at the end of the briefing by its link: answers {item, analysis, analyzing}, its card (read and completed like the
+    // cards of a briefing), and, when it was copied from another briefing of the reader with its analysis, that analysis ({why, next,
+    // timeline}), else null; analyzing true when its analysis is being written, the page then asks for the briefing again (see importNews
+    // on the server)
     addNews: async (briefingId, url) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/news`, {
             method: 'POST',
@@ -75,7 +76,7 @@ export const BriefingApi = {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
-        return {item: data.item, analysis: data.analysis ?? null};
+        return {item: data.item, analysis: data.analysis ?? null, analyzing: Boolean(data.analyzing)};
     },
     // a news added taken out again (204, no body)
     removeNews: async (briefingId, storyId) => {

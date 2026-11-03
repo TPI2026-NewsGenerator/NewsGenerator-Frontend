@@ -55,7 +55,7 @@ const MailAdd = ({news}) => {
     return (
         <span className="mt-1.5 block">
             <Button size="sm" variant="quiet" onClick={add} loading={adding} disabled={adding}>Add to the e-mail</Button>
-            {adding && <span className="caption ml-2">Reading the page and choosing its key passages…</span>}
+            {adding && <span className="caption ml-2">Reading the page and completing it like a card: a minute or two…</span>}
         </span>
     );
 };

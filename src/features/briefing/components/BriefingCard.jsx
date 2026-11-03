@@ -447,7 +447,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <Margin kicker="Added by you">
                         {item.transferred
                             ? 'Copied from another of your briefings, with its other angles, sources and analysis.'
-                            : 'From its link: not chosen nor checked against other media.'}
+                            // read and completed like the cards (the media that tell it, other angles, official sources, the people named, analysis)
+                            // when it has the count of the media that tell it; a news added before 03.11.2026, or whose steps failed, has only its page
+                            : item.corroboration ? 'Chosen by you, then read and completed like the other cards: other media, angles, official sources, people named, analysis.'
+                                : 'From its link: not chosen nor checked against other media.'}
                         {onRemove && (
                             <button type="button" onClick={onRemove}
                                     className="mt-1 block cursor-pointer text-action-text hover:underline underline-offset-4">Take it out</button>

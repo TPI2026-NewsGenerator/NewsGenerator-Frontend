@@ -192,10 +192,12 @@ export const BriefingPage = () => {
     // a news added by its link: at the end of the briefing, ticked for the e-mail; true when added
     const addNews = async (url) => {
         try {
-            const {item, analysis} = await BriefingApi.addNews(briefing.id, url);
-            // a news copied from another briefing comes with its analysis, shown as the cards' are
+            const {item, analysis, analyzing} = await BriefingApi.addNews(briefing.id, url);
+            // a news copied from another briefing comes with its analysis, shown as the cards' are; one read like a card has it written
+            // after the answer: the analysis shown as running with the card among those picked, which the page then asks for until it is written
             setBriefing(current => current && current.id === briefing.id ? {...current, items: [...current.items, item],
-                ...(analysis && current.analysis?.status === 'ready' ? {analysis: {...current.analysis, cards: {...current.analysis.cards, [item.storyId]: analysis}}} : {})} : current);
+                ...(analysis && current.analysis?.status === 'ready' ? {analysis: {...current.analysis, cards: {...current.analysis.cards, [item.storyId]: analysis}}} : {}),
+                ...(analyzing && current.analysis ? {analysis: {...current.analysis, status: 'running', picked: [...(current.analysis.picked ?? []), {storyId: item.storyId, reason: null}]}} : {})} : current);
             tick([...ticked, item.storyId]);
             toast.success('The news was added at the end of the briefing, ticked for the e-mail.');
             return true;

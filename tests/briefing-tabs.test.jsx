@@ -112,7 +112,8 @@ describe('BriefingPage tabs', () => {
         expect(shownAt.hash).toBe('');
     });
 
-    it('should keep the bar of the e-mail to the tab of the briefing', async () => {
+    // the bar is in both tabs since 03.11.2026: a news put in the e-mail from the tab of what you follow showed no bar to send it
+    it('should keep the bar of the e-mail in both tabs, with the cards ticked', async () => {
         follows();
         BriefingApi.following.mockResolvedValue({limit: 100, groups});
         await renderPage();
@@ -120,7 +121,8 @@ describe('BriefingPage tabs', () => {
         expect(screen.getByRole('button', {name: 'Send email'})).toBeInTheDocument();
 
         fireEvent.mouseDown(await followingTab());
-        expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull();
+        expect(screen.getByRole('button', {name: 'Send email'})).toBeInTheDocument();
+        expect(screen.getByText(/1 story ticked/)).toBeInTheDocument();
     });
 
     it('should ask the number of news wanted for each name again when the bar is moved, and keep it for the next visit', async () => {

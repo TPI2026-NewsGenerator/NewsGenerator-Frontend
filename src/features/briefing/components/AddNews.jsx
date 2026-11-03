@@ -3,7 +3,7 @@
 //  Date: 13.10.2026
 //  File: AddNews.jsx
 //  Description: A news the reader adds to the briefing by its link, to send it by e-mail with the cards:
-//               the server reads its page and chooses its key passages as for a card
+//               the server reads it, and completes it, as a card of the briefing
 //
 
 import {useState} from "react";
@@ -40,7 +40,7 @@ export const AddNews = ({onAdd}) => {
                        }}/>
                 <Button onClick={add} loading={adding} disabled={!valid || adding}>Add</Button>
             </div>
-            <Help>{adding ? 'Reading the page and choosing its key passages…' : 'Added at the end of the briefing, ticked for the e-mail. A news of another of your briefings comes as it is there.'}</Help>
+            <Help>{adding ? 'Reading the page and completing it like a card: a minute or two…' : 'Added at the end of the briefing, ticked for the e-mail, read and completed like its cards. A news of another of your briefings comes as it is there.'}</Help>
         </div>
     );
 };
