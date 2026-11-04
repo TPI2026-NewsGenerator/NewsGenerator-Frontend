@@ -8,7 +8,7 @@
 
 import '@testing-library/jest-dom';
 import {describe, expect, it} from 'vitest';
-import {fireEvent, render} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {paragraphsWithMarks, segmentsOf} from '@/features/briefing/marks.js';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {WatchedNews} from '@/features/briefing/components/WatchedNews.jsx';
@@ -45,6 +45,8 @@ describe('BriefingCard and WatchedNews marks', () => {
 
     it('should mark the terms in the title, the passages and the other angles of a card, and say which it names', () => {
         const {container, getByText} = render(<BriefingCard item={item} marked/>);
+        // the other angles are in the first tab, open at first
+        expect(screen.getByRole('button', {name: /^Angles/})).toHaveAttribute('aria-expanded', 'true');
         expect(marked(container)).toEqual(['Infantino', 'VAR', 'VAR', 'Infantino', 'VAR']);
         expect(getByText('Infantino · VAR · Malagò (other angle)')).toBeInTheDocument();
         expect(container.querySelector('h2')).toHaveTextContent('Infantino face à la VAR');

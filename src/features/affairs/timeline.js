@@ -89,3 +89,22 @@ export const barsOf = (coverageDays, axis, maxHeight = 56) => {
         height: day.media === 0 ? 0 : Math.max(2, Math.round((day.media / peak) * maxHeight)),
     }));
 };
+
+// How far the line is scrolled when the wheel turns over it: the turn of a mouse wheel (vertical) moves it sideways, until the
+// line is at its end that way, when the page scrolls instead; a sideways swipe is left to the browser. Answers the new
+// scrollLeft, or null to leave the event alone. node: {scrollLeft, scrollWidth, clientWidth}
+export const wheelScrolled = ({deltaX, deltaY, deltaMode = 0}, {scrollLeft, scrollWidth, clientWidth}) => {
+    if (Math.abs(deltaX) >= Math.abs(deltaY)) return null;
+    const most = scrollWidth - clientWidth;
+    if (most <= 0) return null;
+    // a wheel that counts in lines (Firefox) or in pages
+    const delta = deltaMode === 1 ? deltaY * 16 : deltaMode === 2 ? deltaY * clientWidth : deltaY;
+    if ((delta < 0 && scrollLeft <= 0) || (delta > 0 && scrollLeft >= most - 1)) return null;
+    return Math.min(most, Math.max(0, scrollLeft + delta));
+};
+
+// The mouse moves this far before it is a drag and no click on a marker
+export const DRAG_PX = 4;
+
+// The scrollLeft of a line dragged with the mouse: it follows the hand, as a sheet pulled
+export const draggedTo = (startLeft, startX, x) => startLeft - (x - startX);

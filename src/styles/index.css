@@ -47,6 +47,7 @@
     --color-action-hover: var(--action-hover);
     --color-action-text: var(--action-text);
     --color-accent-ink: var(--accent-ink);
+    --color-official: var(--official);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -73,7 +74,8 @@
 }
 
 /* paper: the page; paper-deep: the one other tone (a selected row, a quiet button, the footer);
-   action: links and what is pressed, nothing else; accent-ink: what warns (an error, a text the AI wrote).
+   action: links and what is pressed, nothing else; accent-ink: what warns (an error, a text the AI wrote, who denies);
+   official: what a party said itself.
    The shadcn names point at the same tones, so a component added later fits in */
 :root {
     --paper: #FFFFFF;
@@ -85,6 +87,7 @@
     --action-hover: #0077ED;
     --action-text: #0066CC;
     --accent-ink: #BF4800;
+    --official: #248A3D;
 
     --background: var(--paper);
     --foreground: var(--ink);
@@ -128,6 +131,7 @@
         --rule: #3A3A3C;
         --action-text: #2997FF;
         --accent-ink: #FF9F0A;
+        --official: #30D158;
     }
 }
 
@@ -139,6 +143,7 @@
     --rule: #3A3A3C;
     --action-text: #2997FF;
     --accent-ink: #FF9F0A;
+    --official: #30D158;
 }
 
 /* what floats over the page (a dialog, a menu, a panel, a note) is a step lighter in the dark, its greys
@@ -284,6 +289,42 @@
     .caption {
         font-size: 0.8125rem;
         line-height: 1.45;
+        color: var(--ink-mute);
+    }
+
+    /* what says who wrote a text and how far to trust it: smaller than a caption, in italics, so it reads as a note and not as news */
+    .footnote {
+        font-size: 0.75rem;
+        font-style: italic;
+        line-height: 1.45;
+        color: var(--ink-mute);
+    }
+
+    /* the panels under a card (analysis, angles, coverage, affair) write in one scale: .kicker labels a part, .panel-lead says what
+       the panel is about, .panel-text carries its lines, .caption says who and when, .footnote says who wrote it. Regular weight
+       throughout, the lead and the key events of a line in medium */
+    .panel-lead {
+        font-size: 1.0625rem;
+        font-weight: 500;
+        line-height: 1.35;
+        color: var(--ink);
+    }
+
+    .panel-text {
+        font-size: 0.9375rem;
+        line-height: 1.55;
+        color: var(--ink);
+    }
+
+    /* a link of a panel: a hairline under it, quiet on hover */
+    .panel-link {
+        text-decoration-line: underline;
+        text-decoration-color: var(--rule);
+        text-underline-offset: 0.25em;
+        transition: color 0.2s;
+    }
+
+    .panel-link:hover {
         color: var(--ink-mute);
     }
 

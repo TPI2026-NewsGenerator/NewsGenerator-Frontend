@@ -12,16 +12,18 @@ import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Meta, MetaLine} from "@/components/ui/text.jsx";
 import {cn} from "@/lib/utils.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
-import {axisOf, barsOf, dotRows, labelLanes, LABEL_LANES, LABEL_PX, radiusOf} from "@/features/affairs/timeline.js";
+import {axisOf, barsOf, dotRows, draggedTo, DRAG_PX, labelLanes, LABEL_LANES, LABEL_PX, radiusOf, wheelScrolled} from "@/features/affairs/timeline.js";
 
 // the heights of the line, from the top: the labels on their lanes, the line, the minor events under it, the days,
 // the bars of the coverage
-const LABEL_H = 54;
+const LABEL_H = 58;
 const AXIS_Y = LABEL_LANES * LABEL_H + 18;
 const DOTS_Y = AXIS_Y + 16;
 const TICKS_Y = AXIS_Y + 68;
 const BARS_Y = TICKS_Y + 26;
 const BAR_MAX = 56;
+// the margin on each side of the line (px-6): the date of the first day is centred under it and half of it is out of the line
+const EDGE = 24;
 const HEIGHT = BARS_Y + BAR_MAX + 4;
 
 const dateOf = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
@@ -31,14 +33,21 @@ const MEDIA_SHOWN = 6;
 // what the articles of an event say of it: the words of the media, never a verdict (see hedging.js, statements.js and
 // contested.js on the server)
 const MARKS = {
-    reported: {label: 'Reported', means: (event) => `The articles that tell it say they have no confirmation (“${event.reported}”). It says how they present it, not whether it is true.`},
-    official: {label: 'Official', means: () => 'A party this event is about announced it itself, in a statement or a release one of the articles reports.'},
-    denial: {label: 'Contested', means: () => 'One of the articles reports that someone named denies it. Nobody is said to be right.'},
+    reported: {label: 'Reported', tone: 'accent', means: (event) => `The articles that tell it say they have no confirmation (“${event.reported}”). It says how they present it, not whether it is true.`},
+    official: {label: 'Official', tone: 'official', means: () => 'A party this event is about announced it itself, in a statement or a release one of the articles reports.'},
+    denial: {label: 'Contested', tone: 'accent', means: () => 'One of the articles reports that someone named denies it. Nobody is said to be right.'},
 };
+// the colour of a marker when its event is denied (orange, as "Contested" everywhere) or announced by a party (green, as "Official source"):
+// filled, small ones too. Both at once, the denial: it is what the reader is to be warned of (the user, 05.11.2026)
+const MARKER_TONES = {
+    denial: {look: 'border-accent-ink bg-accent-ink/85', ring: 'ring-accent-ink', hover: 'ring-accent-ink/55'},
+    official: {look: 'border-official bg-official/85', ring: 'ring-official', hover: 'ring-official/55'},
+};
+const toneOfMarker = (event) => event.denial ? MARKER_TONES.denial : event.official ? MARKER_TONES.official : null;
 const marksOf = (event) => Object.keys(MARKS).filter(mark => event[mark]);
 
 const Marks = ({event, className}) => marksOf(event).map(mark => (
-    <Meta key={mark} tone="accent" className={className} title={MARKS[mark].means(event)}>{MARKS[mark].label}</Meta>
+    <Meta key={mark} tone={MARKS[mark].tone} className={className} title={MARKS[mark].means(event)}>{MARKS[mark].label}</Meta>
 ));
 
 // the title in the language of the reader, the original on demand, as the other angles of a card are
@@ -46,7 +55,7 @@ const EventTitle = ({event, className}) => {
     const [original, setOriginal] = useState(false);
     return (
         <>
-            <a href={event.url} target="_blank" rel="noreferrer" className={cn('body-text font-semibold underline-offset-2 hover:underline', className)}>
+            <a href={event.url} target="_blank" rel="noreferrer" className={cn('panel-text panel-link', className)}>
                 {event.titleTranslation ?? event.title}
             </a>
             {event.titleTranslation && (
@@ -70,7 +79,7 @@ const toldBy = (event) => {
 
 // the event chosen on the line: when, what the articles say of it, who told it
 const Detail = ({event}) => (
-    <div className="mt-4 rounded-2xl bg-paper-deep px-5 py-4">
+    <div className="mt-4 border-l border-rule pl-5">
         <MetaLine>
             <Meta tone="ink"><time dateTime={event.at}>{timeOf(event.at)}</time></Meta>
             <Meta>{event.kind === 'key' ? 'Key event' : 'Event'}</Meta>
@@ -84,14 +93,14 @@ const Detail = ({event}) => (
     </div>
 );
 
-// every event in time order, the key ones in bold
+// every event in time order, the key ones in medium weight
 const EventList = ({events}) => (
     <ol className="mt-4 list-none divide-y divide-rule p-0">
         {events.map(event => (
             <li key={event.id} className="grid grid-cols-[4.5rem_1fr] gap-x-3 py-2.5">
                 <time dateTime={event.at} className="caption pt-0.5">{dateOf(event.at)}</time>
                 <div>
-                    <EventTitle event={event} className={event.kind === 'key' ? '' : '!font-normal'}/>
+                    <EventTitle event={event} className={event.kind === 'key' ? 'font-medium' : ''}/>
                     <MetaLine className="mt-0.5">
                         <Meta>{toldBy(event)}</Meta>
                         <Marks event={event}/>
@@ -107,19 +116,81 @@ export const AffairTimeline = ({events, coverage}) => {
     const scroller = useRef(null);
     const [width, setWidth] = useState(0);
     const [selected, setSelected] = useState(null);
+    // the event the mouse or the focus is on: its marker and its label light up together (the user, 05.11.2026)
+    const [hovered, setHovered] = useState(null);
     const [listed, setListed] = useState(false);
 
-    // the line fills its place when the affair is short, and is read by scrolling when it is long
+    const [dragging, setDragging] = useState(false);
+    // a drag in progress ({x, left, moved}), and whether the click that ends one is to be swallowed
+    const drag = useRef(null);
+    const swallow = useRef(false);
+
+    // the line fills its place when the affair is short, and is read by scrolling when it is long; the margins on its sides
+    // (EDGE) hold the first date, centred under the first day, which was cut by the edge
     useEffect(() => {
         const node = scroller.current;
         if (!node) return undefined;
-        const measure = () => setWidth(node.clientWidth);
+        const measure = () => setWidth(Math.max(0, node.clientWidth - 2 * EDGE));
         measure();
         if (typeof ResizeObserver === 'undefined') return undefined;
         const observer = new ResizeObserver(measure);
         observer.observe(node);
         return () => observer.disconnect();
     }, []);
+
+    // the wheel of a mouse over the line moves it sideways (the page scrolls at its ends): React listens to the wheel as a passive
+    // event, which cannot be cancelled, so it is listened to here
+    useEffect(() => {
+        const node = scroller.current;
+        if (!node) return undefined;
+        const onWheel = (event) => {
+            if (event.ctrlKey) return;
+            const left = wheelScrolled(event, node);
+            if (left === null) return;
+            event.preventDefault();
+            node.scrollLeft = left;
+        };
+        node.addEventListener('wheel', onWheel, {passive: false});
+        return () => node.removeEventListener('wheel', onWheel);
+    }, []);
+
+    // the mouse drags the line, as a finger does on a phone; a drag is no click on a marker
+    const startDrag = (event) => {
+        const node = scroller.current;
+        if (event.pointerType !== 'mouse' || event.button !== 0 || node.scrollWidth <= node.clientWidth) return;
+        drag.current = {x: event.clientX, left: node.scrollLeft, moved: false};
+        const move = (next) => {
+            const now = drag.current;
+            if (!now || (!now.moved && Math.abs(next.clientX - now.x) < DRAG_PX)) return;
+            now.moved = true;
+            setDragging(true);
+            node.scrollLeft = draggedTo(now.left, now.x, next.clientX);
+        };
+        const end = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', end);
+            window.removeEventListener('pointercancel', end);
+            if (drag.current?.moved) {
+                swallow.current = true;
+                setTimeout(() => { swallow.current = false; }, 0);
+            }
+            drag.current = null;
+            setDragging(false);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', end);
+    };
+    const lights = (id) => ({
+        onMouseEnter: () => setHovered(id), onMouseLeave: () => setHovered(null),
+        onFocus: () => setHovered(id), onBlur: () => setHovered(null),
+    });
+    const swallowClick = (event) => {
+        if (!swallow.current) return;
+        event.stopPropagation();
+        event.preventDefault();
+        swallow.current = false;
+    };
 
     const axis = axisOf(events, coverage?.days ?? [], width);
     if (!axis) return null;
@@ -132,7 +203,9 @@ export const AffairTimeline = ({events, coverage}) => {
     return (
         <div className="mt-6">
             <div ref={scroller} tabIndex={0} aria-label="The events of the affair on a line, scroll sideways to read it"
-                 className="overflow-x-auto rounded-xl pb-2 focus-visible:outline-2 focus-visible:outline-action">
+                 onPointerDown={startDrag} onClickCapture={swallowClick}
+                 className={cn('overflow-x-auto rounded-xl px-6 pb-2 select-none focus-visible:outline-2 focus-visible:outline-action',
+                     dragging ? 'cursor-grabbing' : 'cursor-grab')}>
                 <div className="relative" style={{width: axis.width, height: HEIGHT}}>
                     {/* the stems first, then the labels of the key events over them, each on a lane */}
                     {events.filter(event => lanes.has(event.id)).map(event => {
@@ -142,11 +215,13 @@ export const AffairTimeline = ({events, coverage}) => {
                     {events.filter(event => lanes.has(event.id)).map(event => {
                         const top = (LABEL_LANES - 1 - lanes.get(event.id)) * LABEL_H;
                         return (
-                            <button key={`label-${event.id}`} type="button" onClick={() => setSelected(event.id)}
-                                    style={{left: axis.x(event.at), top, width: LABEL_PX, height: LABEL_H - 8}}
-                                    className="absolute cursor-pointer overflow-hidden bg-paper pl-1.5 text-left hover:text-action-text">
+                            <button key={`label-${event.id}`} type="button" onClick={() => setSelected(event.id)} {...lights(event.id)}
+                                    style={{left: axis.x(event.at), top, width: LABEL_PX, height: LABEL_H - 5}}
+                                    className={cn('absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-0.5 text-left transition-colors',
+                                        hovered === event.id ? 'bg-paper-deep text-action-text' : 'bg-paper')}>
                                 <span className="caption block leading-tight">{dateOf(event.at)}</span>
-                                <span className="line-clamp-2 block text-[0.8125rem] leading-tight">{event.titleTranslation ?? event.title}</span>
+                                {/* no "block" here: line-clamp is a box of its own, "block" took the "…" away and cut the title in the middle of a line */}
+                                <span className="line-clamp-2 text-[0.8125rem] leading-tight">{event.titleTranslation ?? event.title}</span>
                             </button>
                         );
                     })}
@@ -156,17 +231,18 @@ export const AffairTimeline = ({events, coverage}) => {
                     {events.map(event => {
                         const key = event.kind === 'key';
                         const radius = key ? radiusOf(event.media.length) : 4;
+                        const tone = toneOfMarker(event);
                         const y = key ? AXIS_Y : DOTS_Y + rows.get(event.id) * 11;
                         return (
-                            <button key={event.id} type="button" onClick={() => setSelected(selected === event.id ? null : event.id)}
+                            <button key={event.id} type="button" onClick={() => setSelected(selected === event.id ? null : event.id)} {...lights(event.id)}
                                     aria-pressed={selected === event.id}
                                     aria-label={`${dateOf(event.at)}: ${event.titleTranslation ?? event.title}, ${toldBy(event)}`}
                                     title={`${dateOf(event.at)} · ${(event.titleTranslation ?? event.title).slice(0, 90)}`}
                                     style={{left: axis.x(event.at) - radius, top: y - radius, width: radius * 2, height: radius * 2}}
                                     className={cn('absolute cursor-pointer rounded-full border transition-shadow',
-                                        key ? 'border-action bg-action/85' : 'border-ink-mute bg-paper',
+                                        tone ? tone.look : key ? 'border-action bg-action/85' : 'border-ink-mute bg-paper',
                                         event.reported && 'border-dashed !bg-paper',
-                                        selected === event.id && 'ring-2 ring-action ring-offset-1 ring-offset-paper')}/>
+                                        selected === event.id ? `ring-2 ${tone?.ring ?? 'ring-action'} ring-offset-1 ring-offset-paper` : hovered === event.id && `ring-2 ${tone?.hover ?? 'ring-action/55'}`)}/>
                         );
                     })}
 
@@ -187,7 +263,10 @@ export const AffairTimeline = ({events, coverage}) => {
 
             <p className="caption mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span>{events.length} events, {keys} key. Click one to read it.</span>
-                <span>Big marker: told by many media · hollow: other event · dashed: reported · grey bars: media writing each day</span>
+                <span>
+                    Big marker: told by many media · hollow: other event · dashed: reported ·{' '}
+                    <span className="text-accent-ink">orange: contested</span> · <span className="text-official">green: official</span> · grey bars: media writing each day
+                </span>
                 <InfoTip label="The line">
                     Each event is a fact told by one or several media, in any language, at the date of its first news. A key event brings something new and is told
                     by two media or more, or announced or denied by a party. The AI chose the events; the dates, the media and the marks are counted from the news.
@@ -197,7 +276,7 @@ export const AffairTimeline = ({events, coverage}) => {
             {chosen && <Detail event={chosen}/>}
 
             <button type="button" onClick={() => setListed(!listed)} aria-expanded={listed}
-                    className="mt-4 cursor-pointer text-[0.875rem] text-action-text hover:underline underline-offset-4">
+                    className="mt-4 cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4">
                 {listed ? 'Hide the list' : `Read all ${events.length} events as a list`}
             </button>
             {listed && <EventList events={events}/>}

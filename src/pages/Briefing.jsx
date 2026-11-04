@@ -9,12 +9,15 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {Tabs} from "radix-ui";
+import {Link2, ListChecks, Sparkles} from "lucide-react";
 import {PageShell, Opening, Toolbar} from "@/components/layout/Page.jsx";
 import {SettingsPill} from "@/components/ui/settings-pill.jsx";
-import {Button} from "@/components/ui/button.jsx";
+import {Button, IconButton} from "@/components/ui/button.jsx";
+import {ToolPopover} from "@/components/ui/tool-popover.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx";
+import {hasAnalysisNote} from "@/features/briefing/analysis.js";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {FollowingNews} from "@/features/briefing/components/FollowingNews.jsx";
 import {useFollowing} from "@/features/briefing/useFollowing.js";
@@ -296,14 +299,6 @@ export const BriefingPage = () => {
 
     const cards = (
         <>
-            {ready && count > 0 && !onlyFound && briefing.analysis && (
-                <div className="grid-12">
-                    <div className="col-span-12 md:col-span-9">
-                        <AnalysisNote analysis={briefing.analysis} items={briefing.items}/>
-                    </div>
-                </div>
-            )}
-
             {found > 0 && (
                 <div className="grid-12">
                     <div className="col-span-12 flex flex-wrap items-baseline gap-x-4 gap-y-2 md:col-span-9">
@@ -375,12 +370,43 @@ export const BriefingPage = () => {
 
     // the reading of the cards, in the toolbar while the tab of the briefing is read
     const reading = tab === 'briefing' && ready && count > 0 && shorter && <BriefingFormat format={format} onChange={chooseFormat}/>;
+    // what the briefing offers beside the way to read it, a round icon each in the toolbar (the user, 05.11.2026: a line over the cards
+    // and a form took a band of the page): its AI analysis, ticking every story for the e-mail, a news added by its link
+    const allTicked = ready && count > 0 && briefing.items.every(item => ticked.includes(item.storyId));
+    const analysed = ready && count > 0 && hasAnalysisNote(briefing.analysis);
+    const tools = tab === 'briefing' && ready && (analysed || mail) && (
+        <div className="flex items-center gap-0.5">
+            {analysed && (
+                <ToolPopover icon={<Sparkles aria-hidden className="size-4"/>} label="AI analysis of the stories" busy={briefing.analysis.status === 'running'}>
+                    {close => <AnalysisNote analysis={briefing.analysis} items={briefing.items} onPick={close}/>}
+                </ToolPopover>
+            )}
+            {mail && count > 0 && (
+                <IconButton label={allTicked ? 'Untick all the stories' : 'Tick all the stories'} pressed={allTicked}
+                            title={allTicked ? 'Untick all the stories' : 'Tick all the stories, to send them by e-mail'}
+                            onClick={() => tick(allTicked ? [] : briefing.items.map(item => item.storyId))}>
+                    <ListChecks aria-hidden className="size-4"/>
+                </IconButton>
+            )}
+            {mail && (
+                <ToolPopover icon={<Link2 aria-hidden className="size-4"/>} label="Add a news by its link">
+                    {close => (
+                        <AddNews key={briefing.id} onAdd={async url => {
+                            const added = await addNews(url);
+                            if (added) close();
+                            return added;
+                        }}/>
+                    )}
+                </ToolPopover>
+            )}
+        </div>
+    );
     // the next briefing: shown while the profile is asked too (it came after the briefing, and the controls
     // appearing then pushed the cards down, the user 16.10.2026); none without a profile
     // its days and cards, kept from a briefing to the next, in a panel the pill opens: beside the tabs and the
     // way to read, they took the toolbar to two lines on a laptop (the user, 01.11.2026)
     const next = profile !== null && (
-        <div className="flex items-center gap-3 md:ml-auto">
+        <div className="flex items-center gap-3">
             <SettingsPill label={`${spanOf(hours)} · ${size} cards`} title="Next briefing"
                           ariaLabel={`Next briefing: the news of the last ${spanOf(hours)}, ${size} cards. Change`}>
                 <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
@@ -429,31 +455,16 @@ export const BriefingPage = () => {
 
                 {/* one bar for what the page shows and for the next briefing; the tab of what is followed has
                     no briefing to write (the user, 01.11.2026): its own bar for the news wanted is in it */}
-                {(tabs || next) && (
+                {(tabs || next || tools) && (
                     <Toolbar>
                         {tabs}
                         {reading}
-                        {tab === 'briefing' && next}
+                        {tab === 'briefing' && (tools || next) && <div className="flex items-center gap-3 md:ml-auto">{tools}{next}</div>}
                     </Toolbar>
                 )}
 
                 {/* room under the last card for the bar of the e-mail */}
                 <div className={`page mt-10 space-y-8 md:mt-12${ticked.length > 0 ? ' pb-20' : ''}`}>
-                    {mail && ready && tab === 'briefing' && (
-                        <div className="grid-12 gap-y-6">
-                            {count > 0 && (
-                                <p className="caption col-span-12 self-end md:col-span-6">
-                                    Tick the stories to send them by e-mail, or{' '}
-                                    <button type="button" onClick={() => tick(briefing.items.map(item => item.storyId))}
-                                            className="cursor-pointer text-action-text hover:underline underline-offset-4">tick them all</button>.
-                                </p>
-                            )}
-                            <div className="col-span-12 md:col-span-3 md:col-start-10">
-                                <AddNews key={briefing.id} onAdd={addNews}/>
-                            </div>
-                        </div>
-                    )}
-
                     <div className="grid-12">
                         <div className="col-span-12 space-y-8 empty:hidden md:col-span-9">
                             {/* a briefing written before the shorter ways (12.10.2026): nothing to choose in the toolbar */}

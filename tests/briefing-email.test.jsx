@@ -16,7 +16,7 @@ import {WithSession} from "./session.jsx";
 vi.setConfig({testTimeout: 20000});
 
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
+    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), addNews: vi.fn(), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
         {url: 'https://cdn.example/first.jpg', source: 'media1.fr'}, {url: 'https://cdn.example/other.jpg', source: 'kicker.de'},
     ]}))},
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},
@@ -224,7 +224,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
     it('should send the stories in the order the reader gives them, their place in the briefing told', async () => {
         await renderPage();
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         const order = screen.getByRole('list', {name: 'The stories of the e-mail, in their order'});
@@ -285,7 +285,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         }))}});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
@@ -336,7 +336,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         ]}});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         // the first: the widest lying picture of the story; the third has none wide enough
@@ -377,7 +377,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         // a story with neither has nothing to choose
@@ -408,7 +408,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
@@ -434,7 +434,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
@@ -455,7 +455,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
             BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
             render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
             await screen.findByText('Council votes the budget');
-            fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
             fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
             fireEvent.click(screen.getByRole('button', {name: 'Edit “Council votes the budget” in the e-mail'}));
         };
@@ -499,7 +499,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
             BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
             render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
             await screen.findByText(title);
-            fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
             fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
             fireEvent.click(screen.getByRole('button', {name: `Edit “${title}” in the e-mail`}));
         };
@@ -596,7 +596,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
@@ -628,16 +628,66 @@ describe('BriefingPage e-mail of the cards ticked', () => {
     it('should tick them all, and untick them all', async () => {
         await renderPage();
 
-        fireEvent.click(screen.getByRole('button', {name: 'tick them all'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
         expect(screen.getByText(/3 stories ticked/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', {name: 'Untick all'}));
         expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull();
     });
 
+    // the line over the cards and the form to add a news took a band of the page: they are round icons in the toolbar (the user, 05.11.2026)
+    it('should have the tools in the toolbar, and no band of the page over the cards', async () => {
+        await renderPage();
+        expect(screen.queryByText(/Tick the stories to send them by e-mail/)).toBeNull();
+        expect(screen.getByRole('button', {name: 'Tick all the stories'})).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByRole('button', {name: 'Add a news by its link'})).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText('https://…')).toBeNull();
+    });
+
+    it('should tick every story from the toolbar, and untick them from the same button', async () => {
+        await renderPage();
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
+        expect(screen.getByRole('button', {name: 'Untick all the stories'})).toHaveAttribute('aria-pressed', 'true');
+        screen.getAllByRole('checkbox', BOX).forEach(box => expect(box).toBeChecked());
+        fireEvent.click(screen.getByRole('button', {name: 'Untick all the stories'}));
+        screen.getAllByRole('checkbox', BOX).forEach(box => expect(box).not.toBeChecked());
+        expect(screen.getByRole('button', {name: 'Tick all the stories'})).toBeInTheDocument();
+    });
+
+    it('should add a news from the panel of its icon, and close the panel once it is added', async () => {
+        BriefingApi.addNews.mockResolvedValue({item: card(4, 'Added story'), analysis: null, analyzing: false});
+        await renderPage();
+        fireEvent.click(screen.getByRole('button', {name: 'Add a news by its link'}));
+        const field = await screen.findByPlaceholderText('https://…');
+        fireEvent.change(field, {target: {value: 'https://media4.fr/story'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Add'}));
+        await waitFor(() => expect(BriefingApi.addNews).toHaveBeenCalledWith(9, 'https://media4.fr/story'));
+        await screen.findByText('Added story');
+        await waitFor(() => expect(screen.queryByPlaceholderText('https://…')).toBeNull());
+    });
+
+    it('should say in the toolbar which stories have an AI analysis, a link to each', async () => {
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, analysis: {status: 'ready', picked: [{storyId: 1}, {storyId: 3}],
+            cards: {1: {why: ['One.'], next: [], timeline: []}, 3: {why: ['Three.'], next: [], timeline: []}}}}, mail: true});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        expect(screen.queryByText(/AI analysis of the stories that need one/)).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'AI analysis of the stories'}));
+        const note = await screen.findByText(/The AI wrote an analysis of the stories that need one/);
+        expect(within(note).getByRole('link', {name: '01'})).toHaveAttribute('href', '#card-1');
+        expect(within(note).getByRole('link', {name: '03'})).toHaveAttribute('href', '#card-3');
+    });
+
+    it('should show no icon for an analysis a briefing does not have, nor for the e-mail without an account', async () => {
+        await renderPage(false);
+        expect(screen.queryByRole('button', {name: 'AI analysis of the stories'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Add a news by its link'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Tick all the stories'})).toBeNull();
+    });
+
     it('should show no box when the server has no e-mail account', async () => {
         await renderPage(false);
         expect(screen.queryAllByRole('checkbox', BOX)).toHaveLength(0);
-        expect(screen.queryByRole('button', {name: 'tick them all'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Tick all the stories'})).toBeNull();
     });
 });
 

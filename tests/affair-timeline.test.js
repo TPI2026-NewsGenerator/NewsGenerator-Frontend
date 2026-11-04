@@ -7,7 +7,7 @@
 //
 
 import {describe, expect, it} from 'vitest';
-import {axisOf, barsOf, dotRows, labelLanes, localDay, radiusOf, DAY_PX} from '@/features/affairs/timeline.js';
+import {axisOf, barsOf, dotRows, draggedTo, labelLanes, localDay, radiusOf, wheelScrolled, DAY_PX} from '@/features/affairs/timeline.js';
 
 const event = (id, at, kind = 'key') => ({id, at, kind});
 const day = (n) => `2026-10-${String(n).padStart(2, '0')}T12:00:00`;
@@ -82,5 +82,33 @@ describe('barsOf', () => {
         expect(bars.map(bar => bar.height)).toEqual([56, 0, 28]);
         expect(bars[0].x).toBeLessThan(bars[2].x);
         expect(localDay('2026-10-10').getDate()).toBe(10);
+    });
+});
+
+describe('wheelScrolled', () => {
+    const node = (scrollLeft) => ({scrollLeft, scrollWidth: 1000, clientWidth: 400});
+
+    it('should turn the vertical wheel into a sideways scroll, within the line', () => {
+        expect(wheelScrolled({deltaX: 0, deltaY: 100}, node(0))).toBe(100);
+        expect(wheelScrolled({deltaX: 0, deltaY: -50}, node(200))).toBe(150);
+        expect(wheelScrolled({deltaX: 0, deltaY: 900}, node(200))).toBe(600);
+    });
+
+    it('should leave the page to scroll when the line is at its end that way, or has nothing to scroll', () => {
+        expect(wheelScrolled({deltaX: 0, deltaY: -100}, node(0))).toBeNull();
+        expect(wheelScrolled({deltaX: 0, deltaY: 100}, node(600))).toBeNull();
+        expect(wheelScrolled({deltaX: 0, deltaY: 100}, {scrollLeft: 0, scrollWidth: 400, clientWidth: 400})).toBeNull();
+    });
+
+    it('should leave a sideways swipe to the browser, and count a wheel in lines', () => {
+        expect(wheelScrolled({deltaX: 80, deltaY: 5}, node(0))).toBeNull();
+        expect(wheelScrolled({deltaX: 0, deltaY: 3, deltaMode: 1}, node(0))).toBe(48);
+    });
+});
+
+describe('draggedTo', () => {
+    it('should move the line with the hand: dragging to the left shows what is on the right', () => {
+        expect(draggedTo(100, 300, 250)).toBe(150);
+        expect(draggedTo(100, 300, 340)).toBe(60);
     });
 });

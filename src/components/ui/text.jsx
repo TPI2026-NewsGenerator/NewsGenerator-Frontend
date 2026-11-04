@@ -8,12 +8,12 @@
 
 import {cn} from "@/lib/utils.js";
 
-// what used to be a coloured tag: a small quiet word. tone 'accent' is kept for what warns
+// what used to be a coloured tag: a small quiet word. tone 'accent' is kept for what warns, 'official' for what a party said itself
 export const Meta = ({tone, className, ...props}) => (
     <span
         className={cn(
             'text-[0.8125rem] font-medium',
-            tone === 'accent' ? 'text-accent-ink' : tone === 'ink' ? 'text-ink' : 'text-ink-mute',
+            tone === 'accent' ? 'text-accent-ink' : tone === 'official' ? 'text-official' : tone === 'ink' ? 'text-ink' : 'text-ink-mute',
             className,
         )}
         {...props}

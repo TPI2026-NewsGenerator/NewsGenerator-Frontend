@@ -31,12 +31,12 @@ export const AffairCoverage = ({coverage}) => {
     const media = all ? coverage.byMedium : coverage.byMedium.slice(0, MEDIA_SHOWN);
 
     return (
-        <div className="mt-8">
+        <div className="mt-6">
             <p className="kicker">
                 How widely it was told
                 <InfoTip label="How widely it was told">{NOTE}</InfoTip>
             </p>
-            <p className="mt-2 text-[1.0625rem] font-semibold">
+            <p className="panel-lead mt-2">
                 {count(coverage.media)} media · {count(coverage.news)} news · {coverage.languages.length} {coverage.languages.length === 1 ? 'language' : 'languages'}
             </p>
             <MetaLine className="mt-1">
@@ -51,7 +51,7 @@ export const AffairCoverage = ({coverage}) => {
             <p className="kicker mt-6">The media, in the order they joined</p>
             <ol className="mt-2 list-none divide-y divide-rule p-0">
                 {media.map(one => (
-                    <li key={one.medium} className="grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-x-3 py-1.5 text-[0.9375rem]">
+                    <li key={one.medium} className="panel-text grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-x-3 py-1.5">
                         <time dateTime={one.firstAt} className="caption">{dayOf(one.firstAt)}</time>
                         <span>{one.medium}</span>
                         <span className="caption">{one.news} news</span>
@@ -60,7 +60,7 @@ export const AffairCoverage = ({coverage}) => {
             </ol>
             {coverage.byMedium.length > MEDIA_SHOWN && (
                 <button type="button" onClick={() => setAll(!all)} aria-expanded={all}
-                        className="mt-2 cursor-pointer text-[0.875rem] text-action-text hover:underline underline-offset-4">
+                        className="mt-2 cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4">
                     {all ? 'Show the first ones only' : `Show all ${count(coverage.byMedium.length)} media`}
                 </button>
             )}

@@ -17,12 +17,13 @@ const Trusted = ({article}) => article.trusted
     : null;
 
 // lead: {url, source, trusted, language} the article of the card (its title, its passages); others:
-// [{url, source, title, trusted, language}] the other articles of the news, each medium once and never the one of lead
-export const NewsLinks = ({lead, others = [], className}) => {
+// [{url, source, title, trusted, language}] the other articles of the news, each medium once and never the one of lead. limit: how many
+// are named (8 by default); onMore: what "and N more" does instead of naming them all (the card opens its coverage)
+export const NewsLinks = ({lead, others = [], className, limit = SHOWN_OTHERS, onMore = null}) => {
     const [all, setAll] = useState(false);
     const seen = new Set([lead.source]);
     const media = others.filter(other => !seen.has(other.source) && seen.add(other.source));
-    const shown = all ? media : media.slice(0, SHOWN_OTHERS);
+    const shown = all && !onMore ? media : media.slice(0, limit);
 
     return (
         <div className={cn('mt-4 space-y-2', className)}>
@@ -40,12 +41,12 @@ export const NewsLinks = ({lead, others = [], className}) => {
                             <Trusted article={other}/><LanguageMark code={other.language}/>
                         </span>
                     ))}
-                    {media.length > SHOWN_OTHERS && (
+                    {media.length > limit && (
                         <>
                             {' '}
-                            <button type="button" onClick={() => setAll(!all)}
+                            <button type="button" onClick={() => onMore ? onMore() : setAll(!all)}
                                     className="cursor-pointer underline underline-offset-4 hover:text-ink">
-                                {all ? 'show less' : `and ${media.length - SHOWN_OTHERS} more`}
+                                {all && !onMore ? 'show less' : `and ${media.length - limit} more`}
                             </button>
                         </>
                     )}

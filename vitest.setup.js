@@ -14,6 +14,9 @@ Object.defineProperty(window, 'matchMedia', {
     }),
 });
 
+// jsdom scrolls nothing: the card scrolls to the tab it opens
+window.HTMLElement.prototype.scrollIntoView ??= () => {};
+
 // jsdom measures no element: the scroll frames of Radix (components/ui/scroll-area.jsx) watch their size
 window.ResizeObserver ??= class {
     observe() {}

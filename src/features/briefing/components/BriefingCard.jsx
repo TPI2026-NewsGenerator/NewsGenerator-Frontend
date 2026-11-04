@@ -2,17 +2,16 @@
 //  Author: Fabian Rostello
 //  Date: 24.09.2026
 //  File: BriefingCard.jsx
-//  Description: One story of the briefing: why it was chosen, its summary, who tells it and how
-//               many of them wrote it themselves, who denies it, its other angles, and the post where
-//               a party of the news said it itself
+//  Description: One story of the briefing: why it was chosen, its summary, how widely it is told, who denies it, its other
+//               angles, and the post where a party of the news said it itself, then the link to its article at the very bottom
 //
 
 import {Fragment, useState} from "react";
 import {Link} from "react-router-dom";
+import {CircleHelp, Megaphone, Radio, TriangleAlert} from "lucide-react";
 import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-icons/fa";
 import {IconButton} from "@/components/ui/button.jsx";
 import {Notice} from "@/components/ui/text.jsx";
-import {coverageLabel} from "@/features/briefing/corroboration.js";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
 import {Marked} from "@/components/news/Marked.jsx";
@@ -23,18 +22,11 @@ import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
 import {countryNames} from "@/features/briefing/countries.js";
 import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
-import {AffairSection} from "@/features/affairs/components/AffairSection.jsx";
+import {AffairPanel, AffairRail} from "@/features/affairs/components/AffairSection.jsx";
+import {CardCoverage} from "@/features/briefing/components/CardCoverage.jsx";
+import {CardMore} from "@/features/briefing/components/CardMore.jsx";
 import {cn, capitalized} from "@/lib/utils.js";
 import {pageOf} from "@/features/entities/entityApi.js";
-
-// Who the article credits for what it reports, read by the AI while it summarizes. It describes the
-// article, never whether the news is true: said under each one, in the "i" next to it
-const SOURCING = {
-    named: {label: 'named sources', means: 'The article names who it quotes: a person, a club, an institution, an official statement.'},
-    anonymous: {label: 'unnamed sources', means: 'The article relies on sources it does not name, such as “sources close to the club”.'},
-    none: {label: 'no source given', means: 'The article credits nobody for what it reports: often a match report or a guide, with nobody to quote.'},
-};
-const SOURCING_NOTE = 'Read by the AI in the article quoted. It says nothing on whether the news is true.';
 
 // Passages of an article, a gap between two of them: the sentences are the article's own, the AI only
 // chose them (see server/services/utils/extract.js). paragraphs: [{text, marks}] (see marks.js)
@@ -78,7 +70,7 @@ const AiVersion = ({id, format, text, model, source}) => (
                 ? <Points paragraphs={text.map(point => ({text: point}))}/>
                 : <p>{text}</p>}
         </div>
-        <p className="caption mt-3">
+        <p className="footnote mt-3">
             Written by the AI ({model.replace(/:.*$/, '')}) from the article {source && <>of {source} </>}in its own words: it can get a
             fact wrong. The article's sentences above are the reference.
         </p>
@@ -113,18 +105,18 @@ const Translated = ({original: opened, language, id, className, children}) => {
 
 // Someone named who denies the news, in the words of one of its articles, translated into the reader's
 // language when written in another (see server/services/utils/contested.js). Nobody is said to be right:
-// the reader is told who denies, and where it is written
+// the reader is told who denies, and where it is written. In the column beside the card, under the badge "Contested" that leads to it
 const CONTESTED_NOTE = 'One of its articles reports that someone named denies this news. The sentence is the article’s own, found by the AI; it does not say who is right.';
-const Contested = ({denials, original}) => (
-    <div className="mt-6 rounded-2xl bg-paper-deep px-5 py-4">
+const Contested = ({id, denials, original}) => (
+    <div id={id} className="scroll-mt-24">
         <p className="kicker !text-accent-ink">
             Contested
             <InfoTip label="Contested">{CONTESTED_NOTE}</InfoTip>
         </p>
-        <ul className="mt-3 space-y-4">
+        <ul className="caption mt-1 max-w-[32ch] space-y-3 !text-ink">
             {denials.map((denial, i) => (
                 <li key={denial.url + denial.sentence}>
-                    <p className="body-text"><span className="font-semibold">{denial.by} denies:</span>{' '}
+                    <p>{denial.by} denies:{' '}
                         “{denial.translation
                             ? <Marked text={denial.translation} marks={denial.marks?.translation}/>
                             : <span lang={denial.language ?? undefined}><Marked text={denial.sentence} marks={denial.marks?.sentence}/></span>}”
@@ -149,16 +141,16 @@ const Contested = ({denials, original}) => (
 // in another language than the reader's, the original shown with the card's
 const ANGLES_NOTE = 'Close news of the last days, in any language, that the AI read as the same affair seen from another side: what came before or after, a reaction, a background. Judged from their titles: one may only be close.';
 const OtherAngles = ({angles, original}) => (
-    <div className="mt-10">
+    <div>
         <p className="kicker">
             Same affair, other angles
             <InfoTip label="Same affair, other angles">{ANGLES_NOTE}</InfoTip>
         </p>
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-2 space-y-3">
             {angles.map(angle => (
-                <li key={angle.url}>
+                <li key={angle.url} className="panel-text">
                     <a href={angle.url} target="_blank" rel="noreferrer" title={angle.titleTranslation ? angle.title : undefined}
-                       className="body-text font-semibold underline-offset-2 hover:underline">
+                       className="panel-link">
                         {angle.titleTranslation
                             ? <Marked text={angle.titleTranslation} marks={angle.marks?.titleTranslation}/>
                             : <Marked text={angle.title} marks={angle.marks?.title}/>}
@@ -184,12 +176,12 @@ const OtherAngles = ({angles, original}) => (
 // since 18.10.2026). Or its statement one of the card's articles reports (channel 'reported', see
 // statements.js): the sentence quoted in the reader's language, the original on demand
 const OFFICIAL_NOTE = 'A party this news is about said it itself: published on its own website or account, as Wikidata lists them, or in a statement one of the articles reports, quoted as written. Found and read by the AI, which may be wrong: the link is the reference. X and Instagram can’t be read, so most news have none.';
-const OfficialSource = ({posts, original}) => (
-    <Margin kicker={<>Official sources <InfoTip label="Official sources">{OFFICIAL_NOTE}</InfoTip></>}>
+const OfficialSource = ({id, posts, original}) => (
+    <Margin id={id} tone="official" kicker={<>Official sources <InfoTip label="Official sources">{OFFICIAL_NOTE}</InfoTip></>}>
         <ul className="space-y-2">
             {posts.map((post, i) => post.channel === 'reported' ? (
                 <li key={post.url + post.party}>
-                    <span className="font-semibold">{post.party}</span> said it, reported by{' '}
+                    {post.party} said it, reported by{' '}
                     <a href={post.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink-mute">{post.source}</a>:{' '}
                     <span lang={post.translation ? undefined : post.language ?? undefined}>“{post.translation ?? post.title}”</span>
                     {post.translation && (
@@ -200,7 +192,7 @@ const OfficialSource = ({posts, original}) => (
                 </li>
             ) : (
                 <li key={post.url}>
-                    <span className="font-semibold">{post.party}</span> said it:{' '}
+                    {post.party} said it:{' '}
                     <a href={post.url} target="_blank" rel="noreferrer" title={post.translation ? post.title : undefined}
                        className="underline underline-offset-2 hover:text-ink-mute">{post.translation ?? post.title}</a>
                     {post.publishedAt && <span className="text-ink-mute">, <time dateTime={post.publishedAt}>{when(post.publishedAt)}</time></span>}
@@ -234,19 +226,62 @@ const REWRITTEN_NOTE = 'The AI judged that this title carried a judgment or an e
 const FOLLOW_UP_NOTE = 'A story you sent by e-mail in the last two days counts as read: it is not shown again, unless news published since tell something new. Judged by the AI from their titles.';
 const day = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 const FollowUp = ({followUp}) => (
-    <Margin kicker={<>Follow-up <InfoTip label="Follow-up">{FOLLOW_UP_NOTE}</InfoTip></>}>
-        {followUp.evolved ? 'New since you read it' : 'A new step of the affair you read'}, sent on {day(followUp.shownAt)}:{' '}
-        <span className="italic">“{followUp.title}”</span>
-    </Margin>
+    <div className="rounded-xl border border-action/30 bg-action/10 px-3.5 py-3">
+        <p className="kicker !text-action-text">Follow-up <InfoTip label="Follow-up">{FOLLOW_UP_NOTE}</InfoTip></p>
+        <div className="caption mt-1 max-w-[32ch] !text-action-text">
+            {followUp.evolved ? 'New since you read it' : 'A new step of the affair you read'}, sent on {day(followUp.shownAt)}: “{followUp.title}”
+        </div>
+    </div>
 );
 
-// a note of the outer column: its kicker and what it says
-const Margin = ({kicker, tone, children}) => (
-    <div>
-        <p className={cn('kicker', tone === 'accent' && '!text-accent-ink')}>{kicker}</p>
+// a note of the outer column: its kicker and what it says, the one way the column is written in (13 px, regular: the follow-up, the
+// denials, the affair, the checkboxes). id: its place on the page, where the badge of the glance leads
+const Margin = ({id, kicker, tone, children}) => (
+    <div id={id} className="scroll-mt-24">
+        <p className={cn('kicker', tone === 'accent' && '!text-accent-ink', tone === 'official' && '!text-official')}>{kicker}</p>
         <div className="caption mt-1 max-w-[32ch] !text-ink">{children}</div>
     </div>
 );
+
+// A badge of the glance: what the reader should see at once, without opening anything. tone 'warn' (orange) for what is said against the
+// news or what the article itself says is not confirmed, 'official' (green) for what a party said itself
+const BADGE_TONES = {
+    warn: 'border-accent-ink/30 bg-accent-ink/10 text-accent-ink hover:bg-accent-ink/15',
+    official: 'border-official/30 bg-official/10 text-official hover:bg-official/15',
+};
+const Badge = ({icon, tone, onClick, children}) => (
+    <button type="button" onClick={onClick}
+            className={cn('inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors', BADGE_TONES[tone])}>
+        {icon}
+        {children}
+    </button>
+);
+
+// Under the title, what matters before reading: how widely it is told (its pill opens the coverage), then a badge for each of: someone
+// who denies it, a party that said it itself, an article that says itself it is not confirmed (the user, 05.11.2026). A badge leads
+// to its words in the column beside the card. onOpen(key): a tab; onNote(kind): the note of the column
+const Glance = ({item, onOpen, onNote}) => {
+    const media = item.corroboration?.media ?? 0;
+    const languages = new Set((item.articles ?? []).map(article => article.language).filter(Boolean)).size;
+    const contested = item.contested?.length ?? 0;
+    const official = item.official?.length ?? 0;
+    if (media === 0 && contested === 0 && official === 0 && !item.hedged) return null;
+    return (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+            {media > 0 && (
+                <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-transparent bg-paper-deep px-3.5 py-1.5 text-[0.8125rem] text-ink-mute">
+                    <Radio aria-hidden className="size-3.5 shrink-0"/>
+                    <button type="button" onClick={() => onOpen('coverage')} className="cursor-pointer underline-offset-4 hover:text-ink hover:underline">
+                        {media === 1 ? 'Told by one medium' : `Told by ${media} media`}{languages > 1 && ` in ${languages} languages`}
+                    </button>
+                </span>
+            )}
+            {contested > 0 && <Badge icon={<TriangleAlert aria-hidden className="size-3.5 shrink-0"/>} tone="warn" onClick={() => onNote('contested')}>{contested === 1 ? 'Contested' : `Contested (${contested})`}</Badge>}
+            {official > 0 && <Badge icon={<Megaphone aria-hidden className="size-3.5 shrink-0"/>} tone="official" onClick={() => onNote('official')}>{official === 1 ? 'Official source' : `${official} official sources`}</Badge>}
+            {item.hedged && <Badge icon={<CircleHelp aria-hidden className="size-3.5 shrink-0"/>} tone="warn" onClick={() => onNote('unconfirmed')}>Unconfirmed</Badge>}
+        </div>
+    );
+};
 
 // onVote(vote): 'up', 'down', or null when the reader takes back the thumb given. The next briefings
 // learn from it; without onVote no thumb is shown. number: its place in the briefing. lede: the first
@@ -283,7 +318,6 @@ const unmarked = (entry) => ({...entry, marks: undefined});
 export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages',
                                  analysis, analysisPending = false, analysisModel, affair, briefingId}) => {
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
-    const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
     // the terms the profile follows, marked where they are (see marks.js)
     const marks = item.marks ?? {};
@@ -300,8 +334,35 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     // the AI version of the points or the summary, absent from the key passages and the briefings before 15.10.2026
     const aiText = format === 'points' ? item.ai?.points : format === 'digest' ? item.ai?.summary : null;
     const [showAi, setShowAi] = useState(false);
+    // what lies around the news, one strip under it (see CardMore); the glance and the link row open one
+    // none chosen yet: the first tab is the one open (the user, 05.11.2026); once the reader opens one, or closes it, theirs stands
+    const [chosen, setChosen] = useState(undefined);
+    const openMore = (key) => {
+        setChosen(key);
+        requestAnimationFrame(() => document.getElementById(`card-${given.storyId}-${key}`)?.scrollIntoView({block: 'nearest', behavior: 'smooth'}));
+    };
+    // a badge of the glance leads to its words in the column beside the card (below the card on a phone)
+    const showNote = (kind) => document.getElementById(`card-${given.storyId}-${kind}`)?.scrollIntoView({block: 'center', behavior: 'smooth'});
+    // the affair the reader follows: what the server said when the card was shown, then what they did on it
+    const [localFollowed, setLocalFollowed] = useState(undefined);
+    const followed = localFollowed !== undefined ? localFollowed : affair?.followed ?? null;
     // the countries of who it names, none when its title names them (see countries.js)
     const countries = countryNames(item.countries, {titles: [item.title, item.titleTranslation], languages: [item.language]});
+
+    const tabs = [
+        paragraphs.length > 0 && (analysis || analysisPending) && {
+            key: 'analysis', label: 'AI analysis', pending: analysisPending && !analysis,
+            content: <CardAnalysis id={`analysis-${item.storyId}`} analysis={analysis} pending={analysisPending && !analysis} model={analysisModel}/>,
+        },
+        item.angles?.length > 0 && {key: 'angles', label: 'Angles', count: item.angles.length, content: <OtherAngles angles={item.angles} original={original}/>},
+        affair && briefingId && {
+            key: 'affair', label: 'This affair',
+            content: <AffairPanel briefingId={briefingId} storyId={item.storyId} chip={affair} followed={followed}/>,
+        },
+        item.articles?.length > 0 && {key: 'coverage', label: 'Coverage', count: item.corroboration?.media || undefined, content: <CardCoverage item={item}/>},
+    ].filter(Boolean);
+    // the affair is not the one open at first: it is built by the AI when its tab is opened, not for every card shown
+    const more = chosen !== undefined ? chosen : tabs.find(tab => tab.key !== 'affair')?.key ?? null;
 
     // what the card is about and when, in the column beside it, or one line over its title on a phone
     const metas = [
@@ -390,6 +451,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {item.titleAsPublished && !item.titleRewritten && !item.titleTranslation && asPublished && (
                     <p id={`published-${item.storyId}`} lang={item.language ?? undefined} className="caption mt-1 italic">“{item.titleAsPublished}”</p>
                 )}
+                <Glance item={item} onOpen={openMore} onNote={showNote}/>
                 {item.why && <p className="standfirst mt-3">{item.why}</p>}
                 {item.thumbnail && <Picture key={item.thumbnail} src={item.thumbnail} source={item.thumbnailSource}
                                             illustration={item.thumbnail === item.illustration?.url}/>}
@@ -402,7 +464,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <div className="mt-6">
                         <p className="kicker">In the article's words, translated</p>
                         <div className="body-text mt-3"><Way paragraphs={translation} lede={lede}/></div>
-                        <p className="caption mt-3">
+                        <p className="footnote mt-3">
                             Sentences chosen by the AI in the article {lead && <>of {lead.source} </>}and translated by it: it may contain errors, the original is the reference.
                             {item[fields.translation]?.includes(ORIGINAL_START) && ' The sentences in italics, between parentheses, are left in the language of the article: the AI could not translate them with their figures.'}
                         </p>
@@ -410,7 +472,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                             <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
                                 <p className="kicker">Original, {languageLabel(item.language)}</p>
                                 <div lang={item.language ?? undefined} className="body-text mt-3 text-ink/85"><Way paragraphs={paragraphs}/></div>
-                                <p className="caption mt-3">As the article published them.</p>
+                                <p className="footnote mt-3">As the article published them.</p>
                             </div>
                         )}
                     </div>
@@ -418,7 +480,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <div className="mt-6">
                         <p className="kicker">In the article's words</p>
                         <div className="body-text mt-3"><Way paragraphs={paragraphs} lede={lede}/></div>
-                        <p className="caption mt-3">
+                        <p className="footnote mt-3">
                             Sentences chosen by the AI, shown as the article {lead && <>of {lead.source} </>}published them.
                         </p>
                     </div>
@@ -427,21 +489,19 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {paragraphs.length > 0 && aiText && (
                     <>
                         <button type="button" onClick={() => setShowAi(!showAi)} aria-expanded={showAi} aria-controls={`ai-${item.storyId}`}
-                                className="mt-4 cursor-pointer text-[0.875rem] text-action-text hover:underline underline-offset-4">
+                                className="mt-4 cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4">
                             {showAi ? 'Hide AI version' : 'Show AI version'}
                         </button>
                         {showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
                     </>
                 )}
 
-                {paragraphs.length > 0 && (analysis || analysisPending) && (
-                    <div><CardAnalysis id={`analysis-${item.storyId}`} analysis={analysis} pending={analysisPending && !analysis} model={analysisModel}/></div>
-                )}
+                {/* what lies around the news, behind one strip: the first open at first */}
+                <CardMore tabs={tabs} open={more} onOpen={setChosen} id={`card-${item.storyId}`}/>
 
-                {item.contested?.length > 0 && <Contested denials={item.contested} original={original}/>}
-                {item.angles?.length > 0 && <OtherAngles angles={item.angles} original={original}/>}
-
-                {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-8"/>}
+                {/* at the very bottom, the link to the article and a few of the media that cover it: the others open the coverage */}
+                {lead && <NewsLinks lead={lead} others={item.articles.filter(article => article.url !== lead.url)} className="mt-10" limit={3}
+                                    onMore={() => openMore('coverage')}/>}
             </div>
 
             <aside className="col-span-12 mt-10 space-y-5 md:col-span-3 md:col-start-10 md:mt-1">
@@ -460,15 +520,25 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     </Margin>
                 )}
                 {item.project && <Margin kicker="For your project">{item.project}</Margin>}
-                {affair && briefingId && <AffairSection key={`${briefingId}:${item.storyId}`} briefingId={briefingId} storyId={item.storyId} chip={affair}/>}
                 {item.followUp && <FollowUp followUp={item.followUp}/>}
-                {item.official?.length > 0 && <OfficialSource posts={item.official} original={original}/>}
+                {item.contested?.length > 0 && <Contested id={`card-${item.storyId}-contested`} denials={item.contested} original={original}/>}
+                {item.official?.length > 0 && <OfficialSource id={`card-${item.storyId}-official`} posts={item.official} original={original}/>}
+                {item.hedged && (
+                    <Margin id={`card-${item.storyId}-unconfirmed`} kicker="Not confirmed" tone="accent">
+                        unconfirmed: “{item.hedgedTranslation ?? item.hedged}”
+                        <InfoTip label="unconfirmed">The article says itself, in these words, that this is not confirmed yet.</InfoTip>
+                    </Margin>
+                )}
+                {affair && briefingId && (
+                    <AffairRail briefingId={briefingId} storyId={item.storyId} chip={affair} followed={followed} onFollowed={setLocalFollowed}/>
+                )}
                 {item.names?.length > 0 && (
                     <Margin kicker="Who it is about">
-                        <ul aria-label="Who it is about" className="flex list-none flex-wrap gap-x-3 gap-y-0.5 p-0">
+                        <ul aria-label="Who it is about" className="flex list-none flex-wrap gap-1.5 p-0">
                             {item.names.map(name => (
                                 <li key={`${name.qid ?? ''} ${name.name}`}>
-                                    <Link to={pageOf(name)} className="text-action-text hover:underline underline-offset-4">
+                                    <Link to={pageOf(name)}
+                                          className="inline-flex items-center rounded-full border border-rule bg-paper px-2.5 py-0.5 text-[0.8125rem] text-action-text no-underline transition-colors hover:border-action hover:bg-paper-deep">
                                         {name.name}
                                     </Link>
                                 </li>
@@ -476,33 +546,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                         </ul>
                     </Margin>
                 )}
-                {coverage && (
-                    <Margin kicker="Who tells it">
-                        {coverage.text}
-                        <InfoTip label={coverage.text}>
-                            {coverage.title}.
-                            {item.corroboration.mediaNames?.length > 1 && <> Media: {item.corroboration.mediaNames.join(', ')}.</>}
-                        </InfoTip>
-                    </Margin>
-                )}
-                {SOURCING[item.sourcing] && (
-                    <Margin kicker="Its sources">
-                        {SOURCING[item.sourcing].label}
-                        <InfoTip label={SOURCING[item.sourcing].label}>
-                            {SOURCING[item.sourcing].means} <span className="text-ink-mute">{SOURCING_NOTE}</span>
-                        </InfoTip>
-                    </Margin>
-                )}
-                {item.hedged && (
-                    <Margin kicker="Not confirmed" tone="accent">
-                        unconfirmed: “{item.hedgedTranslation ?? item.hedged}”
-                        <InfoTip label="unconfirmed">The article says itself, in these words, that this is not confirmed yet.</InfoTip>
-                    </Margin>
-                )}
                 {onSelect && (
                     <div>
                         <p className="kicker">E-mail</p>
-                        <Checkbox checked={selected} onChange={event => onSelect(event.target.checked)} className="mt-0.5 text-[0.9375rem]">
+                        <Checkbox checked={selected} onChange={event => onSelect(event.target.checked)} className="mt-0.5 text-[0.8125rem]">
                             Add to the e-mail
                         </Checkbox>
                     </div>

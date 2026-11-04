@@ -17,7 +17,8 @@ export const RUNNING_STORY = 10;
 // here is called reliable. Two measures: the briefing reads the texts of the articles ({media, read,
 // independent, agencies}), the search compares their headlines ({media, wordings}). articles: how many
 // articles the card holds, a search group of RUNNING_STORY or more is a running story.
-// Answers {text, title, tone}, null when nothing is known
+// Answers {text, title, tone, texts}, null when nothing is known; texts: what the texts read say alone (the card has the count of media
+// elsewhere), only for the briefing's measure
 export const coverageLabel = ({media, read, independent, wordings, agencies = []} = {}, {articles = 0} = {}) => {
     if (!media) return null;
     const wire = agencies.length > 0 ? ` · wire: ${agencies.join(', ')}` : '';
@@ -26,13 +27,15 @@ export const coverageLabel = ({media, read, independent, wordings, agencies = []
     const told = `Told by ${media} media`;
     // the texts read
     if (independent !== undefined) {
-        if (read < 2) return {text: `${told}, too few texts could be read to compare them${wire}`, title: 'Fewer than two of their texts could be read'};
+        if (read < 2) return {text: `${told}, too few texts could be read to compare them${wire}`, texts: `too few texts could be read to compare them${wire}`,
+            title: 'Fewer than two of their texts could be read'};
         if (independent <= 1) {
-            return {text: `${told}, one single text republished${wire}`, title: 'Their texts are the same, most likely one wire republished: one report, not several'};
+            return {text: `${told}, one single text republished${wire}`, texts: `one single text republished${wire}`,
+                title: 'Their texts are the same, most likely one wire republished: one report, not several'};
         }
         // "different", not "independent": a wire reworded counts as another text, and two media can each
         // write theirs from one statement (the user, 15.10.2026)
-        return {text: `${told}, ${independent} different texts of ${read} read${wire}`, tone: 'ink',
+        return {text: `${told}, ${independent} different texts of ${read} read${wire}`, texts: `${independent} different texts of ${read} read${wire}`, tone: 'ink',
             title: `${independent} of the ${read} texts read are not copies of one another: a text republished almost word for word counts once`};
     }
     // the headlines only. Identical ones are one wire whatever the size of the group, said first

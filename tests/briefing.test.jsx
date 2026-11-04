@@ -11,6 +11,15 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {coverageLabel} from '@/features/briefing/corroboration.js';
 
+// what lies around the news of a card is behind one strip of buttons, none open at first (the user chose it, 05.11.2026): a test opens the one it reads
+// the first one is open at first (the user, 05.11.2026): a test that counts the links or the items of the card itself closes it first
+const closeTabs = () => document.querySelectorAll('button[aria-expanded="true"][id$="-tab"]').forEach(tab => fireEvent.click(tab));
+// (a click on an open one would close it)
+const openTab = (name) => {
+    const tab = screen.getByRole('button', {name: new RegExp(`^${name}`)});
+    if (tab.getAttribute('aria-expanded') !== 'true') fireEvent.click(tab);
+};
+
 const article = (n) => ({title: `Article ${n}`, url: `https://media${n}.fr/story`, source: `media${n}.fr`, publishedAt: '2026-09-24T10:00:00.000Z'});
 
 const item = (changes = {}) => ({
@@ -29,8 +38,10 @@ const item = (changes = {}) => ({
 
 describe('coverageLabel of the texts read', () => {
     it('should never count ten copies of one wire as ten confirmations', () => {
-        expect(coverageLabel({media: 10, read: 5, independent: 1, agencies: ['AFP']}).text)
-            .toBe('Told by 10 media, one single text republished · wire: AFP');
+        const label = coverageLabel({media: 10, read: 5, independent: 1, agencies: ['AFP']});
+        expect(label.text).toBe('Told by 10 media, one single text republished · wire: AFP');
+        // the card says it alone, its count of media being elsewhere
+        expect(label.texts).toBe('one single text republished · wire: AFP');
     });
 
     it('should say how many different texts there are among the ones read', () => {
@@ -107,13 +118,28 @@ describe('BriefingCard, a title rewritten by the AI', () => {
 });
 
 describe('BriefingCard', () => {
-    it('should show why the story was chosen, its summary and its sources', () => {
+    it('should show why the story was chosen, its summary and how widely it is told', () => {
         render(<BriefingCard item={item()}/>);
         expect(screen.getByText('Du Top 14, que vous suivez.')).toBeInTheDocument();
         expect(screen.getByText('Second paragraphe.')).toBeInTheDocument();
-        expect(screen.getByText('named sources')).toBeInTheDocument();
+        // the media that tell it in one line under the title, how many wrote their own text in the coverage, open at first
+        expect(screen.getByRole('button', {name: 'Told by 3 media'})).toBeInTheDocument();
         expect(screen.getByText(/2 different texts of 3 read/)).toBeInTheDocument();
+        // what the article says of its sources (named, unnamed) and the tab that said it are gone (the user, 05.11.2026)
+        expect(screen.queryByText(/named sources/)).toBeNull();
+        expect(screen.queryByText('Who tells it')).toBeNull();
+        expect(screen.queryByRole('button', {name: /^Sources/})).toBeNull();
+        closeTabs();
         expect(screen.getAllByRole('link')).toHaveLength(3);
+    });
+
+    it('should put the link to the article and the media that cover it at the very bottom of the card', () => {
+        render(<BriefingCard item={item()}/>);
+        const link = screen.getByRole('link', {name: /Read the article at/});
+        const tab = screen.getByRole('button', {name: /^Coverage/});
+        const panel = document.getElementById(tab.getAttribute('aria-controls'));
+        expect(panel.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText(/Also covered by/).compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     });
 
     it('should send to read the article of the passages, and name the others as covering it', () => {
@@ -138,31 +164,66 @@ describe('BriefingCard', () => {
     it('should say when no article could be read, and when the article itself has no confirmation', () => {
         render(<BriefingCard item={item({summary: null, hedged: 'selon nos informations'})}/>);
         expect(screen.getByText(/could be read/)).toBeInTheDocument();
+        // a badge next to the media, the words of the article in the column beside the card, nothing to open
+        expect(screen.getByRole('button', {name: 'Unconfirmed'})).toBeInTheDocument();
         expect(screen.getByText(/selon nos informations/)).toBeInTheDocument();
     });
 
-    it('should name the first media of a big story, and all of them on demand', () => {
+    // the first media in the line under the article, the others in the coverage, which "and 8 more" opens
+    it('should name the first media of a big story, and open the coverage for all of them', () => {
         render(<BriefingCard item={item({articles: Array.from({length: 12}, (_, i) => article(i + 1))})}/>);
-        // the article to read and 8 others
-        expect(screen.getAllByRole('link')).toHaveLength(9);
-        fireEvent.click(screen.getByRole('button', {name: 'and 3 more'}));
-        expect(screen.getAllByRole('link')).toHaveLength(12);
+        // the coverage is the first tab, open: the article to read and 3 others in the line under the text, 8 in the list of the coverage
+        expect(screen.getByRole('link', {name: /Read the article at/})).toBeInTheDocument();
+        expect(screen.getByText(/Also covered by/)).toHaveTextContent('Also covered by media2.fr, media3.fr, media4.fr');
+        closeTabs();
+        expect(screen.queryByText('How widely it is told')).toBeNull();
+        expect(screen.getAllByRole('link')).toHaveLength(4);
+        fireEvent.click(screen.getByRole('button', {name: 'and 8 more'}));
+        expect(screen.getByText('How widely it is told')).toBeInTheDocument();
+        expect(screen.queryByRole('link', {name: 'media12.fr'})).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Show all 12 media'}));
+        expect(screen.getByRole('link', {name: 'media12.fr'})).toBeInTheDocument();
+    });
+
+    it('should show how widely it is told on every card: the media, the languages, who told it first', () => {
+        render(<BriefingCard item={item({articles: [{...article(1), language: 'fr'}, {...article(2), publishedAt: '2026-09-24T12:00:00.000Z', language: 'en'}, article(3)]})}/>);
+        openTab('Coverage');
+        expect(screen.getByText('3 media · 2 languages')).toBeInTheDocument();
+        expect(screen.getByText(/First told by media1.fr/)).toBeInTheDocument();
+        expect(screen.getByText('English 1 · French 1')).toBeInTheDocument();
+    });
+
+    it('should open the first tab at first, close it when its button is pressed again, and show one panel at a time', () => {
+        const angles = [{title: 'Another angle', url: 'https://si.com/a', source: 'si.com', language: 'es', publishedAt: '2026-10-08T07:00:00.000Z', media: 3}];
+        render(<BriefingCard item={item({angles})}/>);
+        expect(screen.getByText('Same affair, other angles')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: /^Angles/}));
+        expect(screen.queryByText('Same affair, other angles')).toBeNull();
+        openTab('Coverage');
+        expect(screen.getByText('How widely it is told')).toBeInTheDocument();
+        openTab('Angles');
+        expect(screen.queryByText('How widely it is told')).toBeNull();
+        expect(screen.getByText('Same affair, other angles')).toBeInTheDocument();
+    });
+
+    it('should have no tab "Sources": what it held is a badge next to the media and its words in the column beside the card', () => {
+        render(<BriefingCard item={item({hedged: 'selon nos informations'})}/>);
+        expect(screen.queryByRole('button', {name: /^Sources/})).toBeNull();
     });
 });
 
 describe('BriefingCard explanations', () => {
-    it('should say what its sources mean on a tap of the "i", where nothing is hovered', async () => {
+    it('should say what the texts read mean on a tap of the "i", where nothing is hovered', async () => {
         render(<BriefingCard item={item()}/>);
         expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
-        fireEvent.click(screen.getByRole('button', {name: 'What “named sources” means'}));
-        expect(await screen.findByRole('tooltip')).toHaveTextContent(/names who it quotes: a person, a club, an institution/);
+        fireEvent.click(screen.getByRole('button', {name: 'What “2 different texts of 3 read” means'}));
+        expect(await screen.findByRole('tooltip')).toHaveTextContent(/2 of the 3 texts read are not copies of one another/);
     });
 
-    it('should name the media telling it in the explanation of who tells it', async () => {
-        render(<BriefingCard item={item()}/>);
-        fireEvent.click(screen.getByRole('button', {name: /What “Told by 3 media/}));
-        expect(await screen.findByRole('tooltip')).toHaveTextContent('Media: a.fr, b.fr, c.fr.');
+    it('should say when the media of a card republish one wire', () => {
+        render(<BriefingCard item={item({corroboration: {media: 10, read: 5, independent: 1, agencies: ['AFP']}})}/>);
+        expect(screen.getByText(/One single text republished · wire: AFP/)).toBeInTheDocument();
     });
 });
 
@@ -190,6 +251,9 @@ describe('BriefingCard thumbs', () => {
 describe('BriefingCard and a trusted source', () => {
     it('should mark the article of a source the reader trusts', () => {
         render(<BriefingCard item={item({articles: [{...article(1), trusted: true}, article(2)]})}/>);
+        // in the line under the text and in the list of the coverage, open at first
+        expect(screen.getAllByLabelText('a source you trust')).toHaveLength(2);
+        closeTabs();
         expect(screen.getAllByLabelText('a source you trust')).toHaveLength(1);
     });
 });
@@ -236,6 +300,7 @@ describe('BriefingCard ways of reading', () => {
 
     it('should show the most important sentences as bullet points, the most important first', () => {
         render(<BriefingCard item={item(ways)} format="points"/>);
+        closeTabs();
         expect(screen.getAllByRole('listitem').map(point => point.textContent))
             .toEqual(['Le président fera appel.', 'Le club a été sanctionné mardi.', 'La décision tombera en mai.']);
         expect(screen.queryByText('[…]')).toBeNull();
@@ -252,6 +317,7 @@ describe('BriefingCard ways of reading', () => {
     it('should show the translated points, and the points as written once the original is shown', () => {
         render(<BriefingCard item={item({...ways, language: 'en', points: 'The president will appeal.\n\nThe club was sanctioned.',
             pointsTranslation: 'Le président fera appel.\n\nLe club a été sanctionné.', translation: 'Traduit.'})} format="points"/>);
+        closeTabs();
         expect(screen.getAllByRole('listitem').map(point => point.textContent)).toEqual(['Le président fera appel.', 'Le club a été sanctionné.']);
         fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
         expect(screen.getByText('The president will appeal.').tagName).toBe('LI');
@@ -259,6 +325,7 @@ describe('BriefingCard ways of reading', () => {
 
     it('should show the key passages of a briefing made before the other ways', () => {
         render(<BriefingCard item={item({summary: ways.summary})} format="points"/>);
+        closeTabs();
         expect(screen.queryByRole('listitem')).toBeNull();
         expect(screen.getAllByText('[…]')).toHaveLength(2);
     });
@@ -279,8 +346,12 @@ describe('BriefingCard contested', () => {
 
     it('should quote who denies the news and where', () => {
         render(<BriefingCard item={item({contested: [denial]})}/>);
-        expect(screen.getByText('Contested')).toBeInTheDocument();
-        expect(screen.getByText('Manchester City denies:')).toBeInTheDocument();
+        // a badge under the title, the quote in the column beside the card: nothing to open
+        expect(screen.getByRole('button', {name: 'Contested'})).toBeInTheDocument();
+        // orange, as what warns
+        expect(screen.getByRole('button', {name: 'Contested'})).toHaveClass('text-accent-ink');
+        expect(screen.getAllByText('Contested')).toHaveLength(2);
+        expect(screen.getByText(/Manchester City denies:/)).toBeInTheDocument();
         expect(screen.getByText('Manchester City denies any wrongdoing.')).toBeInTheDocument();
         expect(screen.queryByText(/Machine translation/)).toBeNull();
         expect(screen.getByRole('link', {name: 'bbc.com'})).toHaveAttribute('href', 'https://bbc.com/city');
@@ -290,7 +361,7 @@ describe('BriefingCard contested', () => {
     it('should quote an article written in another language in the language of the reader, its original on demand', () => {
         render(<BriefingCard item={item({contested: [{...denial, by: 'FIFA', language: 'fr', sentence: 'La FIFA, de son côté, nie toute faute.',
             translation: 'FIFA, for its part, denies any fault.', source: 'walfoot.be', url: 'https://walfoot.be/1'}]})}/>);
-        expect(screen.getByText('“FIFA, for its part, denies any fault.”')).toBeInTheDocument();
+        expect(screen.getByText(/“FIFA, for its part, denies any fault\.”/)).toBeInTheDocument();
         expect(screen.queryByText('La FIFA, de son côté, nie toute faute.')).toBeNull();
         expect(screen.getByText('Machine translation from French')).toBeInTheDocument();
 
@@ -298,6 +369,15 @@ describe('BriefingCard contested', () => {
         expect(screen.getByText('“La FIFA, de son côté, nie toute faute.”')).toHaveAttribute('lang', 'fr');
         fireEvent.click(screen.getByRole('button', {name: 'Hide original'}));
         expect(screen.queryByText('La FIFA, de son côté, nie toute faute.')).toBeNull();
+    });
+
+    it('should lead from its badge to the quote, in the column beside the card', () => {
+        const scroll = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {});
+        render(<BriefingCard item={item({contested: [denial]})}/>);
+        fireEvent.click(screen.getByRole('button', {name: 'Contested'}));
+        expect(scroll.mock.contexts[0]).toHaveAttribute('id', 'card-1-contested');
+        expect(scroll.mock.contexts[0]).toHaveTextContent('Manchester City denies:');
+        scroll.mockRestore();
     });
 
     it('should say nothing on a card nobody denies, or of a briefing made before', () => {
@@ -311,7 +391,12 @@ describe('BriefingCard official source', () => {
     it('should quote a statement an article reports, with the medium, in the language of the reader, the original on demand', () => {
         render(<BriefingCard item={item({official: [{party: 'FPF', title: 'A FPF publicou um comunicado.', translation: 'The FPF published a statement.',
             language: 'pt', url: 'https://www.abola.pt/1', source: 'abola.pt', channel: 'reported', publishedAt: null}]})}/>);
-        expect(screen.getByText('FPF')).toBeInTheDocument();
+        // a badge under the title, the statement in the column beside the card
+        expect(screen.getByRole('button', {name: 'Official source'})).toBeInTheDocument();
+        // green, here and over the statement in the column beside the card
+        expect(screen.getByRole('button', {name: 'Official source'})).toHaveClass('text-official');
+        expect(screen.getByText('Official sources', {selector: 'p'})).toHaveClass('!text-official');
+        expect(screen.getByText(/FPF said it, reported by/)).toBeInTheDocument();
         expect(screen.getByText('“The FPF published a statement.”')).toBeInTheDocument();
         expect(screen.queryByText(/A FPF publicou/)).toBeNull();
         expect(screen.getByText('Machine translation from Portuguese')).toBeInTheDocument();
@@ -334,6 +419,8 @@ describe('BriefingCard other angles', () => {
 
     it('should list the other angles, translated, with their source, language and media', () => {
         render(<BriefingCard item={item({angles: [angle]})}/>);
+        expect(screen.getByRole('button', {name: 'Angles 1'})).toBeInTheDocument();
+        openTab('Angles');
         expect(screen.getByText('Same affair, other angles')).toBeInTheDocument();
         expect(screen.getByRole('link', {name: 'Infantino a pour l’instant le chemin dégagé'})).toHaveAttribute('href', 'https://si.com/infantino');
         expect(screen.getByText(/told by 3 media/)).toBeInTheDocument();
@@ -343,6 +430,7 @@ describe('BriefingCard other angles', () => {
 
     it('should show the original title of an angle with the original of the card', () => {
         render(<BriefingCard item={item({title: 'Summit in Berlin', language: 'en', titleTranslation: 'Sommet à Berlin', angles: [angle]})}/>);
+        openTab('Angles');
         fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
         expect(screen.getByText('“Infantino tiene por ahora el camino despejado”')).toBeInTheDocument();
     });
@@ -350,7 +438,29 @@ describe('BriefingCard other angles', () => {
     it('should say nothing on a card without any, or of a briefing made before', () => {
         render(<BriefingCard item={item({angles: []})}/>);
         render(<BriefingCard item={item()}/>);
+        expect(screen.queryByRole('button', {name: /^Angles/})).toBeNull();
         expect(screen.queryByText('Same affair, other angles')).toBeNull();
+    });
+});
+
+describe('BriefingCard AI analysis', () => {
+    const analysis = {why: ['The vote decides who leads the federation.'], next: [{if: 'the vote fails', then: 'the plan is dropped.'}],
+        timeline: [{date: '2026-10-01', title: 'A first vote', medium: 'bbc.com', url: 'https://bbc.com/vote'}]};
+
+    it('should be the first tab, open at first, plain like the other tabs: no grey box around it', () => {
+        render(<BriefingCard item={item()} analysis={analysis} analysisModel="deepseek-v4-pro:0813"/>);
+        expect(screen.getByRole('button', {name: 'AI analysis'})).toHaveAttribute('aria-expanded', 'true');
+        const panel = document.getElementById('analysis-1');
+        expect(panel).toHaveTextContent('Why it matters');
+        expect(panel).toHaveTextContent('What could come next');
+        expect(panel).toHaveTextContent('Written by the AI (deepseek-v4-pro)');
+        expect(panel.className).not.toMatch(/bg-paper-deep|rounded|border/);
+        expect(screen.queryByRole('button', {name: 'Hide the AI analysis'})).toBeNull();
+    });
+
+    it('should write a line of what could come next as "If X, then Y", with no point before the "then"', () => {
+        render(<BriefingCard item={item()} analysis={analysis} analysisModel="deepseek-v4-pro:0813"/>);
+        expect(screen.getByText('the vote fails', {exact: false}).closest('li')).toHaveTextContent('If the vote fails, then the plan is dropped.');
     });
 });
 
