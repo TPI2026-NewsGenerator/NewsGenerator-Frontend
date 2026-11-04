@@ -223,6 +223,42 @@ describe('the story chosen in the list', () => {
         expect(scrollTo).toHaveBeenLastCalledWith({top: 0, behavior: 'smooth'});
         expect(cell.style.outline).toBe('');
     });
+
+    // the line is there for a second (the user, 05.11.2026), and not at each drawing of the e-mail after a change
+    it('should take the line away after a second, and not draw it again when the e-mail is drawn again', async () => {
+        await open();
+        const frame = await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000});
+        const cell = {style: {outline: ''}};
+        const card = {firstElementChild: cell, getBoundingClientRect: () => ({top: 300})};
+        Object.defineProperty(frame, 'contentDocument', {configurable: true, value: {
+            defaultView: {scrollTo: vi.fn(), scrollY: 0}, querySelectorAll: () => [cell], getElementById: id => id === 'story-2' ? card : null,
+        }});
+
+        vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+        try {
+            fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+            expect(cell.style.outline).toBe('2px solid #2997FF');
+            vi.advanceTimersByTime(999);
+            expect(cell.style.outline).toBe('2px solid #2997FF');
+            vi.advanceTimersByTime(1);
+            expect(cell.style.outline).toBe('');
+
+            // the e-mail drawn again (a change of the reader): scrolled to the story, no line
+            fireEvent.load(frame);
+            expect(cell.style.outline).toBe('');
+            vi.advanceTimersByTime(2000);
+            expect(cell.style.outline).toBe('');
+
+            // a story chosen while the line of another is there: the old one goes at once, the new one has its second
+            fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
+            fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+            vi.advanceTimersByTime(600);
+            fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
+            expect(cell.style.outline).toBe('');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
 });
 
 // the pictures of the e-mail come after the e-mail and push its cards down: the story is put back at the top as each one arrives
