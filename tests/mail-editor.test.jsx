@@ -127,6 +127,64 @@ describe('the editor of the e-mail, three frames', () => {
         expect(BriefingApi.email.mock.calls.at(-1)[5]).toEqual({1: {angles: [0], why: [0]}});
     });
 
+    // the names of who it is about are boxes, one by one (the user, 05.11.2026)
+    it('should list the names of who it is about as boxes, open at first, to take one out like a line of the analysis', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const names = screen.getByRole('group', {name: 'The names of “First story”'});
+        expect(within(names).getAllByRole('checkbox').map(box => box.checked)).toEqual([true, true]);
+        expect(names).toHaveTextContent('FIFA');
+        expect(names).toHaveTextContent('UEFA');
+
+        fireEvent.click(within(names).getByRole('checkbox', {name: 'UEFA'}));
+        expect(screen.getByText(/1 name taken out/)).toBeInTheDocument();
+        // put back, and taken out again
+        fireEvent.click(within(names).getByRole('checkbox', {name: 'UEFA'}));
+        expect(screen.queryByText(/name taken out/)).toBeNull();
+        fireEvent.click(within(names).getByRole('checkbox', {name: 'FIFA'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+        expect(BriefingApi.email.mock.calls.at(-1)[5]).toEqual({1: {names: [0]}});
+        // the block of the names is still on: the names left are sent
+        expect(lastBlocks()[1].names).toBe(true);
+    });
+
+    it('should say there is no name to take out for a story that names nobody', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(screen.queryByRole('group', {name: 'The names of “Second story”'})).toBeNull();
+        expect(within(carries('Second story')).getByRole('checkbox', {name: 'Who it is about'})).toBeDisabled();
+    });
+
+    // the names of who it is about are boxes, one by one (the user, 05.11.2026)
+    it('should list the names of who it is about as boxes, open at first, to take one out like a line of the analysis', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const names = screen.getByRole('group', {name: 'The names of “First story”'});
+        expect(within(names).getAllByRole('checkbox').map(box => box.checked)).toEqual([true, true]);
+        expect(names).toHaveTextContent('FIFA');
+        expect(names).toHaveTextContent('UEFA');
+
+        fireEvent.click(within(names).getByRole('checkbox', {name: 'UEFA'}));
+        expect(screen.getByText(/1 name taken out/)).toBeInTheDocument();
+        // put back, and taken out again
+        fireEvent.click(within(names).getByRole('checkbox', {name: 'UEFA'}));
+        expect(screen.queryByText(/name taken out/)).toBeNull();
+        fireEvent.click(within(names).getByRole('checkbox', {name: 'FIFA'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+        expect(BriefingApi.email.mock.calls.at(-1)[5]).toEqual({1: {names: [0]}});
+        // the block of the names is still on: the names left are sent
+        expect(lastBlocks()[1].names).toBe(true);
+    });
+
+    it('should say there is no name to take out for a story that names nobody', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(screen.queryByRole('group', {name: 'The names of “Second story”'})).toBeNull();
+        expect(within(carries('Second story')).getByRole('checkbox', {name: 'Who it is about'})).toBeDisabled();
+    });
+
     it('should set a block for every story from "All the stories", and keep what each of them was given', async () => {
         await open();
         // one story changed first

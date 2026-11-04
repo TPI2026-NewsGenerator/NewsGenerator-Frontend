@@ -31,12 +31,13 @@ export const editable = (paragraphs, way) => paragraphs.join(way === 'points' ? 
 const written = (text, way) => String(text ?? '').split(way === 'points' ? /\n+/ : /\n\s*\n/)
     .map(paragraph => paragraph.replace(/\s+/g, ' ').trim()).filter(Boolean);
 
-// "2 angles taken out", "1 denial taken out", "1 official source taken out", "2 analysis lines taken
+// "2 angles taken out", "1 denial taken out", "1 official source taken out", "1 name taken out", "2 analysis lines taken
 // out", or nothing (see MailAside)
 export const takenOut = (removed = {}) => [
     [removed.contested?.length ?? 0, 'denial', 'denials'],
     [removed.angles?.length ?? 0, 'angle', 'angles'],
     [removed.official?.length ?? 0, 'official source', 'official sources'],
+    [removed.names?.length ?? 0, 'name', 'names'],
     [(removed.why?.length ?? 0) + (removed.next?.length ?? 0) + (removed.timeline?.length ?? 0), 'analysis line', 'analysis lines'],
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 

@@ -3,8 +3,8 @@
 //  Date: 08.10.2026
 //  File: MailAside.jsx
 //  Description: The lines of what a story tells beside its key points in the e-mail: its AI analysis, who denies it ("Contested"),
-//               its other angles and its official sources, each line kept or taken out by the reader before sending. Each list is
-//               the body of its block in the editor (see MailInspector)
+//               its other angles, its official sources and the names of who it is about, each line kept or taken out by the reader
+//               before sending. Each list is the body of its block in the editor (see MailInspector)
 //
 
 import {Checkbox} from "@/components/ui/field.jsx";
@@ -16,8 +16,8 @@ const toggled = (list, index, kept) => kept ? list.filter(other => other !== ind
 const ANALYSIS_PARTS = ['why', 'next', 'timeline'];
 const every = (list) => list.map((line, index) => index);
 
-// removed: {contested: [index], angles: [index], official: [index], why: [index], next: [index], timeline: [index]}, the places taken
-// out; onChange(removed)
+// removed: {contested: [index], angles: [index], official: [index], names: [index], why: [index], next: [index], timeline: [index]}, the
+// places taken out; onChange(removed)
 const useLines = (removed, onChange) => {
     const out = (part) => removed[part] ?? [];
     return {out, change: (part, index, kept) => onChange({...removed, [part]: toggled(out(part), index, kept)})};
@@ -82,6 +82,21 @@ export const OfficialLines = ({story, removed = {}, onChange}) => {
             {(story.official ?? []).map((post, index) => (
                 <Checkbox key={index} checked={!out('official').includes(index)} onChange={event => change('official', index, event.target.checked)}>
                     <span className="text-[0.8125rem]">{post.party} said it: {post.title}</span>
+                </Checkbox>
+            ))}
+        </div>
+    );
+};
+
+// story.names: ['FIFA', 'UEFA'], the names of who it is about, in the order of the card (the places of removed.names)
+export const NameLines = ({story, removed = {}, onChange}) => {
+    const {out, change} = useLines(removed, onChange);
+    if ((story.names ?? []).length === 0) return null;
+    return (
+        <div role="group" aria-label={`The names of “${story.title}”`} className="flex flex-col">
+            {(story.names ?? []).map((name, index) => (
+                <Checkbox key={index} checked={!out('names').includes(index)} onChange={event => change('names', index, event.target.checked)}>
+                    <span className="text-[0.8125rem]">{name}</span>
                 </Checkbox>
             ))}
         </div>

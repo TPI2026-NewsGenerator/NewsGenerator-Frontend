@@ -56,8 +56,8 @@ export const BriefingApi = {
     // when not given (204, no body). pictures: {storyId: null | {url} | {data}}, the picture of the
     // cards the reader changed: taken out, an image of the web, a file of theirs in base64. titles:
     // {storyId: title}, the ones the reader wrote for the e-mail; removed: {storyId: {contested: [index],
-    // angles: [index], official: [index], why: [index], next: [index], timeline: [index]}}, the denials,
-    // other angles, official sources and lines of the AI analysis they took out; format: the way their
+    // angles: [index], official: [index], names: [index], why: [index], next: [index], timeline: [index]}}, the denials,
+    // other angles, official sources, names of who it is about and lines of the AI analysis they took out; format: the way their
     // sentences are shown, 'points', 'digest' or 'passages' (see formats.js), the key passages when not
     // given; ai: the storyIds of the cards sent in their AI version; texts: {storyId: [paragraph]}, the
     // points or paragraphs the reader wrote instead of the card's in that way; countries: {storyId: [code]}, the

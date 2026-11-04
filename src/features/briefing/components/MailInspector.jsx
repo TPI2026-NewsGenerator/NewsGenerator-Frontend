@@ -11,7 +11,7 @@ import {useState} from "react";
 import {ChevronDown, ChevronRight} from "lucide-react";
 import {Button} from "@/components/ui/button.jsx";
 import {Checkbox, Input, Label, Textarea} from "@/components/ui/field.jsx";
-import {AngleLines, AnalysisLines, ContestedLines, OfficialLines} from "@/features/briefing/components/MailAside.jsx";
+import {AngleLines, AnalysisLines, ContestedLines, NameLines, OfficialLines} from "@/features/briefing/components/MailAside.jsx";
 import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
 import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
 import {MailPicture} from "@/features/briefing/components/MailPicture.jsx";
@@ -42,7 +42,8 @@ const Section = ({label, name, checked, onChange, disabled = false, hint, open, 
 
 // the story the reader is changing. draft: see useMailDraft; onNeutralTitle(storyId): the neutral title the AI proposes
 export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false}) => {
-    const [open, setOpen] = useState({title: true, text: true});
+    // the title, the text and the names are open: the names are short, and each can be taken out
+    const [open, setOpen] = useState({title: true, text: true, names: true});
     const toggle = (name) => setOpen(current => ({...current, [name]: !current[name]}));
     const id = story.storyId;
     const choice = draft.choiceOf(story);
@@ -147,7 +148,7 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
             <p className="kicker pt-3">Around the story</p>
             <Section label="Who it is about" checked={blocks.names} onChange={set('names')} disabled={!has('names')} hint={none('names')}
                      open={open.names} onToggle={() => toggle('names')}>
-                <p className="caption">{(story.names ?? []).join(' · ')}</p>
+                <NameLines story={story} removed={removedOf} onChange={next => draft.setRemovedOf(id, next)}/>
             </Section>
             <Section label="AI analysis" checked={blocks.analysis} onChange={set('analysis')} disabled={!has('analysis')} hint={none('analysis')}
                      open={open.analysis} onToggle={() => toggle('analysis')}>
