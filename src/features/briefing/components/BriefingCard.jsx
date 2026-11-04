@@ -438,8 +438,6 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     <div><CardAnalysis id={`analysis-${item.storyId}`} analysis={analysis} pending={analysisPending && !analysis} model={analysisModel}/></div>
                 )}
 
-                {affair && briefingId && <AffairSection briefingId={briefingId} storyId={item.storyId} chip={affair}/>}
-
                 {item.contested?.length > 0 && <Contested denials={item.contested} original={original}/>}
                 {item.angles?.length > 0 && <OtherAngles angles={item.angles} original={original}/>}
 
@@ -462,6 +460,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     </Margin>
                 )}
                 {item.project && <Margin kicker="For your project">{item.project}</Margin>}
+                {affair && briefingId && <AffairSection key={`${briefingId}:${item.storyId}`} briefingId={briefingId} storyId={item.storyId} chip={affair}/>}
                 {item.followUp && <FollowUp followUp={item.followUp}/>}
                 {item.official?.length > 0 && <OfficialSource posts={item.official} original={original}/>}
                 {item.names?.length > 0 && (

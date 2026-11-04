@@ -30,6 +30,8 @@ import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
+import {AffairList} from "@/features/affairs/components/AffairList.jsx";
+import {useFollowed} from "@/features/affairs/useFollowed.js";
 import {cardTelling, MailAddContext} from "@/features/briefing/mailAdd.js";
 import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
@@ -272,7 +274,11 @@ export const BriefingPage = () => {
     // the page is opened again); none followed, the page has the briefing only. They are not part of the
     // briefing: they are searched when the tab is opened, whatever the briefing written
     const hasTerms = follows;
-    const tab = hasTerms && location.hash === '#terms' ? 'terms' : 'briefing';
+    // the affairs followed, in a tab of their own (#affairs): there when the reader follows one, or a card of the briefing is one
+    // they could follow. The page of each is /affairs/:id
+    const followedAffairs = useFollowed(Boolean(user));
+    const hasAffairs = followedAffairs > 0 || Object.keys(affairs).length > 0;
+    const tab = hasTerms && location.hash === '#terms' ? 'terms' : hasAffairs && location.hash === '#affairs' ? 'affairs' : 'briefing';
     const following = useFollowing(tab === 'terms', watchLimit, active, expired);
     const watchedCount = following.groups ? following.groups.reduce((sum, group) => sum + group.count, 0) : null;
     // the titles of the news of the terms in another language than the reader's, translated as the rows come
@@ -281,7 +287,7 @@ export const BriefingPage = () => {
     const translator = useMemo(() => readerLanguage
         ? createTranslator(readerLanguage, asked => SearchApi.translateNews(asked, readerLanguage).then(data => data?.translations ?? []))
         : null, [readerLanguage]);
-    const chooseTab = (value) => navigate({pathname: location.pathname, search: location.search, hash: value === 'terms' ? '#terms' : ''}, {replace: true});
+    const chooseTab = (value) => navigate({pathname: location.pathname, search: location.search, hash: value === 'terms' ? '#terms' : value === 'affairs' ? '#affairs' : ''}, {replace: true});
     // the stories of the briefing naming a term, shown alone in the tab of the briefing
     const showFound = () => {
         setFoundView(briefing.id);
@@ -385,12 +391,19 @@ export const BriefingPage = () => {
             </Button>
         </div>
     );
-    const tabs = hasTerms && (
-        <Tabs.List aria-label="Your briefing and what you follow" className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-paper-deep p-1 [scrollbar-width:none]">
+    const tabs = (hasTerms || hasAffairs) && (
+        <Tabs.List aria-label="Your briefing, what you follow and your affairs" className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-paper-deep p-1 [scrollbar-width:none]">
             <Tabs.Trigger value="briefing" className={PAGE_TAB}>Briefing</Tabs.Trigger>
-            <Tabs.Trigger value="terms" className={PAGE_TAB}>
-                Following{watchedCount !== null && <> <span className="tabular-nums text-ink-mute">{watchedCount}</span></>}
-            </Tabs.Trigger>
+            {hasTerms && (
+                <Tabs.Trigger value="terms" className={PAGE_TAB}>
+                    Following{watchedCount !== null && <> <span className="tabular-nums text-ink-mute">{watchedCount}</span></>}
+                </Tabs.Trigger>
+            )}
+            {hasAffairs && (
+                <Tabs.Trigger value="affairs" className={PAGE_TAB}>
+                    Affairs{followedAffairs > 0 && <> <span className="tabular-nums text-ink-mute">{followedAffairs}</span></>}
+                </Tabs.Trigger>
+            )}
         </Tabs.List>
     );
 
@@ -476,6 +489,17 @@ export const BriefingPage = () => {
 
                     <Tabs.Content value="briefing" className="space-y-8 outline-none">{cards}</Tabs.Content>
                     {hasTerms && <Tabs.Content value="terms" className="outline-none">{terms}</Tabs.Content>}
+                    {hasAffairs && (
+                        <Tabs.Content value="affairs" className="outline-none">
+                            <section aria-labelledby="affairs-head">
+                                <h2 id="affairs-head" className="section-head">The affairs you follow</h2>
+                                <p className="caption mt-2 max-w-[60ch]">
+                                    A story told over days. You are told as soon as it has a new fact, told by several media: not every article, not an opinion.
+                                </p>
+                                <AffairList/>
+                            </section>
+                        </Tabs.Content>
+                    )}
 
                     {/* the cards ticked are sent from the bar, in the tab of the briefing and in the one of what you follow, where a
                         news is put in the e-mail (the user, 03.11.2026: the bar was not there after "Add to the e-mail") */}
