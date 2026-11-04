@@ -8,10 +8,11 @@
 
 import '@testing-library/jest-dom';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
 import {MemoryRouter, Route, Routes} from "react-router-dom";
 import {WithSession} from "./session.jsx";
 import {MailLayoutChoice} from '@/features/briefing/components/MailLayoutChoice.jsx';
+import {MailPresets} from '@/features/briefing/components/MailPresets.jsx';
 import {DEFAULT_LAYOUT, keepLayout, keptLayout} from '@/features/briefing/mailEditorLayout.js';
 import {BLOCKS, countOf, DEFAULT_BLOCKS, hasBlock, PRESETS, SERVER_BLOCKS} from '@/features/briefing/mailBlocks.js';
 
@@ -65,6 +66,61 @@ describe('the layout of the editor of the e-mail', () => {
         );
         expect(screen.getByRole('heading', {name: 'The editor of the e-mail'})).toBeInTheDocument();
         expect(screen.getByRole('radio', {name: /Three frames/})).toBeChecked();
+        // and what its presets contain, under it (the user, 05.11.2026)
+        expect(screen.getByRole('heading', {name: 'What the presets put in the e-mail'})).toBeInTheDocument();
+        expect(screen.getByRole('table', {name: 'What the presets put in the e-mail'})).toBeInTheDocument();
+    });
+});
+
+// what each preset puts in a story, said in the settings from the presets themselves
+describe('what the presets contain, in the settings', () => {
+    const included = (row, preset) => {
+        const cells = within(row).getAllByRole('cell');
+        return within(cells[PRESETS.findIndex(one => one.value === preset)]).queryByRole('img', {name: 'Included'}) !== null;
+    };
+
+    it('should have a column for each preset and a row for the title and the text and for each block', () => {
+        render(<MailPresets/>);
+        const table = screen.getByRole('table', {name: 'What the presets put in the e-mail'});
+        expect(within(table).getAllByRole('columnheader').map(head => head.textContent)).toEqual(['Block', 'Short', 'Standard', 'Everything']);
+        expect(within(table).getAllByRole('rowheader').map(head => head.textContent.replace(' · badge', ''))).toEqual(['Title and text', ...BLOCKS.map(block => block.label)]);
+        // the badges are said to be
+        expect(within(table).getByRole('rowheader', {name: /Contested/})).toHaveTextContent('badge');
+    });
+
+    it('should put the title and the text in every preset', () => {
+        render(<MailPresets/>);
+        const row = screen.getByRole('row', {name: /Title and text/});
+        for (const preset of PRESETS) expect(included(row, preset.value)).toBe(true);
+    });
+
+    it('should say what "Short" contains: the badges, nothing else', () => {
+        render(<MailPresets/>);
+        const rows = Object.fromEntries(BLOCKS.map(block => [block.key, screen.getByRole('row', {name: new RegExp(`^${block.label}`)})]));
+        const short = BLOCKS.filter(block => included(rows[block.key], 'short')).map(block => block.key);
+        expect(short).toEqual(['media', 'contested', 'official', 'unconfirmed']);
+    });
+
+    it('should say what "Standard" contains: the badges, and the picture, the countries, who it is about and the analysis', () => {
+        render(<MailPresets/>);
+        const rows = Object.fromEntries(BLOCKS.map(block => [block.key, screen.getByRole('row', {name: new RegExp(`^${block.label}`)})]));
+        const standard = BLOCKS.filter(block => included(rows[block.key], 'standard')).map(block => block.key);
+        expect(standard).toEqual(['picture', 'countries', 'media', 'contested', 'official', 'unconfirmed', 'names', 'analysis']);
+        // the angles, the affair and its coverage are for "Everything"
+        for (const key of ['angles', 'affair', 'coverage']) {
+            expect(included(rows[key], 'standard')).toBe(false);
+            expect(included(rows[key], 'everything')).toBe(true);
+        }
+    });
+
+    it('should say it from the presets themselves: what a preset puts on is what the table marks', () => {
+        render(<MailPresets/>);
+        for (const preset of PRESETS) {
+            for (const block of BLOCKS) {
+                const row = screen.getByRole('row', {name: new RegExp(`^${block.label}`)});
+                expect(included(row, preset.value)).toBe(preset.on.includes(block.key));
+            }
+        }
     });
 });
 

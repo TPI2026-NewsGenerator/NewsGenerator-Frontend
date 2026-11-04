@@ -3,7 +3,7 @@
 //  Date: 02.10.2026
 //  File: Settings.jsx
 //  Description: The settings of the account: its username, its email and its password, each changed
-//               with the password of now, and the layout of the editor of the e-mail, kept in this browser
+//               with the password of now, and the layout of the editor of the e-mail, kept in this browser, with what its presets contain
 //
 
 import {useEffect, useState} from "react";
@@ -13,6 +13,7 @@ import {FieldError, Help, Input, Label} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {AccountApi} from "@/features/auth/accountApi.js";
 import {MailLayoutChoice} from "@/features/briefing/components/MailLayoutChoice.jsx";
+import {MailPresets} from "@/features/briefing/components/MailPresets.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
@@ -210,6 +211,11 @@ export const SettingsPage = () => {
             <Section kicker="Briefing" title="The editor of the e-mail"
                      intro="How the editor opens when you send stories of your briefing by e-mail. Kept in this browser: change it here when you want the other.">
                 <MailLayoutChoice/>
+            </Section>
+
+            <Section kicker="Briefing" title="What the presets put in the e-mail"
+                     intro="In the editor of the e-mail, “Short”, “Standard” and “Everything” set what every story carries at once. Here is what each one contains.">
+                <MailPresets/>
             </Section>
         </PageShell>
     );
