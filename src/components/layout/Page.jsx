@@ -25,7 +25,7 @@ export const PageShell = ({user, onSignOut, children}) => (
 // the opening of a page: eyebrow, headline and lead, the whole width (what a page controls goes in its
 // Toolbar under it, never in a column beside)
 export const Opening = ({kicker, title, standfirst}) => (
-    <section className="page pt-16 md:pt-28">
+    <section className="page pt-8 md:pt-28">
         <p className="kicker kicker-rule mb-4">{kicker}</p>
         <div className="max-w-[60rem]">
             <h1 className="display text-balance">{title}</h1>

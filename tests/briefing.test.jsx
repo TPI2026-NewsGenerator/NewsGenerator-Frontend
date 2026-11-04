@@ -331,6 +331,17 @@ describe('BriefingCard ways of reading', () => {
     });
 });
 
+// the number of a story on a phone is a little larger than the line it begins (the user, 05.11.2026), the big number of a screen from md up
+describe('BriefingCard number', () => {
+    it('should show the number of the story with two digits, larger than the rest of its line on a phone and as big as before from md up', () => {
+        render(<BriefingCard item={item({topic: 'sport'})} number={1}/>);
+        const number = screen.getByText('01');
+        expect(number).toHaveClass('text-[1.25rem]', 'md:text-[3rem]');
+        expect(number).not.toHaveClass('text-[0.8125rem]');
+        expect(number).toHaveAttribute('aria-hidden', 'true');
+    });
+});
+
 describe('BriefingCard topic', () => {
     // the feeds give "sport", the page shows it as a name (the user, 02.11.2026)
     it('should show the topic of the card with a capital letter', () => {

@@ -665,10 +665,8 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
     // on a phone the three tools have their words, there is room for them (the user, 05.11.2026); on a wider screen only their icons
     it('should give the tools their words for a phone, hidden from a tablet up, and not read them twice', async () => {
-        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, analysis: {status: 'ready', picked: [{storyId: 1}], cards: {1: {why: ['One.'], next: [], timeline: []}}}}, mail: true});
-        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
-        await screen.findByText('First story');
-        for (const [name, words] of [['AI analysis of the stories', 'AI analysis'], ['Tick all the stories', 'Tick all'], ['Add a news by its link', 'Add a news']]) {
+        await renderPage();
+        for (const [name, words] of [['Tick all the stories', 'Tick all'], ['Add a news by its link', 'Add a news']]) {
             const tool = screen.getByRole('button', {name});
             expect(tool).toHaveTextContent(words);
             const text = within(tool).getByText(words);
@@ -702,21 +700,21 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         await waitFor(() => expect(screen.queryByPlaceholderText('https://…')).toBeNull());
     });
 
-    it('should say in the toolbar which stories have an AI analysis, a link to each', async () => {
+    // the AI analysis is seen on the story itself: no tool for it in the toolbar, with an analysis or without (the user, 05.11.2026)
+    it('should have no tool for the AI analysis in the toolbar, whether the briefing has analyses or not', async () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, analysis: {status: 'ready', picked: [{storyId: 1}, {storyId: 3}],
             cards: {1: {why: ['One.'], next: [], timeline: []}, 3: {why: ['Three.'], next: [], timeline: []}}}}, mail: true});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
-        expect(screen.queryByText(/AI analysis of the stories that need one/)).toBeNull();
-        fireEvent.click(screen.getByRole('button', {name: 'AI analysis of the stories'}));
-        const note = await screen.findByText(/The AI wrote an analysis of the stories that need one/);
-        expect(within(note).getByRole('link', {name: '01'})).toHaveAttribute('href', '#card-1');
-        expect(within(note).getByRole('link', {name: '03'})).toHaveAttribute('href', '#card-3');
+        expect(screen.queryByRole('button', {name: /AI analysis of the stories/})).toBeNull();
+        expect(screen.queryByText(/The AI wrote an analysis of the stories that need one/)).toBeNull();
+        // the two other tools are there
+        expect(screen.getByRole('button', {name: 'Tick all the stories'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Add a news by its link'})).toBeInTheDocument();
     });
 
-    it('should show no icon for an analysis a briefing does not have, nor for the e-mail without an account', async () => {
+    it('should show no tool for the e-mail without an account', async () => {
         await renderPage(false);
-        expect(screen.queryByRole('button', {name: 'AI analysis of the stories'})).toBeNull();
         expect(screen.queryByRole('button', {name: 'Add a news by its link'})).toBeNull();
         expect(screen.queryByRole('button', {name: 'Tick all the stories'})).toBeNull();
     });

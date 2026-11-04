@@ -374,11 +374,11 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
 
     return (
         <article className="grid-12 border-t border-rule pt-10 pb-20">
-            {/* on a phone one line over the title, its number first ("01 · sport · Italy · 30 Oct"): beside a
-                big number, the column stacked into a block of its own (the user, 01.11.2026); beside the card from md */}
+            {/* on a phone one line over the title, its number first ("01 · sport · Italy · 30 Oct"), a little larger than the rest of the line (the
+                user, 05.11.2026): beside a big number, the column stacked into a block of its own (the user, 01.11.2026); beside the card from md */}
             <div className="col-span-12 flex flex-wrap items-center gap-x-2 gap-y-1 md:col-span-2 md:block">
                 {number !== undefined && (
-                    <p aria-hidden className={cn('tabular text-[0.8125rem] font-semibold text-ink-mute md:text-[3rem] md:leading-none md:tracking-[-0.04em] md:text-ink-mute/45',
+                    <p aria-hidden className={cn('tabular text-[1.25rem] leading-none font-semibold text-ink-mute md:text-[3rem] md:leading-none md:tracking-[-0.04em] md:text-ink-mute/45',
                         metas.length > 0 && DOT)}>
                         {String(number).padStart(2, '0')}
                     </p>

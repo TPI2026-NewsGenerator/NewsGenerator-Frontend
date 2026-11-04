@@ -9,15 +9,13 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {Tabs} from "radix-ui";
-import {Link2, ListChecks, Sparkles} from "lucide-react";
+import {Link2, ListChecks} from "lucide-react";
 import {PageShell, Opening, Toolbar} from "@/components/layout/Page.jsx";
 import {SettingsPill} from "@/components/ui/settings-pill.jsx";
 import {Button} from "@/components/ui/button.jsx";
 import {ToolButton, ToolPopover} from "@/components/ui/tool-popover.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
-import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx";
-import {hasAnalysisNote} from "@/features/briefing/analysis.js";
 import {BriefingWindow} from "@/features/briefing/components/BriefingWindow.jsx";
 import {FollowingNews} from "@/features/briefing/components/FollowingNews.jsx";
 import {useFollowing} from "@/features/briefing/useFollowing.js";
@@ -371,35 +369,27 @@ export const BriefingPage = () => {
 
     // the reading of the cards, in the toolbar while the tab of the briefing is read
     const reading = tab === 'briefing' && ready && count > 0 && shorter && <BriefingFormat format={format} onChange={chooseFormat}/>;
-    // what the briefing offers beside the way to read it, a round icon each in the toolbar (the user, 05.11.2026: a line over the cards
-    // and a form took a band of the page): its AI analysis, ticking every story for the e-mail, a news added by its link
+    // what the briefing offers for the e-mail, a round icon each in the toolbar (the user, 05.11.2026: a form took a band of the page): ticking
+    // every story, a news added by its link. The AI analysis has none: it is seen on the story itself
     const allTicked = ready && count > 0 && briefing.items.every(item => ticked.includes(item.storyId));
-    const analysed = ready && count > 0 && hasAnalysisNote(briefing.analysis);
-    const tools = tab === 'briefing' && ready && (analysed || mail) && (
+    const tools = tab === 'briefing' && ready && mail && (
         <div className="flex flex-wrap items-center gap-0.5 max-md:gap-1.5">
-            {analysed && (
-                <ToolPopover icon={<Sparkles aria-hidden className="size-4"/>} text="AI analysis" label="AI analysis of the stories" busy={briefing.analysis.status === 'running'}>
-                    {close => <AnalysisNote analysis={briefing.analysis} items={briefing.items} onPick={close}/>}
-                </ToolPopover>
-            )}
-            {mail && count > 0 && (
+            {count > 0 && (
                 <ToolButton label={allTicked ? 'Untick all the stories' : 'Tick all the stories'} pressed={allTicked} text={allTicked ? 'Untick all' : 'Tick all'}
                             title={allTicked ? 'Untick all the stories' : 'Tick all the stories, to send them by e-mail'}
                             onClick={() => tick(allTicked ? [] : briefing.items.map(item => item.storyId))}>
                     <ListChecks aria-hidden className="size-4"/>
                 </ToolButton>
             )}
-            {mail && (
-                <ToolPopover icon={<Link2 aria-hidden className="size-4"/>} text="Add a news" label="Add a news by its link">
-                    {close => (
-                        <AddNews key={briefing.id} onAdd={async url => {
-                            const added = await addNews(url);
-                            if (added) close();
-                            return added;
-                        }}/>
-                    )}
-                </ToolPopover>
-            )}
+            <ToolPopover icon={<Link2 aria-hidden className="size-4"/>} text="Add a news" label="Add a news by its link">
+                {close => (
+                    <AddNews key={briefing.id} onAdd={async url => {
+                        const added = await addNews(url);
+                        if (added) close();
+                        return added;
+                    }}/>
+                )}
+            </ToolPopover>
         </div>
     );
     // the next briefing: shown while the profile is asked too (it came after the briefing, and the controls

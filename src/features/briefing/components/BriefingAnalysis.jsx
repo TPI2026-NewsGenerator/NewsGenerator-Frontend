@@ -2,49 +2,10 @@
 //  Author: Fabian Rostello
 //  Date: 15.10.2026
 //  File: BriefingAnalysis.jsx
-//  Description: The AI analysis of the cards that merit one (see server/services/utils/card-analysis.js): a line
-//               on top of the briefing says which stories have one, each of them shows it in a tab: why the
-//               news matters, what may come next, and the earlier stories of its affair. It comes a minute or
-//               more after the cards: said to be prepared until then
+//  Description: The AI analysis of the cards that merit one (see server/services/utils/card-analysis.js): each of
+//               them shows it in a tab: why the news matters, what may come next, and the earlier stories of
+//               its affair. It comes a minute or more after the cards: said to be prepared until then
 //
-
-import {Fragment} from "react";
-import {Working} from "@/components/ui/text.jsx";
-import {hasAnalysisNote} from "@/features/briefing/analysis.js";
-
-const number = (n) => String(n).padStart(2, '0');
-
-// Which stories have an analysis, or that it is being written: in the panel of the toolbar (the user, 05.11.2026: a line over the cards
-// took a band of the page). analysis: {status: 'running' | 'ready' | 'failed', picked: [{storyId, reason}], cards: {storyId: {why,
-// next, timeline}}}, null for a briefing written before it (15.10.2026), see hasAnalysisNote. items: the cards, in their order;
-// onPick: a link to a card was followed
-export const AnalysisNote = ({analysis, items, onPick}) => {
-    if (!hasAnalysisNote(analysis)) return null;
-    const numbers = new Map(items.map((item, i) => [String(item.storyId), i + 1]));
-    const stories = (storyIds) => storyIds.filter(storyId => numbers.has(String(storyId)))
-        .sort((a, b) => numbers.get(String(a)) - numbers.get(String(b))).map(storyId => (
-        <a key={storyId} href={`#card-${storyId}`} onClick={onPick} className="underline underline-offset-4 hover:text-ink">{number(numbers.get(String(storyId)))}</a>
-    ));
-    const list = (links) => links.map((link, i) => <Fragment key={i}>{i > 0 && ' · '}{link}</Fragment>);
-
-    if (analysis.status === 'running') {
-        const picked = stories((analysis.picked ?? []).map(entry => entry.storyId));
-        return (
-            <Working>
-                {analysis.picked
-                    ? picked.length > 0
-                        ? <>The AI is writing an analysis of the stories that need one ({list(picked)}), about a minute each. Your stories are below already.</>
-                        : <>No story of this briefing needs an analysis.</>
-                    : <>The AI is choosing the stories that need an analysis. Your stories are below already.</>}
-            </Working>
-        );
-    }
-    if (analysis.status !== 'ready') return <p className="caption">The AI analysis could not be written for this briefing.</p>;
-    const written = stories(Object.keys(analysis.cards));
-    return written.length > 0
-        ? <p className="caption">The AI wrote an analysis of the stories that need one, in their first tab: {list(written)}.</p>
-        : <p className="caption">No story of this briefing needed an AI analysis.</p>;
-};
 
 const Part = ({title, children}) => (
     <div>
