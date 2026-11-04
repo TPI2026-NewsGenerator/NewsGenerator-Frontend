@@ -2,363 +2,50 @@
 //  Author: Fabian Rostello
 //  Date: 08.10.2026
 //  File: MailBar.jsx
-//  Description: The bar of the cards ticked in the briefing: how many, then their order, their title,
-//               their sentences and their picture in the e-mail, the way their sentences are shown,
-//               and the address they are sent to, the one of the account written in already
+//  Description: The bar of the cards ticked in the briefing: how many, and the button that opens the editor of the e-mail (see
+//               MailEditor and MailMatrix, the layout the reader chose in their settings), where their order, title, sentences,
+//               picture, countries and the blocks each carries are chosen before it is sent to the address of the account or another
 //
 
-import {useEffect, useState} from "react";
-import {ArrowDown, ArrowUp} from "lucide-react";
-import {Button, IconButton} from "@/components/ui/button.jsx";
-import {Checkbox, FieldError, Input, Label, Textarea} from "@/components/ui/field.jsx";
-import {MailAside} from "@/features/briefing/components/MailAside.jsx";
-import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
-import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
-import {MailTheme} from "@/features/briefing/components/MailTheme.jsx";
-import {MailPicture, Thumbnail} from "@/features/briefing/components/MailPicture.jsx";
-import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
-import {FORMATS} from "@/features/briefing/formats.js";
-import {languageLabel} from "@/features/briefing/profileWords.js";
-import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooSmall, usePictureSizes} from "@/features/briefing/mailPictures.js";
-
-// one address, as the server checks it (server/services/utils/account-rules.js)
-const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
-
-const two = (number) => String(number).padStart(2, '0');
-
-// the AI version of a story in the way of the e-mail, null when it has none (the key passages have none)
-const aiTextOf = (story, way) => way === 'points' ? (story.ai?.points?.length ? story.ai.points : null)
-    : way === 'digest' ? story.ai?.summary ?? null : null;
-// the sentences of the article the e-mail sends in that way instead, translated when it has a translation;
-// its key passages for a card written before the other ways (12.10.2026), as the server does
-const paragraphsOf = (text) => String(text ?? '').split(/\n\s*\n/).map(paragraph => paragraph.trim()).filter(Boolean);
-const ownTextOf = (story, way) => paragraphsOf(story.own?.[way] || story.own?.passages);
-// the sentences as the reader changes them: a point a line, the paragraphs of a summary or of key
-// passages a blank line between two (the user, 20.10.2026: the three ways can be changed)
-const WAY_NAMES = Object.fromEntries(FORMATS.map(format => [format.value, format.label.toLowerCase()]));
-const editable = (paragraphs, way) => paragraphs.join(way === 'points' ? '\n' : '\n\n');
-const written = (text, way) => String(text ?? '').split(way === 'points' ? /\n+/ : /\n\s*\n/)
-    .map(paragraph => paragraph.replace(/\s+/g, ' ').trim()).filter(Boolean);
-
-// "2 angles taken out", "1 denial taken out", "1 official source taken out", "2 analysis lines taken
-// out", or nothing (see MailAside)
-const takenOut = (removed = {}) => [
-    [removed.contested?.length ?? 0, 'denial', 'denials'],
-    [removed.angles?.length ?? 0, 'angle', 'angles'],
-    [removed.official?.length ?? 0, 'official source', 'official sources'],
-    [(removed.why?.length ?? 0) + (removed.next?.length ?? 0) + (removed.timeline?.length ?? 0), 'analysis line', 'analysis lines'],
-].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
+import {Button} from "@/components/ui/button.jsx";
+import {MailEditor} from "@/features/briefing/components/MailEditor.jsx";
+import {MailMatrix} from "@/features/briefing/components/MailMatrix.jsx";
+import {keptLayout} from "@/features/briefing/mailEditorLayout.js";
+import {useMailDraft} from "@/features/briefing/useMailDraft.js";
 
 // stories: the cards ticked, in the order of the briefing, [{storyId, title, titleAsPublished, titleLanguage, titleTranslated, number, thumbnail,
-// thumbnailSource, countries, ai, analysis, contested, angles, official}] (number: their place in the briefing;
-// countries: the codes ISO 3166-1 the server found for them; ai: the points
-// and the summary written by the AI, see BriefingCard AiVersion; own: {points, digest} the same of the
-// article as published, its paragraphs split by a blank line); accountEmail: the address
-// of the account; format: the way the page shows the sentences of the cards (see formats.js), the one of
-// the e-mail until the reader chooses another, null for a briefing that has the key passages only;
-// onSend(to, storyIds, pictures, titles, removed, format, ai, texts, countries, theme): sends them in this order with the pictures
-// and the titles the reader changed, without the denials, angles, official sources and analysis lines they took out, their sentences in
-// the way chosen, the ones of 'ai' (storyIds) in their AI version, the ones of 'texts' ({storyId:
-// [paragraph]}) as the reader wrote them, 'countries' ({storyId: [code]}) as the reader chose them, in the
-// 'theme' (light, the one at first, or dark) the reader chose for the colours of the e-mail, true when sent; onPictures(storyId): {pictures}, the ones of a story;
-// onNeutralTitle(storyId): {title} or {title: null, reason}, the neutral title the AI proposes for a story, shown against its title (see MailNeutralTitle),
-// none offered without it; onClear: unticks them all
-export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPictures, onNeutralTitle, onClear}) => {
-    const [to, setTo] = useState(null);         // null: the address is not asked yet
-    const [way, setWay] = useState(format);     // the way the sentences are shown in the e-mail
-    const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
-    const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
-    const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
-    const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official, why, next, timeline}: the places taken out
-    const [inAi, setInAi] = useState({});       // storyId -> true: sent in its AI version
-    const [texts, setTexts] = useState({});     // storyId -> {way: the sentences as the reader changes them}
-    const [countries, setCountries] = useState({});     // storyId -> the country codes chosen, when they are not the ones found
-    const [theme, setTheme] = useState('light');        // the colours of the e-mail
-    const [galleries, setGalleries] = useState({});     // storyId -> its pictures, null while asked
-    const [editing, setEditing] = useState(null);       // the storyId whose title and picture are being changed
-    const [error, setError] = useState(null);
-    const [picturesError, setPicturesError] = useState(null);
-    const count = stories.length;
-    const byId = new Map(stories.map(story => [story.storyId, story]));
-    // a story unticked meanwhile leaves the e-mail
-    const ordered = order.filter(storyId => byId.has(storyId)).map(storyId => byId.get(storyId));
-    // the picture of a story the reader did not change is put aside when it is too small (see
-    // MIN_PICTURE_WIDTH): the best other of the story instead, else none
-    const sizes = usePictureSizes([...ordered.map(story => story.thumbnail), ...Object.values(galleries).flatMap(found => (found ?? []).map(picture => picture.url))]);
-    const choiceOf = (story) => {
-        if (choices[story.storyId] !== undefined) return choices[story.storyId];
-        if (!tooSmall(sizes, story.thumbnail)) return undefined;
-        const best = bestPicture(galleries[story.storyId] ?? [], sizes);
-        return best ? {kind: 'url', url: best, auto: true} : {kind: 'none', small: true};
-    };
-
-    const open = () => {
-        setOrder(stories.map(story => story.storyId));
-        setChoices({});
-        setTitles({});
-        setRemoved({});
-        setInAi({});
-        setTexts({});
-        setCountries({});
-        setTheme('light');
-        setEditing(null);
-        setWay(format);
-        setTo(accountEmail ?? '');
-    };
-
-    // one place up (-1) or down (+1) in the e-mail
-    const move = (at, by) => {
-        const next = ordered.map(story => story.storyId);
-        [next[at], next[at + by]] = [next[at + by], next[at]];
-        setOrder(next);
-    };
-
-    // the pictures of the story asked once, its own among them even when the server did not answer
-    const loadGallery = async (story) => {
-        if (story.storyId in galleries) return;
-        setGalleries(current => ({...current, [story.storyId]: null}));
-        const answer = await Promise.resolve().then(() => onPictures?.(story.storyId)).catch(() => null);
-        const found = Array.isArray(answer?.pictures) ? answer.pictures : [];
-        const own = story.thumbnail && !found.some(picture => picture.url === story.thumbnail)
-            ? [{url: story.thumbnail, source: story.thumbnailSource ?? ''}] : [];
-        setGalleries(current => ({...current, [story.storyId]: [...own, ...found]}));
-    };
-
-    const edit = (story) => {
-        setEditing(editing === story.storyId ? null : story.storyId);
-        loadGallery(story);
-    };
-
-    // the pictures of a story whose own is too small, to find a better one
-    const small = ordered.filter(story => tooSmall(sizes, story.thumbnail) && !(story.storyId in galleries)).map(story => story.storyId).join(',');
-    useEffect(() => {
-        if (small) small.split(',').forEach(storyId => loadGallery(byId.get(Number(storyId))));
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- once per story found too small
-    }, [small]);
-
-    // the title the reader wrote, when it is not the one of the card
-    const ownTitle = (story) => {
-        const title = (titles[story.storyId] ?? '').replace(/\s+/g, ' ').trim();
-        return title && title !== story.title ? title : null;
-    };
-
-    // the way the e-mail sends the sentences in: the key passages for a briefing that has them only
-    const shown = way ?? 'passages';
-    // the sentences the e-mail sends of a story when the reader does not change them: its AI version when
-    // asked for, else the article's own
-    const sentOf = (story) => inAi[story.storyId] && aiTextOf(story, way) ? [aiTextOf(story, way)].flat() : ownTextOf(story, shown);
-    // the sentences the reader wrote, when they are not the ones it would send; left empty, its own
-    const ownText = (story) => {
-        const text = texts[story.storyId]?.[shown];
-        if (text === undefined) return null;
-        const paragraphs = written(text, shown);
-        return paragraphs.length > 0 && paragraphs.join('\n') !== sentOf(story).join('\n') ? paragraphs : null;
-    };
-    const writeText = (storyId, text) => setTexts(current => ({...current, [storyId]: {...current[storyId], [shown]: text}}));
-
-    // the countries the e-mail shows for a story: the ones the reader chose, else the ones found; the ones
-    // found again, or null, are no choice (the e-mail then leaves out the ones its title names)
-    const countriesOf = (story) => countries[story.storyId] ?? story.countries ?? [];
-    const chooseCountries = (story, codes) => setCountries(current => {
-        const next = {...current};
-        const found = story.countries ?? [];
-        if (codes === null || (codes.length === found.length && codes.every(code => found.includes(code)))) delete next[story.storyId];
-        else next[story.storyId] = codes;
-        return next;
-    });
-
-    const choose = (storyId, choice) => setChoices(current => {
-        const next = {...current};
-        if (choice === undefined) delete next[storyId];
-        else next[storyId] = choice;
-        return next;
-    });
-
-    const send = async (event) => {
-        event.preventDefault();
-        const address = to.trim();
-        if (!EMAIL.test(address)) {
-            setError('An email, like name@example.org');
-            return;
-        }
-        const sent = ordered.filter(story => choiceOf(story) !== undefined);
-        const files = sent.reduce((sum, story) => sum + fileBytes(choiceOf(story)), 0);
-        if (files > MAX_FILES_BYTES) {
-            setPicturesError(`Your images weigh ${MAX_FILES_BYTES / 1024 / 1024} MB at most together: take one out, or use its address.`);
-            return;
-        }
-        setError(null);
-        setPicturesError(null);
-        const pictures = Object.fromEntries(sent.map(story => [story.storyId, sentPicture(choiceOf(story))]));
-        const retitled = Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title));
-        const left = Object.fromEntries(ordered.filter(story => takenOut(removed[story.storyId]))
-            .map(story => [story.storyId, removed[story.storyId]]));
-        const ai = ordered.filter(story => inAi[story.storyId] && aiTextOf(story, way)).map(story => story.storyId);
-        const rewritten = Object.fromEntries(ordered.map(story => [story.storyId, ownText(story)]).filter(([, paragraphs]) => paragraphs));
-        const chosen = Object.fromEntries(ordered.filter(story => countries[story.storyId]).map(story => [story.storyId, countries[story.storyId]]));
-        if (await onSend(address, ordered.map(story => story.storyId), pictures, retitled, left, way ?? undefined, ai, rewritten, chosen, theme)) setTo(null);
-    };
+// thumbnailSource, countries, ai, analysis, contested, angles, official, names, hedged, media, affair, hasArticles}] (number: their place in the
+// briefing; countries: the codes ISO 3166-1 the server found for them; ai: the points and the summary written by the AI, see BriefingCard
+// AiVersion; own: {points, digest} the same of the article as published, its paragraphs split by a blank line); accountEmail: the address of
+// the account; format: the way the page shows the sentences of the cards (see formats.js), the one of the e-mail until the reader chooses another,
+// null for a briefing that has the key passages only; onSend(to, storyIds, pictures, titles, removed, format, ai, texts, countries, theme,
+// blocks): sends them in this order with the pictures and the titles the reader changed, without what they took out, their sentences in the way
+// chosen, the ones of 'ai' (storyIds) in their AI version, the ones of 'texts' ({storyId: [paragraph]}) as the reader wrote them, 'countries'
+// ({storyId: [code]}) as the reader chose them, in the 'theme' (light, the one at first, or dark) the reader chose for the colours of the e-mail,
+// the 'blocks' each story carries ({storyId: {contested, official, ...}}, see mailBlocks.js), true when sent; onPreview(payload): {html}, the
+// e-mail as it will be sent, drawn by the server for what is in the editor; onPictures(storyId): {pictures}, the ones of a story;
+// onNeutralTitle(storyId): {title} or {title: null, reason}, the neutral title the AI proposes for a story, shown against its title (see
+// MailNeutralTitle), none offered without it; onClear: unticks them all; layout: 'frames' or 'matrix', the one chosen in the settings
+export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPreview, onPictures, onNeutralTitle, onClear, layout = keptLayout()}) => {
+    const draft = useMailDraft({stories, accountEmail, format, onPictures});
+    // the editor hands over what it made: the address and the e-mail, in the order the page's function takes them
+    const send = (address, sent) => onSend(address, sent.storyIds, sent.pictures, sent.titles, sent.removed, sent.way, sent.ai, sent.texts, sent.countries, sent.theme, sent.blocks);
+    const Editor = layout === 'matrix' ? MailMatrix : MailEditor;
 
     return (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150">
-            {to === null ? (
+        <>
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-paper/85 backdrop-blur-xl backdrop-saturate-150">
                 <div className="page flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-                    <p className="folio !text-ink">{count} {count === 1 ? 'story' : 'stories'} ticked</p>
+                    <p className="folio !text-ink">{stories.length} {stories.length === 1 ? 'story' : 'stories'} ticked</p>
                     <div className="flex gap-2">
                         <Button variant="subtle" size="sm" onClick={onClear}>Untick all</Button>
-                        <Button variant="primary" size="sm" onClick={open}>Send email</Button>
+                        <Button variant="primary" size="sm" onClick={draft.open}>Send email</Button>
                     </div>
                 </div>
-            ) : (
-                <form className="page py-3" onSubmit={send} noValidate>
-                    <div className="mb-3">
-                        <p className="kicker">{ordered.length > 1 ? 'Their order, title, text, picture and asides in the e-mail' : 'Its title, text, picture and asides in the e-mail'}</p>
-                        <ol aria-label={ordered.length > 1 ? 'The stories of the e-mail, in their order' : 'The story of the e-mail'}
-                            className="mt-1 max-h-[45vh] list-none overflow-y-auto border-y border-rule p-0">
-                            {ordered.map((story, at) => {
-                                const choice = choiceOf(story);
-                                return (
-                                    <li key={story.storyId} className="border-b border-rule py-1.5 last:border-b-0">
-                                        <div className="flex items-center gap-3">
-                                            {ordered.length > 1 && <span aria-hidden className="w-7 shrink-0 tabular text-[0.9375rem] leading-none font-semibold text-ink-mute">{two(at + 1)}</span>}
-                                            <Thumbnail src={shownPicture(story, choice)}/>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block truncate text-[0.9375rem]">{ownTitle(story) ?? story.title}</span>
-                                                <span className="caption block">
-                                                    {two(story.number)} in the briefing
-                                                    {ownTitle(story) && ' · title changed'}
-                                                    {ownText(story) && ` · ${WAY_NAMES[shown]} changed`}
-                                                    {countries[story.storyId] && ' · countries changed'}
-                                                    {choice?.kind === 'none' && (choice.small ? ' · its picture too small, left out' : ' · no picture')}
-                                                    {choice?.auto && ' · its picture too small, a sharper one of the story instead'}
-                                                    {choice && choice.kind !== 'none' && !choice.auto && ' · picture changed'}
-                                                    {takenOut(removed[story.storyId]) && ` · ${takenOut(removed[story.storyId])}`}
-                                                    {inAi[story.storyId] && aiTextOf(story, way) && ' · AI version'}
-                                                </span>
-                                            </span>
-                                            <Button size="sm" variant="subtle" onClick={() => edit(story)} disabled={sending}
-                                                    aria-expanded={editing === story.storyId} aria-label={`Edit “${story.title}” in the e-mail`}>
-                                                Edit
-                                            </Button>
-                                            {ordered.length > 1 && (
-                                                <>
-                                                    <IconButton label={`Move “${story.title}” up`} onClick={() => move(at, -1)} disabled={at === 0 || sending}>
-                                                        <ArrowUp aria-hidden className="size-4"/>
-                                                    </IconButton>
-                                                    <IconButton label={`Move “${story.title}” down`} onClick={() => move(at, 1)} disabled={at === ordered.length - 1 || sending}>
-                                                        <ArrowDown aria-hidden className="size-4"/>
-                                                    </IconButton>
-                                                </>
-                                            )}
-                                        </div>
-                                        {editing === story.storyId && (
-                                            <>
-                                                <div className="mt-2">
-                                                    <Label htmlFor={`mail-title-${story.storyId}`}>Its title in the e-mail</Label>
-                                                    {/* Enter would send the e-mail */}
-                                                    <Input id={`mail-title-${story.storyId}`} maxLength={300} value={titles[story.storyId] ?? story.title}
-                                                           onChange={event => setTitles(current => ({...current, [story.storyId]: event.target.value}))}
-                                                           onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }}/>
-                                                    {ownTitle(story) && (
-                                                        <Button size="sm" variant="link" className="mt-1"
-                                                                onClick={() => setTitles(current => ({...current, [story.storyId]: story.title}))}>
-                                                            Back to its own title
-                                                        </Button>
-                                                    )}
-                                                    {/* the title of the card is not the one the medium wrote when its bait was taken out or the AI rewrote it
-                                                        (the user, 03.11.2026): the title as published is there to put back, as the medium wrote it (in its
-                                                        language when the card is translated: it is not translated) */}
-                                                    {story.titleAsPublished && (
-                                                        <div className="mt-2">
-                                                            <p className="caption">
-                                                                Title as published{story.titleTranslated && story.titleLanguage ? ` (${languageLabel(story.titleLanguage)}, not translated)` : ''}:{' '}
-                                                                <span lang={story.titleLanguage ?? undefined} className="italic">“{story.titleAsPublished}”</span>
-                                                            </p>
-                                                            <Button size="sm" variant="link" className="mt-1" disabled={sending || (titles[story.storyId] ?? story.title) === story.titleAsPublished}
-                                                                    onClick={() => setTitles(current => ({...current, [story.storyId]: story.titleAsPublished}))}>
-                                                                Use the title as published
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                    {/* the AI proposes, the reader reads it against the title and uses it or not */}
-                                                    {onNeutralTitle && (
-                                                        <MailNeutralTitle story={story} onAsk={onNeutralTitle} disabled={sending}
-                                                                          onUse={title => setTitles(current => ({...current, [story.storyId]: title}))}/>
-                                                    )}
-                                                </div>
-                                                <div className="mt-2 border border-rule p-3">
-                                                    {aiTextOf(story, way) ? (
-                                                        <Checkbox checked={Boolean(inAi[story.storyId])} className="mb-2"
-                                                                  onChange={event => {
-                                                                      // the text shown is the version ticked, the one changed put aside
-                                                                      setInAi(current => ({...current, [story.storyId]: event.target.checked}));
-                                                                      writeText(story.storyId, undefined);
-                                                                  }}>
-                                                            Send its {WAY_NAMES[shown]} in the AI version
-                                                        </Checkbox>
-                                                    ) : way && (
-                                                        // the box is not there: said, rather than left to be looked for
-                                                        <p className="caption mb-2">
-                                                            {way === 'passages'
-                                                                ? 'The key passages have no AI version: choose bullet points or the summary (In the e-mail, as) to send one.'
-                                                                : `No AI version of the ${WAY_NAMES[way]} of this card: the AI did not write one the article backs (a figure it does not give, or no answer).`}
-                                                        </p>
-                                                    )}
-                                                    {/* what the e-mail sends, the reader changing it as they want (the user, 20.10.2026) */}
-                                                    <Label htmlFor={`mail-text-${story.storyId}`}>Its {WAY_NAMES[shown]} in the e-mail</Label>
-                                                    <Textarea id={`mail-text-${story.storyId}`} className="mt-1 p-3 text-[0.9375rem]" rows={shown === 'points' ? 4 : 7}
-                                                              value={texts[story.storyId]?.[shown] ?? editable(sentOf(story), shown)}
-                                                              aria-describedby={`mail-text-help-${story.storyId}`} disabled={sending}
-                                                              onChange={event => writeText(story.storyId, event.target.value)}/>
-                                                    <p id={`mail-text-help-${story.storyId}`} className="caption mt-1">
-                                                        {inAi[story.storyId] && aiTextOf(story, way) ? 'The AI version' : 'The article’s own sentences'}
-                                                        {ownText(story) ? ', changed by you' : ', as the e-mail sends them'}.
-                                                        {shown === 'points' ? ' One point a line.' : ' A blank line between two paragraphs.'} Left empty, its own are sent.
-                                                    </p>
-                                                    {ownText(story) && (
-                                                        <Button size="sm" variant="link" className="mt-1" onClick={() => writeText(story.storyId, undefined)}>
-                                                            Back to {inAi[story.storyId] && aiTextOf(story, way) ? 'the AI version' : 'the article’s sentences'}
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                                <MailCountries story={story} chosen={countriesOf(story)} onChange={codes => chooseCountries(story, codes)}/>
-                                                <MailAside story={story} removed={removed[story.storyId]}
-                                                           onChange={next => setRemoved(current => ({...current, [story.storyId]: next}))}/>
-                                                <MailPicture story={story} choice={choice} pictures={galleries[story.storyId] ?? null}
-                                                             onChoose={next => choose(story.storyId, next)} onClose={() => setEditing(null)}/>
-                                            </>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ol>
-                        {picturesError && <FieldError>{picturesError}</FieldError>}
-                    </div>
-                    {way && (
-                        <div className="mb-3">
-                            <BriefingFormat label="In the e-mail, as" format={way} onChange={setWay} disabled={sending}/>
-                        </div>
-                    )}
-                    <div className="mb-3">
-                        <MailTheme theme={theme} onChange={setTheme} disabled={sending}/>
-                    </div>
-                    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-                        <div className="min-w-0 flex-1 basis-64">
-                            <Label htmlFor="mail-to">Send the {count === 1 ? 'story' : `${count} stories`} to</Label>
-                            <Input id="mail-to" type="email" autoComplete="email" autoFocus value={to}
-                                   onChange={event => setTo(event.target.value)} invalid={Boolean(error)}
-                                   aria-describedby={error ? 'mail-to-error' : 'mail-to-help'}/>
-                            {error
-                                ? <FieldError id="mail-to-error">{error}</FieldError>
-                                : <p id="mail-to-help" className="caption mt-1">One address. Sent to another than yours, the e-mail says it comes from you, and the answers come to you.</p>}
-                        </div>
-                        <div className="flex gap-2 pb-6">
-                            <Button variant="subtle" size="sm" onClick={() => setTo(null)} disabled={sending}>Cancel</Button>
-                            <Button type="submit" variant="primary" size="sm" loading={sending}>Send</Button>
-                        </div>
-                    </div>
-                </form>
+            </div>
+            {draft.to !== null && (
+                <Editor draft={draft} sending={sending} onSend={send} onPreview={onPreview} onNeutralTitle={onNeutralTitle}/>
             )}
-        </div>
+        </>
     );
 };

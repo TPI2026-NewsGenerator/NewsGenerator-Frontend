@@ -44,8 +44,8 @@ export const MailCountries = ({story, chosen, onChange}) => {
         : [];
 
     return (
-        <fieldset className="mt-2 min-w-0 border border-rule p-3">
-            <legend className="kicker px-1">Countries in the e-mail</legend>
+        <fieldset className="min-w-0 border-0 p-0">
+            <legend className="sr-only">Countries in the e-mail</legend>
             <p className="caption">
                 Shown above its title. Left as found, they are left out when the title names them already; changed, they are
                 shown as you choose, none ticked shows none.

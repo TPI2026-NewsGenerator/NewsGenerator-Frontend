@@ -192,10 +192,10 @@ export const BriefingPage = () => {
     // the cards ticked, in the order the reader gave them in the bar, with the pictures, titles and
     // sentences they changed, without the denials and angles they took out, their sentences in the way
     // chosen, sent to the address 'to': true when sent
-    const email = async (to, storyIds, pictures, titles, removed, way, ai, texts, countries, theme) => {
+    const email = async (to, storyIds, pictures, titles, removed, way, ai, texts, countries, theme, blocks) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way, ai, texts, countries, theme);
+            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way, ai, texts, countries, theme, blocks);
             // sent, they count as read: the next briefings leave them out unless something new happens
             toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}, read now for your next briefings.`);
             tick([]);
@@ -516,6 +516,7 @@ export const BriefingPage = () => {
                         news is put in the e-mail (the user, 03.11.2026: the bar was not there after "Add to the e-mail") */}
                     {mail && ready && ticked.length > 0 && (
                         <MailBar accountEmail={user?.email} sending={sending} onSend={email} onClear={() => tick([])}
+                                 onPreview={payload => BriefingApi.emailPreview(briefing.id, payload)}
                                  format={shorter ? format : null}
                                  onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
                                  onNeutralTitle={storyId => BriefingApi.neutralTitle(briefing.id, storyId)}
@@ -526,6 +527,9 @@ export const BriefingPage = () => {
                                          thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                          countries: item.countries ?? [],
                                          contested: item.contested ?? [],
+                                         // what the editor of the e-mail offers to put in it (see mailBlocks.js)
+                                         names: (item.names ?? []).map(name => name.name), hedged: Boolean(item.hedged), media: item.corroboration?.media ?? 0,
+                                         affair: Boolean(affairs[item.storyId]), hasArticles: (item.articles?.length ?? 0) > 0,
                                          ai: item.ai ?? null,
                                          own: {points: withoutOriginalMarks(item.pointsTranslation || item.points || null), digest: withoutOriginalMarks(item.digestTranslation || item.digest || null),
                                              passages: withoutOriginalMarks(item.translation || item.summary || null)},

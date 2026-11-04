@@ -22,6 +22,17 @@ const send = async (path, {method = 'GET', body} = {}) => {
     return await readAnswer(response);
 };
 
+// what an e-mail is made of beside its stories and its address, only what the reader chose (a map left empty is not sent), the same for the
+// e-mail and for its preview
+const mailBody = ({pictures, titles, removed, format, ai, texts, countries, theme, blocks}) => {
+    const some = (map) => map && Object.keys(map).length > 0;
+    return {
+        ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
+        ...(format ? {format} : {}), ...(ai?.length ? {ai} : {}), ...(some(texts) ? {texts} : {}), ...(some(countries) ? {countries} : {}),
+        ...(theme === 'dark' ? {theme} : {}), ...(some(blocks) ? {blocks} : {}), ...(browserTimeZone() ? {timeZone: browserTimeZone()} : {}),
+    };
+};
+
 // the time zone of the reader's browser ("Europe/Paris"), for the hours of the e-mail; none when it does not tell
 const browserTimeZone = () => {
     try {
@@ -51,18 +62,28 @@ export const BriefingApi = {
     // given; ai: the storyIds of the cards sent in their AI version; texts: {storyId: [paragraph]}, the
     // points or paragraphs the reader wrote instead of the card's in that way; countries: {storyId: [code]}, the
     // countries (codes ISO 3166-1) the reader chose for some cards instead of the ones found, [] for none; theme:
-    // 'light' (the default, not sent) or 'dark', the colours of the e-mail. The hours of the e-mail are the ones of the
+    // 'light' (the default, not sent) or 'dark', the colours of the e-mail; blocks: {storyId: {media, contested, official, unconfirmed, names,
+    // analysis, angles, affair, coverage}}, what each story carries (see mailBlocks.js). The hours of the e-mail are the ones of the
     // time zone of this browser, always sent
-    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai, texts, countries, theme) => {
-        const some = (map) => map && Object.keys(map).length > 0;
+    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai, texts, countries, theme, blocks) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
-            body: JSON.stringify({storyIds, to, ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
-                ...(format ? {format} : {}), ...(ai?.length ? {ai} : {}), ...(some(texts) ? {texts} : {}), ...(some(countries) ? {countries} : {}),
-                ...(theme === 'dark' ? {theme} : {}), ...(browserTimeZone() ? {timeZone: browserTimeZone()} : {})}),
+            body: JSON.stringify({storyIds, to, ...mailBody({pictures, titles, removed, format, ai, texts, countries, theme, blocks})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
+    },
+    // the e-mail as it will be sent, for what is in the editor (the same fields as the e-mail, `way` for its format): {html}, the page the
+    // e-mail is made of, nothing is sent and no story is counted as read
+    emailPreview: async (briefingId, {storyIds, pictures, titles, removed, way, ai, texts, countries, theme, blocks}) => {
+        const response = await fetch(`${API_URL}/briefing/${briefingId}/email/preview`, {
+            method: 'POST',
+            headers: withProfile(HEADERS),
+            body: JSON.stringify({storyIds, ...mailBody({pictures, titles, removed, format: way, ai, texts, countries, theme, blocks})}),
+        });
+        const answer = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(answer.error ?? `HTTP ${response.status}`);
+        return answer;
     },
     // a news added at the end of the briefing by its link: answers {item, analysis, analyzing}, its card (read and completed like the
     // cards of a briefing), and, when it was copied from another briefing of the reader with its analysis, that analysis ({why, next,

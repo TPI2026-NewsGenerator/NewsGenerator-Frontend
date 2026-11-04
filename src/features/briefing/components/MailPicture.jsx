@@ -71,8 +71,8 @@ export const MailPicture = ({story, choice, pictures, onChoose, onClose}) => {
     };
 
     return (
-        <div role="group" aria-label={`The picture of “${story.title}”`} className="mt-2 border border-rule p-3">
-            <p className="kicker">Its picture in the e-mail</p>
+        <div role="group" aria-label={`The picture of “${story.title}”`} className="mt-1">
+            <p className="sr-only">Its picture in the e-mail</p>
             {pictures === null || (measuring && offered.length === 0)
                 ? <Working>Finding the pictures of the story…</Working>
                 : (
