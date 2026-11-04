@@ -663,6 +663,23 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.queryByPlaceholderText('https://…')).toBeNull();
     });
 
+    // on a phone the three tools have their words, there is room for them (the user, 05.11.2026); on a wider screen only their icons
+    it('should give the tools their words for a phone, hidden from a tablet up, and not read them twice', async () => {
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, analysis: {status: 'ready', picked: [{storyId: 1}], cards: {1: {why: ['One.'], next: [], timeline: []}}}}, mail: true});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        for (const [name, words] of [['AI analysis of the stories', 'AI analysis'], ['Tick all the stories', 'Tick all'], ['Add a news by its link', 'Add a news']]) {
+            const tool = screen.getByRole('button', {name});
+            expect(tool).toHaveTextContent(words);
+            const text = within(tool).getByText(words);
+            expect(text).toHaveClass('md:hidden');
+            expect(text).toHaveAttribute('aria-hidden', 'true');
+            expect(tool.className).toMatch(/max-md:w-auto/);
+        }
+        fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
+        expect(screen.getByRole('button', {name: 'Untick all the stories'})).toHaveTextContent('Untick all');
+    });
+
     it('should tick every story from the toolbar, and untick them from the same button', async () => {
         await renderPage();
         fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));

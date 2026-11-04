@@ -115,11 +115,10 @@ describe('what the presets contain, in the settings', () => {
 
     it('should say it from the presets themselves: what a preset puts on is what the table marks', () => {
         render(<MailPresets/>);
+        // the rows are looked for once: a role query over the whole table, for each cell, is slow on a busy machine
+        const rows = Object.fromEntries(BLOCKS.map(block => [block.key, screen.getByRole('row', {name: new RegExp(`^${block.label}`)})]));
         for (const preset of PRESETS) {
-            for (const block of BLOCKS) {
-                const row = screen.getByRole('row', {name: new RegExp(`^${block.label}`)});
-                expect(included(row, preset.value)).toBe(preset.on.includes(block.key));
-            }
+            for (const block of BLOCKS) expect(included(rows[block.key], preset.value)).toBe(preset.on.includes(block.key));
         }
     });
 });

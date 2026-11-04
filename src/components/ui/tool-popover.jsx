@@ -6,22 +6,32 @@
 //               the page offers does not take a band of the page
 //
 
-import {useState} from "react";
+import {forwardRef, useState} from "react";
 import {Popover} from "radix-ui";
 import {IconButton} from "@/components/ui/button.jsx";
 import {cn} from "@/lib/utils.js";
 
-// icon: the icon, drawn (<Sparkles/>); label: what it says to the screen readers and when hovered; busy: a pulsing dot on the icon while
-// something goes on (the AI writing); children: the panel, or (close) => the panel when it must close itself
-export const ToolPopover = ({icon, label, busy = false, className, children}) => {
+// A round icon of a toolbar; on a phone, where the toolbar has the room, a button with its words (the user, 05.11.2026). children: the icon,
+// drawn (<Sparkles/>); text: the words; label: what it says to the screen readers and when hovered (the words are not read twice)
+export const ToolButton = forwardRef(({text, className, children, ...props}, ref) => (
+    <IconButton ref={ref} className={cn('max-md:w-auto max-md:gap-1.5 max-md:bg-paper-deep max-md:px-2.5 max-md:text-[0.8125rem] max-md:text-ink', className)} {...props}>
+        {children}
+        {text && <span aria-hidden className="md:hidden">{text}</span>}
+    </IconButton>
+));
+ToolButton.displayName = 'ToolButton';
+
+// icon: the icon, drawn (<Sparkles/>); text: its words on a phone; label: what it says to the screen readers and when hovered; busy: a pulsing
+// dot on the icon while something goes on (the AI writing); children: the panel, or (close) => the panel when it must close itself
+export const ToolPopover = ({icon, text, label, busy = false, className, children}) => {
     const [open, setOpen] = useState(false);
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
             <Popover.Trigger asChild>
-                <IconButton label={label} className="relative data-[state=open]:bg-paper-deep data-[state=open]:text-ink">
+                <ToolButton label={label} text={text} className="relative data-[state=open]:bg-paper-deep data-[state=open]:text-ink">
                     {icon}
                     {busy && <span aria-hidden className="absolute top-1.5 right-1.5 size-1.5 animate-pulse rounded-full bg-accent-ink"/>}
-                </IconButton>
+                </ToolButton>
             </Popover.Trigger>
             <Popover.Portal>
                 {/* a field in the panel takes the focus, so the reader can type at once */}

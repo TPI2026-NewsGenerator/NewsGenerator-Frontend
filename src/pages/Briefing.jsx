@@ -12,8 +12,8 @@ import {Tabs} from "radix-ui";
 import {Link2, ListChecks, Sparkles} from "lucide-react";
 import {PageShell, Opening, Toolbar} from "@/components/layout/Page.jsx";
 import {SettingsPill} from "@/components/ui/settings-pill.jsx";
-import {Button, IconButton} from "@/components/ui/button.jsx";
-import {ToolPopover} from "@/components/ui/tool-popover.jsx";
+import {Button} from "@/components/ui/button.jsx";
+import {ToolButton, ToolPopover} from "@/components/ui/tool-popover.jsx";
 import {Notice, Working} from "@/components/ui/text.jsx";
 import {BriefingCard} from "@/features/briefing/components/BriefingCard.jsx";
 import {AnalysisNote} from "@/features/briefing/components/BriefingAnalysis.jsx";
@@ -316,8 +316,9 @@ export const BriefingPage = () => {
             )}
 
             {ready && count > 0 && (
-                <ol className="list-none p-0">
-                    {/* the stories of the terms followed keep their place in the briefing */}
+                <ol className="list-none p-0 max-md:[&>li:first-child>article]:border-t-0 max-md:[&>li:first-child>article]:pt-0">
+                    {/* on a phone the bar of the tools has its line under it: the first card has none over it (the user, 05.11.2026: two lines).
+                        The stories of the terms followed keep their place in the briefing */}
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId} id={`card-${item.storyId}`} className="scroll-mt-6">
                             <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format}
@@ -375,21 +376,21 @@ export const BriefingPage = () => {
     const allTicked = ready && count > 0 && briefing.items.every(item => ticked.includes(item.storyId));
     const analysed = ready && count > 0 && hasAnalysisNote(briefing.analysis);
     const tools = tab === 'briefing' && ready && (analysed || mail) && (
-        <div className="flex items-center gap-0.5">
+        <div className="flex flex-wrap items-center gap-0.5 max-md:gap-1.5">
             {analysed && (
-                <ToolPopover icon={<Sparkles aria-hidden className="size-4"/>} label="AI analysis of the stories" busy={briefing.analysis.status === 'running'}>
+                <ToolPopover icon={<Sparkles aria-hidden className="size-4"/>} text="AI analysis" label="AI analysis of the stories" busy={briefing.analysis.status === 'running'}>
                     {close => <AnalysisNote analysis={briefing.analysis} items={briefing.items} onPick={close}/>}
                 </ToolPopover>
             )}
             {mail && count > 0 && (
-                <IconButton label={allTicked ? 'Untick all the stories' : 'Tick all the stories'} pressed={allTicked}
+                <ToolButton label={allTicked ? 'Untick all the stories' : 'Tick all the stories'} pressed={allTicked} text={allTicked ? 'Untick all' : 'Tick all'}
                             title={allTicked ? 'Untick all the stories' : 'Tick all the stories, to send them by e-mail'}
                             onClick={() => tick(allTicked ? [] : briefing.items.map(item => item.storyId))}>
                     <ListChecks aria-hidden className="size-4"/>
-                </IconButton>
+                </ToolButton>
             )}
             {mail && (
-                <ToolPopover icon={<Link2 aria-hidden className="size-4"/>} label="Add a news by its link">
+                <ToolPopover icon={<Link2 aria-hidden className="size-4"/>} text="Add a news" label="Add a news by its link">
                     {close => (
                         <AddNews key={briefing.id} onAdd={async url => {
                             const added = await addNews(url);
