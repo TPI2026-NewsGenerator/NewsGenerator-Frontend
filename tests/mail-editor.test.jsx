@@ -173,12 +173,96 @@ describe('the editor of the e-mail, three frames', () => {
     });
 });
 
+describe('the story chosen in the list', () => {
+    it('should say whose blocks the frame on the right shows, with its place in the e-mail', async () => {
+        await open();
+        expect(everyStory()).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(screen.queryByRole('group', {name: 'What every story carries in the e-mail'})).toBeNull();
+        expect(carries('Second story')).toHaveTextContent('Story 02, in the e-mail');
+        expect(carries('Second story')).toHaveTextContent('Second story');
+        expect(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'})).toHaveAttribute('aria-pressed', 'true');
+        // and back to every story
+        fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
+        expect(everyStory()).toBeInTheDocument();
+    });
+
+    // on a phone the three frames are tabs (jsdom has no width: the tabs are in the page, hidden by the width of the screen)
+    it('should open the tab of what the story carries when it is chosen in the list, on a phone', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('tab', {name: 'Order'}));
+        expect(screen.getByRole('tab', {name: 'Order'})).toHaveAttribute('aria-selected', 'true');
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(screen.getByRole('tab', {name: 'Edit'})).toHaveAttribute('aria-selected', 'true');
+        expect(carries('Second story')).toBeInTheDocument();
+        // and "all the stories" too
+        fireEvent.click(screen.getByRole('tab', {name: 'Order'}));
+        fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
+        expect(screen.getByRole('tab', {name: 'Edit'})).toHaveAttribute('aria-selected', 'true');
+        expect(everyStory()).toBeInTheDocument();
+    });
+
+    // the frame of the e-mail is scrolled to the story, a line drawn around it; jsdom draws nothing, so the document of the frame is faked
+    it('should show the story in the e-mail: scrolled to, a line around it, and the e-mail from its top for every story', async () => {
+        await open();
+        const frame = await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000});
+        const scrollTo = vi.fn();
+        const cell = {style: {outline: ''}};
+        const card = {firstElementChild: cell, getBoundingClientRect: () => ({top: 300})};
+        Object.defineProperty(frame, 'contentDocument', {configurable: true, value: {
+            defaultView: {scrollTo, scrollY: 40},
+            querySelectorAll: () => [cell],
+            getElementById: id => id === 'story-2' ? card : null,
+        }});
+
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(scrollTo).toHaveBeenLastCalledWith({top: 328, behavior: 'smooth'});
+        expect(cell.style.outline).toBe('2px solid #2997FF');
+
+        fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
+        expect(scrollTo).toHaveBeenLastCalledWith({top: 0, behavior: 'smooth'});
+        expect(cell.style.outline).toBe('');
+    });
+});
+
+// the pictures of the e-mail come after the e-mail and push its cards down: the story is put back at the top as each one arrives
+describe('the story chosen, while the pictures of the e-mail come', () => {
+    it('should put the story back at the top when a picture arrives, and not when the reader has chosen another place since', async () => {
+        await open();
+        const frame = await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000});
+        const scrollTo = vi.fn();
+        const arrivals = [];
+        const card = {firstElementChild: {style: {outline: ''}}, getBoundingClientRect: () => ({top: 300})};
+        Object.defineProperty(frame, 'contentDocument', {configurable: true, value: {
+            defaultView: {scrollTo, scrollY: 0},
+            querySelectorAll: () => [],
+            getElementById: id => id === 'story-2' ? card : null,
+            images: [{complete: false, addEventListener: (type, handler) => arrivals.push(handler)}, {complete: true, addEventListener: vi.fn()}],
+        }});
+
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(scrollTo).toHaveBeenLastCalledWith({top: 288, behavior: 'smooth'});
+        // only the picture still coming is waited for, once it has come the card is put back at the top, at once
+        expect(arrivals).toHaveLength(1);
+        arrivals[0]();
+        expect(scrollTo).toHaveBeenLastCalledWith({top: 288, behavior: 'auto'});
+
+        // another place chosen meanwhile: the late picture does not take the e-mail back to the old story
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
+        const calls = scrollTo.mock.calls.length;
+        arrivals[0]();
+        expect(scrollTo.mock.calls.length).toBe(calls);
+    });
+});
+
 describe('the e-mail as it will be sent, beside the editor', () => {
     it('should draw the e-mail a moment after the editor opens, in a frame where nothing runs', async () => {
         await open();
         const frame = await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000});
         expect(frame).toHaveAttribute('srcdoc', '<p>The e-mail</p>');
-        expect(frame.getAttribute('sandbox')).not.toMatch(/allow-scripts|allow-same-origin/);
+        // nothing in it runs: of the page's own origin so the page can scroll it to a story, but with no script
+        expect(frame.getAttribute('sandbox')).not.toMatch(/allow-scripts/);
         const [id, sent] = BriefingApi.emailPreview.mock.calls.at(-1);
         expect(id).toBe(9);
         expect(sent).toMatchObject({storyIds: [1, 2], theme: 'light', blocks: {1: DEFAULT_BLOCKS, 2: DEFAULT_BLOCKS}});

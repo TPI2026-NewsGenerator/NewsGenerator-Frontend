@@ -127,7 +127,7 @@ export const MailMatrix = ({draft, sending, onSend, onPreview, onNeutralTitle}) 
                 </div>
                 <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-3">
                     {panel === 'preview'
-                        ? onPreview ? <MailPreview payload={draft.payload} onPreview={onPreview}/> : <Notice>The preview is not available.</Notice>
+                        ? onPreview ? <MailPreview payload={draft.payload} onPreview={onPreview} focus={draft.selected}/> : <Notice>The preview is not available.</Notice>
                         : story
                             ? <div className="max-w-2xl"><StoryInspector key={story.storyId} draft={draft} story={story} onNeutralTitle={onNeutralTitle} disabled={sending}/></div>
                             : <p className="caption">Choose a story in the matrix to change its title, its text, its picture, or the lines of its analysis and its angles.</p>}

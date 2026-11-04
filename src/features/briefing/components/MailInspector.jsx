@@ -16,7 +16,7 @@ import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
 import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
 import {MailPicture} from "@/features/briefing/components/MailPicture.jsx";
 import {BLOCKS, countOf, hasBlock, PRESETS} from "@/features/briefing/mailBlocks.js";
-import {aiTextOf, editable, WAY_NAMES} from "@/features/briefing/useMailDraft.js";
+import {aiTextOf, editable, two, WAY_NAMES} from "@/features/briefing/useMailDraft.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
 
@@ -56,6 +56,11 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
 
     return (
         <div aria-label={`What “${story.title}” carries in the e-mail`} role="group">
+            {/* whose blocks these are: the story chosen in the list, not every story */}
+            <div className="border-b border-rule pb-3">
+                <p className="kicker">{draft.ordered.length > 1 ? `Story ${two(draft.ordered.indexOf(story) + 1)}, in the e-mail` : 'The story'}</p>
+                <p className="panel-text mt-0.5 line-clamp-2">{story.title}</p>
+            </div>
             <Section label="Title" open={open.title} onToggle={() => toggle('title')}>
                 <Label htmlFor={`mail-title-${id}`}>Its title in the e-mail</Label>
                 {/* Enter would send the e-mail */}

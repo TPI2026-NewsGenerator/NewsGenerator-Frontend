@@ -23,10 +23,10 @@ const FRAMES = [
     {value: 'edit', label: 'Edit'},
 ];
 
-// the stories in their order, "all the stories" first
-const Outline = ({draft, sending}) => (
+// the stories in their order, "all the stories" first; onChoose: one was chosen (on a phone, the tab of what it carries opens)
+const Outline = ({draft, sending, onChoose}) => (
     <nav aria-label="The stories of the e-mail, in their order" className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-        <button type="button" onClick={() => draft.select('all')} aria-pressed={draft.selected === 'all'}
+        <button type="button" onClick={() => { draft.select('all'); onChoose(); }} aria-pressed={draft.selected === 'all'}
                 className={cn('flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[0.8125rem] font-normal transition-colors hover:bg-paper-deep',
                     draft.selected === 'all' && 'bg-paper-deep')}>
             <SlidersHorizontal aria-hidden className="size-4 shrink-0 text-ink-mute"/>
@@ -36,7 +36,7 @@ const Outline = ({draft, sending}) => (
         <ol aria-label={draft.ordered.length > 1 ? 'The stories of the e-mail, in their order' : 'The story of the e-mail'} className="list-none p-0">
             {draft.ordered.map((story, at) => (
                 <li key={story.storyId} className="flex items-center gap-1">
-                    <button type="button" onClick={() => draft.select(story.storyId)} aria-pressed={draft.selected === story.storyId}
+                    <button type="button" onClick={() => { draft.select(story.storyId); onChoose(); }} aria-pressed={draft.selected === story.storyId}
                             aria-label={`Edit “${story.title}” in the e-mail`}
                             className={cn('flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-left font-normal transition-colors hover:bg-paper-deep',
                                 draft.selected === story.storyId && 'bg-paper-deep')}>
@@ -80,13 +80,13 @@ export const MailEditor = ({draft, sending, onSend, onPreview, onNeutralTitle}) 
                 ))}
             </div>
             <div className="grid min-h-0 flex-1 md:grid-cols-[16rem_minmax(0,1fr)_23rem] md:divide-x md:divide-rule">
-                <div className={cn('min-h-0 flex-col', only('order'))}><Outline draft={draft} sending={sending}/></div>
+                <div className={cn('min-h-0 flex-col', only('order'))}><Outline draft={draft} sending={sending} onChoose={() => setFrame('edit')}/></div>
 
                 <div className={cn('min-h-0 min-w-0 flex-col', only('preview'))}>
                     <div className="shrink-0 border-b border-rule px-4 py-2.5"><MailSettings draft={draft} sending={sending}/></div>
                     <div className="flex min-h-0 flex-1 flex-col p-3">
                         {onPreview
-                            ? <MailPreview payload={draft.payload} onPreview={onPreview}/>
+                            ? <MailPreview payload={draft.payload} onPreview={onPreview} focus={draft.selected}/>
                             : <Notice>The preview is not available.</Notice>}
                     </div>
                 </div>
