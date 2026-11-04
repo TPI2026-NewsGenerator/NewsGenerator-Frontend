@@ -57,7 +57,7 @@ export const CardMore = ({tabs, open, onOpen, id, className}) => {
                                 // a tab half seen slides into view
                                 event.currentTarget.scrollIntoView?.({block: 'nearest', inline: 'nearest', behavior: 'smooth'});
                             }}
-                            className="group inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[0.875rem] whitespace-nowrap text-ink-mute transition-colors duration-200 hover:text-ink aria-expanded:bg-paper-deep aria-expanded:text-ink">
+                            className="group inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[0.875rem] whitespace-nowrap text-ink-mute transition-colors duration-200 hover:text-ink aria-expanded:bg-paper-deep aria-expanded:text-ink max-md:px-2.5 max-md:text-[0.8125rem]">
                         {tab.label}
                         {/* a count in a circle of its own: it is a mark, not a word of the label */}
                         {tab.count !== undefined && (
