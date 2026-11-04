@@ -88,6 +88,12 @@ export const BriefingApi = {
     // {title} or {title: null, reason}: the neutral title the AI proposes for a card, for the editor of the e-mail; reason
     // 'same' when the title is neutral already, 'unsafe' when the proposal changed what it says (none is shown then)
     neutralTitle: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/neutral-title`, {method: 'POST'}),
+    // the cards of the briefing that are one affair: {affairs: {storyId: {title, stories, media}}}, the name the AI gave it
+    affairs: (briefingId) => send(`/briefing/${briefingId}/affairs`),
+    // the affair of a card, built on the first request (about 20 seconds): {affair: false}, or {affair: true, title, about,
+    // events: [{id, storyIds, at, kind, title, titleTranslation, url, medium, language, media, news, languages, reported,
+    // official, denial}], coverage: {media, news, first, peak, days, languages, byMedium}}
+    affair: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/affair`),
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {

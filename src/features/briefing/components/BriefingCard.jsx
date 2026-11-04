@@ -23,6 +23,7 @@ import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
 import {countryNames} from "@/features/briefing/countries.js";
 import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
+import {AffairSection} from "@/features/affairs/components/AffairSection.jsx";
 import {cn, capitalized} from "@/lib/utils.js";
 import {pageOf} from "@/features/entities/entityApi.js";
 
@@ -274,12 +275,13 @@ const Margin = ({kicker, tone, children}) => (
 // item.ai: {points, summary, model} the same ways written by the AI, shown on demand (see AiVersion).
 // analysis: the AI analysis of the card when it merits one (see CardAnalysis), analysisPending while it is
 // written, analysisModel the model writing it
+// affair: {title, stories, media} when the card is one affair (see AffairSection), with briefingId, the briefing it is in
 // item.followUp: the card of the last days it follows (see FollowUp); item.imported: a news the reader
 // added by its link, for the e-mail; item.transferred: that card copied from another briefing of the reader
 const unmarked = (entry) => ({...entry, marks: undefined});
 // onRemove: a news the reader added taken out of the briefing
 export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages',
-                                 analysis, analysisPending = false, analysisModel}) => {
+                                 analysis, analysisPending = false, analysisModel, affair, briefingId}) => {
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
     const coverage = coverageLabel(item.corroboration);
     const lead = item.lead ?? item.articles[0];
@@ -435,6 +437,8 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                 {paragraphs.length > 0 && (analysis || analysisPending) && (
                     <div><CardAnalysis id={`analysis-${item.storyId}`} analysis={analysis} pending={analysisPending && !analysis} model={analysisModel}/></div>
                 )}
+
+                {affair && briefingId && <AffairSection briefingId={briefingId} storyId={item.storyId} chip={affair}/>}
 
                 {item.contested?.length > 0 && <Contested denials={item.contested} original={original}/>}
                 {item.angles?.length > 0 && <OtherAngles angles={item.angles} original={original}/>}

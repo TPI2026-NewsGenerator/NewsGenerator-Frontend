@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 28.09.2026
 //  File: Masthead.jsx
-//  Description: The bar on top of every page: the name, four sections, the profile read, who reads, their
+//  Description: The bar on top of every page: the name, five sections, the profile read, who reads, their
 //               settings and the theme. It stays on top, translucent; a hairline under it once the page scrolls
 //
 
@@ -12,9 +12,11 @@ import {Link, NavLink, useNavigate} from "react-router-dom";
 import {cn} from "@/lib/utils.js";
 import {ProfileSwitcher} from "@/features/profiles/ProfileSwitcher.jsx";
 import {ThemeButton, ThemeChoice} from "@/components/ui/theme-toggle.jsx";
+import {useUnread} from "@/features/affairs/useUnread.js";
 
 const SECTIONS = [
     {to: '/briefing', label: 'Briefing'},
+    {to: '/affairs', label: 'Affairs'},
     {to: '/profile', label: 'Profile'},
     {to: '/following', label: 'Following'},
     {to: '/search', label: 'Search'},
@@ -33,6 +35,11 @@ export const Masthead = ({user, onSignOut}) => {
     const navigate = useNavigate();
     const [menu, setMenu] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    // the alerts of the affairs followed not read yet, a number after the section
+    const unread = useUnread(Boolean(user));
+    const badge = (section) => section.to === '/affairs' && unread > 0
+        ? <span className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-action px-1 text-[0.6875rem] leading-4 font-semibold text-white" aria-label={`${unread} new`}>{unread}</span>
+        : null;
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 12);
@@ -79,7 +86,7 @@ export const Masthead = ({user, onSignOut}) => {
                 </Link>
                 <nav aria-label="Sections" className="hidden items-center gap-8 lg:flex">
                     {SECTIONS.map(section => (
-                        <NavLink key={section.to} to={section.to} className={sectionClass}>{section.label}</NavLink>
+                        <NavLink key={section.to} to={section.to} className={sectionClass}>{section.label}{badge(section)}</NavLink>
                     ))}
                 </nav>
                 {/* the account at the right of the sections from 1 024 px: below, the four sections and a long
@@ -110,7 +117,7 @@ export const Masthead = ({user, onSignOut}) => {
                             <NavLink key={section.to} to={section.to} onClick={() => setMenu(false)}
                                      className={({isActive}) => cn('py-2.5 text-[2rem] leading-tight font-semibold tracking-[-0.03em] no-underline',
                                          isActive ? 'text-ink' : 'text-ink-mute hover:text-ink')}>
-                                {section.label}
+                                {section.label}{badge(section)}
                             </NavLink>
                         ))}
                         <div className="mt-10 flex flex-wrap items-baseline gap-x-6 gap-y-3 border-t border-rule pt-6">{account(true)}</div>

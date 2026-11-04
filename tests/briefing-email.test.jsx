@@ -16,7 +16,7 @@ import {WithSession} from "./session.jsx";
 vi.setConfig({testTimeout: 20000});
 
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    BriefingApi: {getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
+    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
         {url: 'https://cdn.example/first.jpg', source: 'media1.fr'}, {url: 'https://cdn.example/other.jpg', source: 'kicker.de'},
     ]}))},
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},

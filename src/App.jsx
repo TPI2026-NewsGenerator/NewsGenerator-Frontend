@@ -14,6 +14,8 @@ import {ProfilePage} from "@/pages/Profile.jsx";
 import {SettingsPage} from "@/pages/Settings.jsx";
 import {FollowingPage} from "@/pages/Following.jsx";
 import {EntityPage} from "@/pages/Entity.jsx";
+import {AffairsPage} from "@/pages/Affairs.jsx";
+import {AffairDetailPage} from "@/pages/AffairDetail.jsx";
 import {NamePage} from "@/pages/Name.jsx";
 import {Toaster} from "@/components/ui/overlay.jsx";
 
@@ -22,6 +24,8 @@ function App() {
         <>
             <Routes>
                 <Route path="/briefing" element={<BriefingPage/>}/>
+                <Route path="/affairs" element={<AffairsPage/>}/>
+                <Route path="/affairs/:id" element={<AffairDetailPage/>}/>
                 <Route path="/profile" element={<ProfilePage/>}/>
                 <Route path="/search" element={<SearchPage/>}/>
                 <Route path="/following" element={<FollowingPage/>}/>

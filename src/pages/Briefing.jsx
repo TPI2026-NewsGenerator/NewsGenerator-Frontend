@@ -143,6 +143,20 @@ export const BriefingPage = () => {
         return () => clearTimeout(timer);
     }, [briefing, expired]);
 
+    // the cards that are one affair, asked once the briefing is ready: the AI names each (a few seconds), the cards
+    // show it when it answers. A failure leaves the cards as they are
+    const [affairs, setAffairs] = useState({});
+    const readyId = briefing?.status === 'ready' ? briefing.id : null;
+    useEffect(() => {
+        setAffairs({});
+        if (readyId === null) return undefined;
+        let current = true;
+        BriefingApi.affairs(readyId)
+            .then(data => { if (current && !data.error) setAffairs(data.affairs ?? {}); })
+            .catch(() => {});
+        return () => { current = false; };
+    }, [readyId]);
+
     const start = async () => {
         setError(null);
         const data = await BriefingApi.start(hours, size);
@@ -309,6 +323,7 @@ export const BriefingPage = () => {
                                           analysis={briefing.analysis?.cards?.[item.storyId]} analysisModel={briefing.analysis?.model}
                                           analysisPending={briefing.analysis?.status === 'running'
                                               && (briefing.analysis.picked ?? []).some(entry => entry.storyId === item.storyId)}
+                                          affair={affairs[item.storyId]} briefingId={briefing.id}
                                           onVote={item.imported ? undefined : value => vote(item.storyId, value)}
                                           onRemove={item.imported && mail ? () => removeNews(item.storyId) : undefined}
                                           onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}

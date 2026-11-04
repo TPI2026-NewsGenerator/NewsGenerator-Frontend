@@ -14,7 +14,7 @@ import {MemoryRouter} from "react-router-dom";
 import {WithSession} from "./session.jsx";
 
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    BriefingApi: {getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(), following: vi.fn(), addNews: vi.fn(), pictures: vi.fn(async () => [])},
+    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(), following: vi.fn(), addNews: vi.fn(), pictures: vi.fn(async () => [])},
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},
 }));
 const entities = vi.hoisted(() => ({list: vi.fn()}));
