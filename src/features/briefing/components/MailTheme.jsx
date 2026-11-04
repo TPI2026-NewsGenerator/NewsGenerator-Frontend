@@ -16,7 +16,7 @@ const CHOICES = {
 
 // theme: 'light' or 'dark'; onChange(theme)
 export const MailTheme = ({theme, onChange, disabled = false}) => (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-2">
         <p className="kicker">E-mail colours</p>
         {/* one of them always chosen, light at first */}
         <ToggleGroup.Root type="single" value={theme} disabled={disabled} onValueChange={value => value && onChange(value)}

@@ -406,7 +406,7 @@ export const BriefingPage = () => {
     // its days and cards, kept from a briefing to the next, in a panel the pill opens: beside the tabs and the
     // way to read, they took the toolbar to two lines on a laptop (the user, 01.11.2026)
     const next = profile !== null && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
             <SettingsPill label={`${spanOf(hours)} · ${size} cards`} title="Next briefing"
                           ariaLabel={`Next briefing: the news of the last ${spanOf(hours)}, ${size} cards. Change`}>
                 <BriefingWindow hours={hours} onChange={setChosen} disabled={running}/>
@@ -459,7 +459,7 @@ export const BriefingPage = () => {
                     <Toolbar>
                         {tabs}
                         {reading}
-                        {tab === 'briefing' && (tools || next) && <div className="flex items-center gap-3 md:ml-auto">{tools}{next}</div>}
+                        {tab === 'briefing' && (tools || next) && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-2 md:ml-auto">{tools}{next}</div>}
                     </Toolbar>
                 )}
 

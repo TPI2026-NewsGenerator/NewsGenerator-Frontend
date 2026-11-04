@@ -17,7 +17,7 @@ const WAYS_TIP = 'Bullet points: the 3 most important sentences of the article. 
 
 // format: the one chosen; onChange(format); label: what it chooses, the reading of the page by default
 export const BriefingFormat = ({format, onChange, label = 'Read as', disabled = false}) => (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-2">
         <p className="kicker">
             {label}
             <InfoTip label={label}>{WAYS_TIP}</InfoTip>

@@ -187,21 +187,6 @@ describe('the story chosen in the list', () => {
         expect(everyStory()).toBeInTheDocument();
     });
 
-    // on a phone the three frames are tabs (jsdom has no width: the tabs are in the page, hidden by the width of the screen)
-    it('should open the tab of what the story carries when it is chosen in the list, on a phone', async () => {
-        await open();
-        fireEvent.click(screen.getByRole('tab', {name: 'Order'}));
-        expect(screen.getByRole('tab', {name: 'Order'})).toHaveAttribute('aria-selected', 'true');
-        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
-        expect(screen.getByRole('tab', {name: 'Edit'})).toHaveAttribute('aria-selected', 'true');
-        expect(carries('Second story')).toBeInTheDocument();
-        // and "all the stories" too
-        fireEvent.click(screen.getByRole('tab', {name: 'Order'}));
-        fireEvent.click(screen.getByRole('button', {name: /All the stories/}));
-        expect(screen.getByRole('tab', {name: 'Edit'})).toHaveAttribute('aria-selected', 'true');
-        expect(everyStory()).toBeInTheDocument();
-    });
-
     // the frame of the e-mail is scrolled to the story, a line drawn around it; jsdom draws nothing, so the document of the frame is faked
     it('should show the story in the e-mail: scrolled to, a line around it, and the e-mail from its top for every story', async () => {
         await open();
@@ -325,6 +310,151 @@ describe('the e-mail as it will be sent, beside the editor', () => {
         fireEvent.click(within(everyStory()).getByRole('button', {name: 'Short'}));
         expect(await screen.findByText('The AI is busy', {}, {timeout: 4000})).toBeInTheDocument();
         expect(screen.getByTitle('The e-mail as it will be sent')).toBe(frame);
+    });
+});
+
+// on a phone the e-mail is shown alone, the list of the stories and what the story carries closed, each opening from its side over 90% of
+// the screen, the e-mail dimmed beside it (the user, 05.11.2026)
+describe('the editor of the e-mail, three frames on a phone', () => {
+    const wide = window.matchMedia;
+    beforeEach(() => {
+        window.matchMedia = query => ({matches: query === '(max-width: 767px)', media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}});
+    });
+    afterEach(() => {
+        window.matchMedia = wide;
+    });
+    const stories = () => screen.queryByRole('region', {name: 'The stories'});
+    const carried = () => screen.queryByRole('region', {name: 'What the e-mail carries'});
+
+    it('should show the e-mail alone at first, the list of the stories and what they carry both closed', async () => {
+        await open();
+        expect(stories()).toBeNull();
+        expect(carried()).toBeNull();
+        expect(screen.queryByRole('navigation', {name: 'The stories of the e-mail, in their order'})).toBeNull();
+        expect(screen.queryByRole('group', {name: /carries in the e-mail/})).toBeNull();
+        expect(await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Stories'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Edit'})).toBeInTheDocument();
+        // no tab to choose between frames any more
+        expect(screen.queryByRole('tablist')).toBeNull();
+    });
+
+    it('should open the list of the stories from the left over 90% of the screen, and close it with its button', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Stories'}));
+        const list = within(stories());
+        expect(list.getByRole('navigation', {name: 'The stories of the e-mail, in their order'})).toBeInTheDocument();
+        expect(list.getByRole('button', {name: 'Edit “First story” in the e-mail'})).toBeInTheDocument();
+        // its own title and way back, 90% of the width, on the left
+        expect(stories().className).toMatch(/w-\[90%\]/);
+        expect(stories().className).toMatch(/left-0/);
+        fireEvent.click(screen.getByRole('button', {name: 'Close the stories'}));
+        expect(stories()).toBeNull();
+    });
+
+    it('should close a frame with a tap on the e-mail beside it', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Stories'}));
+        fireEvent.click(document.querySelector('[data-drawer-backdrop]'));
+        expect(stories()).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit'}));
+        expect(carried()).not.toBeNull();
+        fireEvent.click(document.querySelector('[data-drawer-backdrop]'));
+        expect(carried()).toBeNull();
+    });
+
+    it('should close the list on the e-mail when a story is chosen, which then is the one the frame of its blocks shows', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Stories'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+        expect(stories()).toBeNull();
+        // the e-mail is the one in view, with the story chosen in it
+        expect(await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000})).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit'}));
+        expect(within(carried()).getByRole('group', {name: 'What “Second story” carries in the e-mail'})).toBeInTheDocument();
+    });
+
+    it('should open what the e-mail carries from the right over 90% of the screen: every story at first, and the blocks put on or off from there', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Edit'}));
+        expect(carried().className).toMatch(/w-\[90%\]/);
+        expect(carried().className).toMatch(/right-0/);
+        expect(within(carried()).getByRole('group', {name: 'What every story carries in the e-mail'})).toBeInTheDocument();
+        fireEvent.click(within(carried()).getByRole('button', {name: 'Everything'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Close what the e-mail carries'}));
+        expect(carried()).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+        expect(lastBlocks()[1].affair).toBe(true);
+    });
+
+    it('should keep the address and the button to send under the e-mail', async () => {
+        await open();
+        expect(screen.getByLabelText(/Send the 2 stories to/)).toHaveValue('reader@example.org');
+        expect(screen.getByRole('button', {name: 'Send'})).toBeInTheDocument();
+    });
+});
+
+// on a phone eleven columns do not fit (the user, 05.11.2026): a card for each story, its blocks as buttons
+describe('the editor of the e-mail, matrix on a phone', () => {
+    const wide = window.matchMedia;
+    beforeEach(() => {
+        localStorage.setItem('newsgenerator.mail-editor', 'matrix');
+        window.matchMedia = query => ({matches: query === '(max-width: 767px)', media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}});
+    });
+    afterEach(() => {
+        window.matchMedia = wide;
+    });
+
+    it('should have a card for each story and no table, the blocks of the story as buttons that are on or off', async () => {
+        await open();
+        expect(screen.queryByRole('table')).toBeNull();
+        const cards = within(screen.getByRole('list', {name: 'What each story carries in the e-mail'})).getAllByRole('listitem');
+        expect(cards).toHaveLength(2);
+        expect(within(cards[0]).getByRole('button', {name: 'Contested, First story'})).toHaveAttribute('aria-pressed', 'true');
+        expect(within(cards[0]).getByRole('button', {name: 'This affair, First story'})).toHaveAttribute('aria-pressed', 'false');
+        // the second story has none of those blocks: its card has no button for them
+        expect(within(cards[1]).queryByRole('button', {name: 'Contested, Second story'})).toBeNull();
+        expect(within(cards[1]).getByRole('button', {name: 'Picture, Second story'})).toBeInTheDocument();
+    });
+
+    it('should put a block on or off with its button, and send it', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Coverage, First story'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Angles, First story'}));
+        expect(screen.getByRole('button', {name: 'Coverage, First story'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: 'Angles, First story'})).toHaveAttribute('aria-pressed', 'false');
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+        expect(lastBlocks()[1]).toEqual({...DEFAULT_BLOCKS, coverage: true, angles: false});
+    });
+
+    it('should open what the story carries inside its card, and close it with a second tap', async () => {
+        await open();
+        const edit = screen.getByRole('button', {name: 'Edit “First story” in the e-mail'});
+        fireEvent.click(edit);
+        const card = edit.closest('li');
+        expect(within(card).getByRole('group', {name: 'What “First story” carries in the e-mail'})).toBeInTheDocument();
+        expect(within(screen.getAllByRole('listitem')[1]).queryByRole('group', {name: /carries in the e-mail/})).toBeNull();
+        fireEvent.click(edit);
+        expect(within(card).queryByRole('group', {name: /carries in the e-mail/})).toBeNull();
+    });
+
+    it('should set every story with a preset, and have the e-mail as it will be sent in a tab of its own', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Everything'}));
+        expect(screen.getByRole('button', {name: 'This affair, First story'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('tab', {name: 'Stories'})).toHaveAttribute('aria-selected', 'true');
+        fireEvent.click(screen.getByRole('tab', {name: 'Preview'}));
+        expect(await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000})).toHaveAttribute('srcdoc', '<p>The e-mail</p>');
+    });
+
+    it('should leave the order of the stories to the arrows of their cards', async () => {
+        await open();
+        fireEvent.click(screen.getByRole('button', {name: 'Move “First story” down'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+        expect(BriefingApi.email.mock.calls.at(-1)[1]).toEqual([2, 1]);
     });
 });
 
