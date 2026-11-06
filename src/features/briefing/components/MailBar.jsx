@@ -13,7 +13,7 @@ import {MailMatrix} from "@/features/briefing/components/MailMatrix.jsx";
 import {keptLayout} from "@/features/briefing/mailEditorLayout.js";
 import {useMailDraft} from "@/features/briefing/useMailDraft.js";
 
-// stories: the cards ticked, in the order of the briefing, [{storyId, title, titleAsPublished, titleLanguage, titleTranslated, number, thumbnail,
+// stories: the cards ticked, in the order of the briefing, [{storyId, title, titleAsPublished, titleProposal, titleLanguage, titleTranslated, number, thumbnail,
 // thumbnailSource, countries, ai, analysis, contested, angles, official, names, hedged, media, affair, hasArticles}] (number: their place in the
 // briefing; countries: the codes ISO 3166-1 the server found for them; ai: the points and the summary written by the AI, see BriefingCard
 // AiVersion; own: {points, digest} the same of the article as published, its paragraphs split by a blank line); accountEmail: the address of

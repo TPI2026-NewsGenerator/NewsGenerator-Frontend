@@ -8,9 +8,11 @@
 //
 
 import {useEffect, useMemo, useState} from "react";
+import {aiFirstPreference} from "@/features/briefing/aiFirst.js";
 import {FORMATS} from "@/features/briefing/formats.js";
 import {DEFAULT_BLOCKS, hasBlock, SERVER_BLOCKS} from "@/features/briefing/mailBlocks.js";
 import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooSmall, usePictureSizes} from "@/features/briefing/mailPictures.js";
+import {usePreference} from "@/features/preferences/usePreference.js";
 
 // one address, as the server checks it (server/services/utils/account-rules.js)
 const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
@@ -50,7 +52,8 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
     const [choices, setChoices] = useState({}); // storyId -> the picture chosen (see MailPicture)
     const [titles, setTitles] = useState({});   // storyId -> the title written for the e-mail
     const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official, why, next, timeline}: the places taken out
-    const [inAi, setInAi] = useState({});       // storyId -> true: sent in its AI version
+    const [inAi, setInAi] = useState({});       // storyId -> true or false: what the reader chose for it, else the settings' (aiFirst)
+    const [aiFirst] = usePreference(aiFirstPreference);
     const [texts, setTexts] = useState({});     // storyId -> {way: the sentences as the reader changes them}
     const [countries, setCountries] = useState({});     // storyId -> the country codes chosen, when they are not the ones found
     const [blocks, setBlocks] = useState({});           // storyId -> the blocks changed (see mailBlocks.js)
@@ -129,9 +132,11 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
 
     // the way the e-mail sends the sentences in: the key passages for a briefing that has them only
     const shown = way ?? 'passages';
+    // whether a story is sent in its AI version: what the reader chose, else the settings' (on at first), when it has one in that way
+    const aiOn = (story) => Boolean(inAi[story.storyId] ?? aiFirst) && Boolean(aiTextOf(story, way));
     // the sentences the e-mail sends of a story when the reader does not change them: its AI version when
     // asked for, else the article's own
-    const sentOf = (story) => inAi[story.storyId] && aiTextOf(story, way) ? [aiTextOf(story, way)].flat() : ownTextOf(story, shown);
+    const sentOf = (story) => aiOn(story) ? [aiTextOf(story, way)].flat() : ownTextOf(story, shown);
     // the sentences the reader wrote, when they are not the ones it would send; left empty, its own
     const ownText = (story) => {
         const text = texts[story.storyId]?.[shown];
@@ -199,7 +204,7 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
             choice?.auto && 'its picture too small, a sharper one of the story instead',
             choice && choice.kind !== 'none' && !choice.auto && 'picture changed',
             takenOut(removed[story.storyId]),
-            inAi[story.storyId] && aiTextOf(story, way) && 'AI version',
+            aiOn(story) && 'AI version',
         ].filter(Boolean).join(' · ');
     };
 
@@ -213,14 +218,14 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
             titles: Object.fromEntries(ordered.map(story => [story.storyId, ownTitle(story)]).filter(([, title]) => title)),
             removed: Object.fromEntries(ordered.filter(story => takenOut(removed[story.storyId])).map(story => [story.storyId, removed[story.storyId]])),
             way: way ?? undefined,
-            ai: ordered.filter(story => inAi[story.storyId] && aiTextOf(story, way)).map(story => story.storyId),
+            ai: ordered.filter(aiOn).map(story => story.storyId),
             texts: Object.fromEntries(ordered.map(story => [story.storyId, ownText(story)]).filter(([, paragraphs]) => paragraphs)),
             countries: Object.fromEntries(ordered.filter(story => countries[story.storyId]).map(story => [story.storyId, countries[story.storyId]])),
             theme,
             blocks: Object.fromEntries(ordered.map(story => [story.storyId, blocksOf(story)])),
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps -- the states it is made of
-    }, [ordered.map(story => story.storyId).join(','), choices, sizes, galleries, titles, removed, way, inAi, texts, countries, theme, blocks]);
+    }, [ordered.map(story => story.storyId).join(','), choices, sizes, galleries, titles, removed, way, inAi, aiFirst, texts, countries, theme, blocks]);
 
     // the e-mail sent: the address checked, the weight of the images too; onSend(address, payload) answers true when it went
     const submit = async (event, onSend) => {
@@ -242,7 +247,7 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
 
     return {
         to, setTo, way, setWay, theme, setTheme, ordered, count: stories.length, selected, select, move, open, close: () => setTo(null),
-        noteOf, choiceOf, choose, galleries, titles, setTitle, ownTitle, removed, setRemovedOf, inAi, setAi, texts, shown, sentOf, ownText, writeText,
+        noteOf, choiceOf, choose, galleries, titles, setTitle, ownTitle, removed, setRemovedOf, aiOn, setAi, texts, shown, sentOf, ownText, writeText,
         countries, countriesOf, chooseCountries, blocksOf, isOn, setBlock, applyPreset, payload, submit, error, picturesError, shownPicture,
     };
 };

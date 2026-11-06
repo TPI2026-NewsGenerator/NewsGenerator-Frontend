@@ -23,13 +23,16 @@ const AHEAD = '600px';
 // translate({news, titles, excerpts?}) is the request to the server, answering [{url, language, title, description}]
 // and, for the passages asked, [{url, text, language, excerpt}]. requestExcerpt(url, text) asks the words of a
 // description around a name followed (the page of what a profile follows), getExcerpt(url, text) answers it
-// like get. known: [[url, translation | null]] the translations of this search already had (see keptSearch.js),
-// answered without asking; known() gives them back
+// like get. A news asked with its terms (the names the page marks in it, see requestExcerpt and request) gets the places of them in
+// the translation: 'marks' {title, description} on the translation, 'excerptMarks' on a passage (the page of what a profile follows
+// marks the names in a text translated as in a text as written). known: [[url, translation | null]] the translations of this
+// search already had (see keptSearch.js), answered without asking; known() gives them back
 export const createTranslator = (language, translate, known = []) => {
     const results = new Map(known);
     const listeners = new Set();
     const waiting = {news: new Set(), titles: new Set(), excerpts: new Map()};
     const passages = new Map();
+    const termsOf = new Map();      // url -> the names the page marks in its news
     const keyOf = (url, text) => `${url}\n${text}`;
     // each news asked, true when its description was asked too: the fact of a card in its affair asks
     // the title of the card first, the card must still ask its description
@@ -48,7 +51,10 @@ export const createTranslator = (language, translate, known = []) => {
         excerpts.forEach(([key]) => waiting.excerpts.delete(key));
         if (waiting.news.size + waiting.titles.size + waiting.excerpts.size > 0) timer = setTimeout(send, 0);
 
-        const translations = (await translate({news, titles, ...(excerpts.length > 0 ? {excerpts: excerpts.map(([, passage]) => passage)} : {})}).catch(() => [])) ?? [];
+        // the names of each news asked, whatever it is asked for
+        const terms = Object.fromEntries([...news, ...titles, ...excerpts.map(([, passage]) => passage.url)].filter(url => termsOf.has(url)).map(url => [url, termsOf.get(url)]));
+        const translations = (await translate({news, titles, ...(excerpts.length > 0 ? {excerpts: excerpts.map(([, passage]) => passage)} : {}),
+            ...(Object.keys(terms).length > 0 ? {terms} : {})}).catch(() => [])) ?? [];
         const byUrl = new Map(translations.filter(translation => translation.excerpt === undefined).map(translation => [translation.url, translation]));
         const byPassage = new Map(translations.filter(translation => translation.excerpt !== undefined).map(translation => [keyOf(translation.url, translation.text), translation]));
         // a news without a translation shows its own text, and is not asked again
@@ -59,7 +65,8 @@ export const createTranslator = (language, translate, known = []) => {
 
     return {
         language,
-        request: (url, withDescription) => {
+        request: (url, withDescription, terms = null) => {
+            if (terms?.length > 0) termsOf.set(url, terms);
             if (asked.has(url) && (asked.get(url) || !withDescription)) return;
             asked.set(url, withDescription);
             if (withDescription) waiting.titles.delete(url);
@@ -67,7 +74,8 @@ export const createTranslator = (language, translate, known = []) => {
             if (!timer) timer = setTimeout(send, WAIT_MS);
         },
         get: (url) => results.get(url),
-        requestExcerpt: (url, text) => {
+        requestExcerpt: (url, text, terms = null) => {
+            if (terms?.length > 0) termsOf.set(url, terms);
             const key = keyOf(url, text);
             if (passages.has(key) || waiting.excerpts.has(key)) return;
             waiting.excerpts.set(key, {url, text});
@@ -88,10 +96,11 @@ export const TranslationContext = createContext(null);
 const nothing = () => () => {};
 
 // The translation of a news written in another language than the one searched, asked when its element
-// (ref) comes near the screen: {ref, translation, excerpt}. The card shows the title as written under it.
+// (ref) comes near the screen: {ref, translation, excerpt, excerptMarks}. The card shows the title as written under it.
 // excerpt: the words of its description around a name followed that the row shows (the page of what a profile
-// follows), asked with the title; its translation answered in 'excerpt' (a text), null before and without one
-export const useTranslation = (url, language, {withDescription = true, excerpt = null} = {}) => {
+// follows), asked with the title; its translation answered in 'excerpt' (a text), null before and without one.
+// terms: the names the page marks in the news: the places of them in the translation come in translation.marks and excerptMarks
+export const useTranslation = (url, language, {withDescription = true, excerpt = null, terms = null} = {}) => {
     const translator = useContext(TranslationContext);
     const needed = Boolean(translator && url && language && language !== translator.language);
     const ref = useRef(null);
@@ -99,8 +108,8 @@ export const useTranslation = (url, language, {withDescription = true, excerpt =
     useEffect(() => {
         if (!needed || !ref.current) return;
         const ask = () => {
-            translator.request(url, withDescription);
-            if (excerpt) translator.requestExcerpt(url, excerpt);
+            translator.request(url, withDescription, terms);
+            if (excerpt) translator.requestExcerpt(url, excerpt, terms);
         };
         if (typeof IntersectionObserver === 'undefined') {
             ask();
@@ -113,9 +122,9 @@ export const useTranslation = (url, language, {withDescription = true, excerpt =
         }, {rootMargin: AHEAD});
         observer.observe(ref.current);
         return () => observer.disconnect();
-    }, [needed, translator, url, withDescription, excerpt]);
+    }, [needed, translator, url, withDescription, excerpt, terms]);
 
     const translation = useSyncExternalStore(needed ? translator.subscribe : nothing, () => needed ? translator.get(url) ?? null : null);
-    const passage = useSyncExternalStore(needed ? translator.subscribe : nothing, () => needed && excerpt ? translator.getExcerpt(url, excerpt)?.excerpt ?? null : null);
-    return {ref, translation, excerpt: passage};
+    const passage = useSyncExternalStore(needed ? translator.subscribe : nothing, () => needed && excerpt ? translator.getExcerpt(url, excerpt) ?? null : null);
+    return {ref, translation, excerpt: passage?.excerpt ?? null, excerptMarks: passage?.excerptMarks ?? null};
 };

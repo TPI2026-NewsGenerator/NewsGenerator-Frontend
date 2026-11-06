@@ -518,6 +518,8 @@ export const BriefingPage = () => {
                                      ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
                                          // the title as the medium wrote it, when the card's was shortened or rewritten (the editor offers it), and its language
                                          titleAsPublished: item.titleAsPublished ?? null, titleLanguage: item.language ?? null, titleTranslated: Boolean(item.titleTranslation),
+                                         // the rewrite the AI wrote when the card was made, that the checks refused: the editor shows it with what they found
+                                         titleProposal: item.titleProposal ?? null,
                                          thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                          countries: item.countries ?? [],
                                          contested: item.contested ?? [],

@@ -6,10 +6,11 @@
 //
 
 import '@testing-library/jest-dom';
-import {describe, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
+import {aiFirstPreference} from '@/features/briefing/aiFirst.js';
 import {coverageLabel} from '@/features/briefing/corroboration.js';
 
 // what lies around the news of a card is behind one strip of buttons, none open at first (the user chose it, 05.11.2026): a test opens the one it reads
@@ -393,7 +394,7 @@ describe('BriefingCard with the blocks of a preset', () => {
         // the badges, and the notes they lead to, stay
         expect(screen.getByText('Told by 3 media')).toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Contested'})).toBeInTheDocument();
-        expect(screen.getByRole('button', {name: 'Official source'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Officially confirmed'})).toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Unconfirmed'})).toBeInTheDocument();
     });
 
@@ -410,7 +411,7 @@ describe('BriefingCard with the blocks of a preset', () => {
         expect(screen.queryByRole('button', {name: 'Contested'})).toBeNull();
         expect(screen.queryByText(/Infantino denies/)).toBeNull();
         expect(screen.queryByRole('button', {name: 'Unconfirmed'})).toBeNull();
-        expect(screen.getByRole('button', {name: 'Official source'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Officially confirmed'})).toBeInTheDocument();
     });
 
     it('should add the picture, the countries, who it is about and the analysis in "Standard", and the other tabs in "Everything"', () => {
@@ -429,7 +430,22 @@ describe('BriefingCard with the blocks of a preset', () => {
 describe('BriefingCard, the AI version', () => {
     const withAi = (changes = {}) => item({points: 'Premier point.\n\nSecond point.', ai: {points: ['Un point de l’IA.'], summary: 'Un résumé de l’IA.', model: 'gemma4:31b'}, ...changes});
 
-    it('should offer it as a switch in the row of the title of the sentences, off at first', () => {
+    // on at first (the user, 06.11.2026); a reader who turned it off in the settings has the sentences of the article alone at first
+    const aiOffInSettings = () => aiFirstPreference.keep(false);
+    afterEach(() => localStorage.removeItem('newsgenerator.ai-first'));
+
+    it('should show it under the sentences from the start, as the settings have it, on at first', () => {
+        render(<BriefingCard item={withAi()} format="points"/>);
+        expect(screen.getByRole('switch', {name: 'AI version'})).toHaveAttribute('aria-checked', 'true');
+        expect(screen.getByText('Written by the AI')).toBeInTheDocument();
+        expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
+        // the card can still go back to the sentences of the article, alone
+        fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
+        expect(screen.queryByText('Written by the AI')).toBeNull();
+    });
+
+    it('should offer it as a switch in the row of the title of the sentences, off when the settings have it off', () => {
+        aiOffInSettings();
         render(<BriefingCard item={withAi()} format="points"/>);
         const toggle = screen.getByRole('switch', {name: 'AI version'});
         expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -443,6 +459,7 @@ describe('BriefingCard, the AI version', () => {
     });
 
     it('should show the AI version under the sentences when the switch is on, and take it away when it is off', () => {
+        aiOffInSettings();
         render(<BriefingCard item={withAi()} format="points"/>);
         fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
         expect(screen.getByRole('switch', {name: 'AI version'})).toHaveAttribute('aria-checked', 'true');
@@ -458,6 +475,7 @@ describe('BriefingCard, the AI version', () => {
     });
 
     it('should show the summary of the AI for the summary, and no switch for the key passages, which the AI did not write again', () => {
+        aiOffInSettings();
         const {rerender} = render(<BriefingCard item={withAi({digest: 'Un digest.'})} format="digest"/>);
         fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
         expect(screen.getByText('Un résumé de l’IA.')).toBeInTheDocument();
@@ -537,9 +555,9 @@ describe('BriefingCard official source', () => {
         render(<BriefingCard item={item({official: [{party: 'FPF', title: 'A FPF publicou um comunicado.', translation: 'The FPF published a statement.',
             language: 'pt', url: 'https://www.abola.pt/1', source: 'abola.pt', channel: 'reported', publishedAt: null}]})}/>);
         // a badge under the title, the statement in the column beside the card
-        expect(screen.getByRole('button', {name: 'Official source'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Officially confirmed'})).toBeInTheDocument();
         // green, here and over the statement in the column beside the card
-        expect(screen.getByRole('button', {name: 'Official source'})).toHaveClass('text-official');
+        expect(screen.getByRole('button', {name: 'Officially confirmed'})).toHaveClass('text-official');
         expect(screen.getByText('Official sources', {selector: 'p'})).toHaveClass('!text-official');
         expect(screen.getByText(/FPF said it, reported by/)).toBeInTheDocument();
         expect(screen.getByText('“The FPF published a statement.”')).toBeInTheDocument();

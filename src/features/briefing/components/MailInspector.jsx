@@ -93,12 +93,12 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                     </div>
                 )}
                 {/* the AI proposes, the reader reads it against the title and uses it or not */}
-                {onNeutralTitle && <MailNeutralTitle story={story} onAsk={onNeutralTitle} disabled={disabled} onUse={title => draft.setTitle(id, title)}/>}
+                {onNeutralTitle && <MailNeutralTitle key={id} story={story} onAsk={onNeutralTitle} disabled={disabled} onUse={title => draft.setTitle(id, title)}/>}
             </Section>
 
             <Section label="Text" open={open.text} onToggle={() => toggle('text')}>
                 {aiText ? (
-                    <Checkbox checked={Boolean(draft.inAi[id])} className="mb-2 text-[0.8125rem]" onChange={event => draft.setAi(id, event.target.checked)}>
+                    <Checkbox checked={draft.aiOn(story)} className="mb-2 text-[0.8125rem]" onChange={event => draft.setAi(id, event.target.checked)}>
                         Send its {WAY_NAMES[shown]} in the AI version
                     </Checkbox>
                 ) : way && (
@@ -114,13 +114,13 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                 <MailTextItems id={id} way={shown} label={`Its ${WAY_NAMES[shown]} in the e-mail`} value={draft.texts[id]?.[shown] ?? editable(draft.sentOf(story), shown)}
                                describedBy={`mail-text-help-${id}`} disabled={disabled} onChange={text => draft.writeText(id, text)}/>
                 <p id={`mail-text-help-${id}`} className="caption mt-1">
-                    {draft.inAi[id] && aiText ? 'The AI version' : 'The article’s own sentences'}
+                    {draft.aiOn(story) ? 'The AI version' : 'The article’s own sentences'}
                     {draft.ownText(story) ? ', changed by you' : ', as the e-mail sends them'}.
                     {shown === 'points' ? ' A box for each point: Enter adds one under it.' : ' A box for each passage; the e-mail puts […] between two.'} Left empty, its own are sent.
                 </p>
                 {draft.ownText(story) && (
                     <Button size="sm" variant="link" className="mt-1" onClick={() => draft.writeText(id, undefined)}>
-                        Back to {draft.inAi[id] && aiText ? 'the AI version' : 'the article’s sentences'}
+                        Back to {draft.aiOn(story) ? 'the AI version' : 'the article’s sentences'}
                     </Button>
                 )}
             </Section>
@@ -143,7 +143,7 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                      open={open.contested} onToggle={() => toggle('contested')}>
                 <ContestedLines story={story} removed={removedOf} onChange={next => draft.setRemovedOf(id, next)}/>
             </Section>
-            <Section label="Official source" checked={blocks.official} onChange={set('official')} disabled={!has('official')} hint={none('official')}
+            <Section label="Officially confirmed" checked={blocks.official} onChange={set('official')} disabled={!has('official')} hint={none('official')}
                      open={open.official} onToggle={() => toggle('official')}>
                 <OfficialLines story={story} removed={removedOf} onChange={next => draft.setRemovedOf(id, next)}/>
             </Section>

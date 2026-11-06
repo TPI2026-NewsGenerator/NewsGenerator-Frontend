@@ -80,7 +80,7 @@ describe('the editor of the e-mail, three frames', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
         const first = within(carries('First story'));
         expect(first.getByRole('checkbox', {name: 'Contested'})).toBeChecked();
-        expect(first.getByRole('checkbox', {name: 'Official source'})).toBeChecked();
+        expect(first.getByRole('checkbox', {name: 'Officially confirmed'})).toBeChecked();
         expect(first.getByRole('checkbox', {name: 'Unconfirmed'})).toBeChecked();
         expect(first.getByRole('checkbox', {name: 'Told by 3 media'})).toBeChecked();
         expect(first.getByRole('checkbox', {name: 'This affair'})).not.toBeChecked();
@@ -94,7 +94,7 @@ describe('the editor of the e-mail, three frames', () => {
         // the second has nothing but its text: its boxes are there, none to tick
         fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
         const second = within(carries('Second story'));
-        for (const name of ['Contested', 'Official source', 'Unconfirmed', 'Who it is about', 'AI analysis', 'Angles', 'This affair', 'Coverage']) {
+        for (const name of ['Contested', 'Officially confirmed', 'Unconfirmed', 'Who it is about', 'AI analysis', 'Angles', 'This affair', 'Coverage']) {
             expect(second.getByRole('checkbox', {name})).toBeDisabled();
         }
 

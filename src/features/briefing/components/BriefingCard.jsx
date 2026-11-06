@@ -21,6 +21,8 @@ import {Checkbox} from "@/components/ui/field.jsx";
 import {Switch} from "@/components/ui/switch.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
+import {aiFirstPreference} from "@/features/briefing/aiFirst.js";
+import {usePreference} from "@/features/preferences/usePreference.js";
 import {countryNames} from "@/features/briefing/countries.js";
 import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx";
 import {AffairPanel, AffairRail} from "@/features/affairs/components/AffairSection.jsx";
@@ -72,7 +74,7 @@ const AiVersion = ({id, format, text, model, source}) => (
                 : <p>{text}</p>}
         </div>
         <p className="footnote mt-3">
-            Written by the AI ({model.replace(/:.*$/, '')}) from the article {source && <>of {source} </>}in its own words: it can get a
+            Written by the AI{model ? ` (${model.replace(/:.*$/, '')})` : ''} from the article {source && <>of {source} </>}in its own words: it can get a
             fact wrong. The article's sentences above are the reference.
         </p>
     </div>
@@ -281,7 +283,7 @@ const Glance = ({item, onOpen, onNote, on = () => true}) => {
                 </span>
             )}
             {contested > 0 && <Badge icon={<TriangleAlert aria-hidden className="size-3.5 shrink-0"/>} tone="warn" onClick={() => onNote('contested')}>{contested === 1 ? 'Contested' : `Contested (${contested})`}</Badge>}
-            {official > 0 && <Badge icon={<Megaphone aria-hidden className="size-3.5 shrink-0"/>} tone="official" onClick={() => onNote('official')}>{official === 1 ? 'Official source' : `${official} official sources`}</Badge>}
+            {official > 0 && <Badge icon={<Megaphone aria-hidden className="size-3.5 shrink-0"/>} tone="official" onClick={() => onNote('official')}>Officially confirmed</Badge>}
             {hedged && <Badge icon={<CircleHelp aria-hidden className="size-3.5 shrink-0"/>} tone="warn" onClick={() => onNote('unconfirmed')}>Unconfirmed</Badge>}
         </div>
     );
@@ -339,10 +341,13 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     const [asPublished, setAsPublished] = useState(false);
     // the AI version of the points or the summary, absent from the key passages and the briefings before 15.10.2026
     const aiText = format === 'points' ? item.ai?.points : format === 'digest' ? item.ai?.summary : null;
-    const [showAi, setShowAi] = useState(false);
+    // on at first, as the reader chose in the settings (aiFirst), until they switch this card
+    const [aiFirst] = usePreference(aiFirstPreference);
+    const [aiChosen, setAiChosen] = useState(null);
+    const showAi = aiChosen ?? aiFirst;
     // a switch in the row of the title of the sentences (the user, 06.11.2026: a link under them was not understood): put on, the AI version is shown under them
     const aiSwitch = paragraphs.length > 0 && aiText && (
-        <Switch checked={showAi} onCheckedChange={setShowAi} aria-controls={`ai-${item.storyId}`}
+        <Switch checked={showAi} onCheckedChange={setAiChosen} aria-controls={`ai-${item.storyId}`}
                 title="The version the AI wrote of these sentences, shown under them for you to compare">
             AI version
         </Switch>

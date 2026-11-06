@@ -89,3 +89,26 @@ describe('SettingsPage', () => {
         expect(refresh).not.toHaveBeenCalled();
     });
 });
+
+// the cards and the editor of the e-mail start on the AI version unless the reader turns it off (the user, 06.11.2026)
+describe('SettingsPage, the AI version', () => {
+    afterEach(() => {
+        localStorage.removeItem('newsgenerator.ai-first');
+        vi.clearAllMocks();
+    });
+
+    it('should start the cards on the AI version at first, and keep the reader\'s choice of the other', async () => {
+        const {aiFirstPreference} = await import('@/features/briefing/aiFirst.js');
+        renderPage();
+        const toggle = screen.getByRole('switch', {name: 'Start on the AI version'});
+        expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+        fireEvent.click(toggle);
+        expect(screen.getByRole('switch', {name: 'Start on the AI version'})).toHaveAttribute('aria-checked', 'false');
+        expect(aiFirstPreference.kept()).toBe(false);
+        expect(screen.getByText(/A card shows the article’s own sentences/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('switch', {name: 'Start on the AI version'}));
+        expect(aiFirstPreference.kept()).toBe(true);
+    });
+});

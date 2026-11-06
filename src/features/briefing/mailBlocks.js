@@ -3,7 +3,7 @@
 //  Date: 05.11.2026
 //  File: mailBlocks.js
 //  Description: What a story can carry in the e-mail, block by block (the user, 05.11.2026): the picture, the countries, the badges
-//               (told by, contested, official source, unconfirmed), who it is about, the AI analysis, the angles, the affair and
+//               (told by, contested, officially confirmed, unconfirmed), who it is about, the AI analysis, the angles, the affair and
 //               its coverage. Which of them a story has, which are on at first, and the presets that set them for every story
 //
 
@@ -14,7 +14,7 @@ export const BLOCKS = [
     {key: 'countries', label: 'Countries'},
     {key: 'media', label: 'Told by', badge: true},
     {key: 'contested', label: 'Contested', badge: true},
-    {key: 'official', label: 'Official source', badge: true},
+    {key: 'official', label: 'Officially confirmed', badge: true},
     {key: 'unconfirmed', label: 'Unconfirmed', badge: true},
     {key: 'names', label: 'Who it is about'},
     {key: 'analysis', label: 'AI analysis'},

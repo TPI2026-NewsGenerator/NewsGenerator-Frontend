@@ -10,6 +10,7 @@ import '@testing-library/jest-dom';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from "react-router-dom";
+import {aiFirstPreference} from "@/features/briefing/aiFirst.js";
 import {WithSession} from "./session.jsx";
 
 // each test renders the whole page and the bar of the e-mail: over the 5 s of the default on a machine that is busy
@@ -127,7 +128,30 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
         const story = carries('First story');
 
+        // the AI version is the one at first (the user, 06.11.2026), the article's sentences are one tick away
         expect(within(story).getByRole('group', {name: 'Its bullet points in the e-mail'})).toBeInTheDocument();
+        expect(within(story).getByRole('checkbox', {name: 'Send its bullet points in the AI version'})).toBeChecked();
+        expect(textsOf(story, 'Point')).toEqual(['Un point de l\'IA.']);
+        fireEvent.click(within(story).getByRole('checkbox', {name: 'Send its bullet points in the AI version'}));
+        expect(textsOf(story, 'Point')).toEqual(['Premier point.', 'Deuxième point.']);
+        localStorage.clear();
+    });
+
+    it('should start on the sentences of the article when the settings have the AI version off, and send the AI version only when ticked', async () => {
+        localStorage.clear();
+        aiFirstPreference.keep(false);
+        const item = {...BRIEFING.items[0], digest: 'Ein Digest.', points: 'Erster Punkt.\n\nZweiter Punkt.', pointsTranslation: 'Premier point.\n\nDeuxième point.', ai: {points: ['Un point de l\'IA.']}};
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        openView();
+        fireEvent.click(within(screen.getByRole('group', {name: 'Read as'})).getByRole('radio', {name: 'Bullet points'}));
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const story = carries('First story');
+
+        expect(within(story).getByRole('checkbox', {name: 'Send its bullet points in the AI version'})).not.toBeChecked();
         expect(textsOf(story, 'Point')).toEqual(['Premier point.', 'Deuxième point.']);
         fireEvent.click(within(story).getByRole('checkbox', {name: 'Send its bullet points in the AI version'}));
         expect(textsOf(story, 'Point')).toEqual(['Un point de l\'IA.']);
@@ -161,6 +185,8 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
     it('should send the bullet points, the summary or the key passages the reader wrote, their own when left as they are', async () => {
         localStorage.clear();
+        // the settings have the AI version off here: the box below is ticked by the reader
+        aiFirstPreference.keep(false);
         const item = {...BRIEFING.items[0], digest: 'Ein Digest.\n\nSein Ende.', points: 'Erster Punkt.', ai: {points: ['Un point de l\'IA.']}};
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item, BRIEFING.items[1]]}, mail: true});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
@@ -215,7 +241,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         localStorage.clear();
     }, 30000);
 
-    it('should forget the AI versions ticked when the e-mail is opened again', async () => {
+    it('should forget what the reader chose of the AI versions when the e-mail is opened again: back to the settings\'', async () => {
         localStorage.clear();
         const item = {...BRIEFING.items[0], digest: 'Ein Digest.', points: 'Erster Punkt.', pointsTranslation: 'Premier point.', ai: {points: ['Un point de l\'IA.']}};
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
@@ -226,13 +252,15 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        // on at first: the reader takes it off, cancels, and the e-mail opened again has it on
         fireEvent.click(screen.getByRole('checkbox', {name: 'Send its bullet points in the AI version'}));
+        expect(screen.getByRole('checkbox', {name: 'Send its bullet points in the AI version'})).not.toBeChecked();
         fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', [1], {}, {}, 'light', expect.any(Object)));
         localStorage.clear();
     });
 
@@ -604,8 +632,8 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
     // the AI proposes a neutral title, the reader reads it against the title of the card and uses it or not (the user, 03.11.2026)
     describe('neutral title', () => {
-        const openEditor = async (title = 'Incredible news! The council votes the budget') => {
-            const items = [{...card(1, title)}, {...card(2, 'Second story')}];
+        const openEditor = async (title = 'Incredible news! The council votes the budget', changes = {}) => {
+            const items = [{...card(1, title), ...changes}, {...card(2, 'Second story')}];
             BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
             render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
             await screen.findByText(title);
@@ -654,7 +682,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
             expect(screen.queryByText(/· title changed/)).toBeNull();
         });
 
-        it('should say when the title is neutral already, and when the AI changed what it says so nothing is shown', async () => {
+        it('should say when the title is neutral already, and when the AI wrote nothing', async () => {
             BriefingApi.neutralTitle.mockResolvedValueOnce({title: null, reason: 'same'});
             await openEditor('The council votes the budget');
             fireEvent.click(screen.getByRole('button', ASK));
@@ -662,7 +690,31 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
             BriefingApi.neutralTitle.mockResolvedValueOnce({title: null, reason: 'unsafe'});
             fireEvent.click(screen.getByRole('button', ASK));
-            expect(await screen.findByText(/changed what the title says, so it is not shown/)).toBeInTheDocument();
+            expect(await screen.findByText(/The AI wrote no neutral title for this one/)).toBeInTheDocument();
+            expect(screen.queryByRole('group', PROPOSAL)).toBeNull();
+        });
+
+        // the first card of a briefing of 6.11.2026: the proposal lost the "FA", the checks refused it and the button said nothing
+        it('should show a proposal the checks found something against, with what they found, and use it only when the reader says so', async () => {
+            BriefingApi.neutralTitle.mockResolvedValue({title: 'The council votes the budget', problem: 'name lost'});
+            await openEditor();
+            fireEvent.click(screen.getByRole('button', ASK));
+            const proposal = await screen.findByRole('group', PROPOSAL);
+            expect(within(proposal).getByRole('note')).toHaveTextContent('Check it before you use it: it leaves out a name of the title.');
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('Incredible news! The council votes the budget');
+            fireEvent.click(within(proposal).getByRole('button', {name: 'Use it anyway'}));
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('The council votes the budget');
+        });
+
+        it('should show the proposal the briefing was written with when the editor opens, with its warning, no button to press', async () => {
+            await openEditor('Incredible news! The council votes the budget', {titleProposal: {title: 'The council votes the budget', problem: 'second opinion'}});
+            const proposal = screen.getByRole('group', PROPOSAL);
+            expect(proposal).toHaveTextContent('The council votes the budget');
+            expect(within(proposal).getByRole('note')).toHaveTextContent('a second reading by the AI says it may not tell exactly the same fact');
+            expect(BriefingApi.neutralTitle).not.toHaveBeenCalled();
+            // not applied by itself: the reader reads it first
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('Incredible news! The council votes the budget');
+            fireEvent.click(within(proposal).getByRole('button', {name: 'Keep the title'}));
             expect(screen.queryByRole('group', PROPOSAL)).toBeNull();
         });
 
@@ -710,7 +762,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
 
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
-        showSection('Official source');
+        showSection('Officially confirmed');
         const aside = screen.getByRole('group', {name: 'The official sources of “First story”'});
         expect(aside).toHaveTextContent('UEFA said it: Čeferin seeks final term');
         fireEvent.click(aside.querySelector('input[type=checkbox]'));

@@ -12,6 +12,7 @@ import {Button} from "@/components/ui/button.jsx";
 import {FieldError, Help, Input, Label} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {AccountApi} from "@/features/auth/accountApi.js";
+import {AiFirstChoice} from "@/features/briefing/components/AiFirstChoice.jsx";
 import {MailLayoutChoice} from "@/features/briefing/components/MailLayoutChoice.jsx";
 import {MailPresets, PagePresets} from "@/features/briefing/components/MailPresets.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
@@ -206,6 +207,11 @@ export const SettingsPage = () => {
                         </Button>
                     </div>
                 </form>
+            </Section>
+
+            <Section kicker="Briefing" title="The AI version of the sentences"
+                     intro="A card can give its bullet points or its summary written by the AI, from the sentences of the article. Start every card and every story of the e-mail on that version: you can still go back to the article’s own sentences, one card or one story at a time. Kept on your account.">
+                <AiFirstChoice/>
             </Section>
 
             <Section kicker="Briefing" title="The editor of the e-mail"

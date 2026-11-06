@@ -64,15 +64,16 @@ const MailAdd = ({news}) => {
 // title and those words are translated when the row comes near the screen (the translator of the page, see
 // FollowingNews and search/translation.js), shown marked as translated; the title and the words as written
 // only when the reader asks, under them in italics (always there, they doubled the list: the user, 01.11.2026);
-// without a translator, as written
+// without a translator, as written. The terms are marked in the translation as in the text as written: the server answers their places
+// in it, asked with news.terms (the user, 06.11.2026: a title translated had lost the tint of the name that found it)
 const News = ({news}) => {
-    const {ref, translation, excerpt} = useTranslation(news.link, news.language, {withDescription: false, excerpt: news.excerpt});
+    const {ref, translation, excerpt, excerptMarks} = useTranslation(news.link, news.language, {withDescription: false, excerpt: news.excerpt, terms: news.terms});
     const translated = Boolean(translation?.title) || Boolean(excerpt);
     const [original, setOriginal] = useState(false);
     return (
         <li ref={ref} className="body-text">
             <a href={news.url} target="_blank" rel="noreferrer" className="link">
-                {translation?.title ? translation.title : <Marked text={news.title} marks={news.marks?.title}/>}
+                {translation?.title ? <Marked text={translation.title} marks={translation.marks?.title}/> : <Marked text={news.title} marks={news.marks?.title}/>}
             </a>
             {/* the title as written, with the places of the terms */}
             {translation?.title && original && (
@@ -83,7 +84,7 @@ const News = ({news}) => {
             {/* the words of its description (around the name when it is there), translated with the words as written under */}
             {news.excerpt && (excerpt ? (
                 <>
-                    <span className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80">{excerpt}</span>
+                    <span className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/80"><Marked text={excerpt} marks={excerptMarks}/></span>
                     {original && (
                         <span lang={news.language ?? undefined} className="caption mt-0.5 block italic">
                             “<Marked text={news.excerpt} marks={news.marks?.excerpt}/>”

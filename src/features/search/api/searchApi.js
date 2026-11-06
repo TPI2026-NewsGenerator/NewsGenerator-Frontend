@@ -28,12 +28,14 @@ export const SearchApi = {
     // the titles and descriptions of the cards reached ('news', 30 max) and the titles of the facts of
     // their affairs ('titles', 60 max), translated into the language searched when written in another:
     // {translations: [{url, language, title, description}]}. excerpts: [{url, text}], the words of a description
-    // around a name followed (30 max), answered [{url, text, language, excerpt}] after the others
-    translateNews: async ({news, titles, excerpts}, language) => {
+    // around a name followed (30 max), answered [{url, text, language, excerpt}] after the others. terms: {url: [name]}, the names
+    // the page marks in the text of a news (the page of what a profile follows): their places in the translation come back, 'marks'
+    // {title, description} on a news and 'excerptMarks' on a passage
+    translateNews: async ({news, titles, excerpts, terms}, language) => {
         const response = await fetch(`${API_URL}/news/translations`, {
             method: 'POST',
             headers: withProfile({'Content-Type': 'application/json'}),
-            body: JSON.stringify({news, titles, ...(excerpts ? {excerpts} : {}), language}),
+            body: JSON.stringify({news, titles, ...(excerpts ? {excerpts} : {}), ...(terms && Object.keys(terms).length > 0 ? {terms} : {}), language}),
         });
 
         return await response.json();

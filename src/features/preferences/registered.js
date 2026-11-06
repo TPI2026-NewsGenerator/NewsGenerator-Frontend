@@ -8,6 +8,7 @@
 
 import "@/features/briefing/mailEditorLayout.js";
 import "@/features/briefing/blockPresets.js";
+import "@/features/briefing/aiFirst.js";
 import "@/features/briefing/formats.js";
 import "@/features/briefing/sizes.js";
 import "@/features/briefing/windows.js";

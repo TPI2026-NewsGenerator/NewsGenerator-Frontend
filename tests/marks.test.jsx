@@ -7,8 +7,9 @@
 //
 
 import '@testing-library/jest-dom';
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {fireEvent, render, screen} from '@testing-library/react';
+import {createTranslator, TranslationContext} from '@/features/search/translation.js';
 import {paragraphsWithMarks, segmentsOf} from '@/features/briefing/marks.js';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {WatchedNews} from '@/features/briefing/components/WatchedNews.jsx';
@@ -67,6 +68,46 @@ describe('BriefingCard and WatchedNews marks', () => {
         ]}]}/>);
         expect(getByText(/a annulé le but/)).toBeInTheDocument();
         expect(marked(container)).toEqual(['VAR']);
+    });
+});
+
+// a title and a passage translated keep the tint of the name that finds them (the user, 06.11.2026)
+describe('WatchedNews, the news translated', () => {
+    const german = {title: 'Nuri Şahin vor dem Aus', url: 'https://x/1', link: 'https://x/1', source: 'bild.de', language: 'de',
+        excerpt: '…der Trainer Nuri Şahin steht unter Druck…', marks: {title: [[0, 10]], excerpt: [[13, 23]]}, terms: ['Nuri Şahin', 'Şahin']};
+
+    it('should ask the translation with the names of the news, and mark them where the server found them in the title and the passage', async () => {
+        const translate = vi.fn(async ({excerpts}) => [
+            {url: 'https://x/1', language: 'de', title: 'Nuri Sahin facing the sack', description: null, marks: {title: [[0, 10]]}},
+            ...excerpts.map(({url, text}) => ({url, text, language: 'de', excerpt: '…the coach Nuri Sahin is under pressure…', excerptMarks: [[11, 21]]})),
+        ]);
+        const {container} = render(
+            <TranslationContext.Provider value={createTranslator('en', translate)}>
+                <WatchedNews watched={[{term: 'Nuri Şahin', qid: 'Q1', count: 1, news: [german]}]}/>
+            </TranslationContext.Provider>
+        );
+
+        expect(await screen.findByText(/is under pressure/)).toBeInTheDocument();
+        expect(translate).toHaveBeenCalledWith(expect.objectContaining({terms: {'https://x/1': ['Nuri Şahin', 'Şahin']}}));
+        // the title and the passage translated are tinted, as the text as written is
+        expect(marked(container)).toEqual(['Nuri Sahin', 'Nuri Sahin']);
+        expect(container.querySelector('a')).toHaveTextContent('Nuri Sahin facing the sack');
+
+        // the text as written, on demand, is tinted too
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(marked(container)).toEqual(['Nuri Sahin', 'Nuri Şahin', 'Nuri Sahin', 'Nuri Şahin']);
+    });
+
+    it('should show a translation without marks as it is, when the server found no name in it', async () => {
+        const translate = vi.fn(async () => [{url: 'https://x/1', language: 'de', title: 'Coach facing the sack', description: null}]);
+        const {container} = render(
+            <TranslationContext.Provider value={createTranslator('en', translate)}>
+                <WatchedNews watched={[{term: 'Nuri Şahin', qid: 'Q1', count: 1, news: [{...german, excerpt: null, marks: {title: [[0, 10]]}}]}]}/>
+            </TranslationContext.Provider>
+        );
+
+        expect(await screen.findByText('Coach facing the sack')).toBeInTheDocument();
+        expect(marked(container)).toEqual([]);
     });
 });
 

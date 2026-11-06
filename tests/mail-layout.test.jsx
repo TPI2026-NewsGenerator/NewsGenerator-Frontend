@@ -212,7 +212,7 @@ describe('the blocks a story can carry in the e-mail', () => {
         angles: [], affair: true, hasArticles: true};
 
     it('should list the picture, the countries, the four badges, who it is about, the analysis, the angles, the affair and its coverage', () => {
-        expect(BLOCKS.map(block => block.label)).toEqual(['Picture', 'Countries', 'Told by', 'Contested', 'Official source', 'Unconfirmed', 'Who it is about',
+        expect(BLOCKS.map(block => block.label)).toEqual(['Picture', 'Countries', 'Told by', 'Contested', 'Officially confirmed', 'Unconfirmed', 'Who it is about',
             'AI analysis', 'Angles', 'This affair', 'Coverage']);
         expect(BLOCKS.filter(block => block.badge).map(block => block.key)).toEqual(['media', 'contested', 'official', 'unconfirmed']);
     });
