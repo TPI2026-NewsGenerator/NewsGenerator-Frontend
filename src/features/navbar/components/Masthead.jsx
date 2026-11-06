@@ -14,12 +14,13 @@ import {ProfileSwitcher} from "@/features/profiles/ProfileSwitcher.jsx";
 import {ThemeButton, ThemeChoice} from "@/components/ui/theme-toggle.jsx";
 import {useUnread} from "@/features/affairs/useUnread.js";
 
+// in the order of use (the user, 06.11.2026): what is read, then what is looked for, the profile last
 const SECTIONS = [
     {to: '/briefing', label: 'Briefing'},
     {to: '/affairs', label: 'Affairs'},
-    {to: '/profile', label: 'Profile'},
     {to: '/following', label: 'Following'},
     {to: '/search', label: 'Search'},
+    {to: '/profile', label: 'Profile'},
 ];
 
 // small and quiet: the bar gets out of the way of the page
