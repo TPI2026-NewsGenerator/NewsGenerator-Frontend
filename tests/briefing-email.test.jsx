@@ -56,6 +56,9 @@ const carries = (title) => screen.getByRole('group', {name: `What “${title}”
 const openView = () => {
     if (!screen.queryByRole('group', {name: 'Read as'})) fireEvent.click(screen.getByRole('button', {name: /^What the cards show/}));
 };
+// the boxes of the sentences the e-mail sends (a box for each point or passage, the user, 06.11.2026): their texts, one by one
+const boxesOf = (scope, noun) => within(scope).queryAllByRole('textbox', {name: new RegExp(`^${noun} \\d+$`)});
+const textsOf = (scope, noun) => boxesOf(scope, noun).map(box => box.value);
 const showSection = (name) => {
     const button = screen.queryByRole('button', {name: `Show the details of ${name}`});
     if (button) fireEvent.click(button);
@@ -124,10 +127,10 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
         const story = carries('First story');
 
-        const text = within(story).getByLabelText('Its bullet points in the e-mail');
-        expect(text).toHaveValue('Premier point.\nDeuxième point.');
+        expect(within(story).getByRole('group', {name: 'Its bullet points in the e-mail'})).toBeInTheDocument();
+        expect(textsOf(story, 'Point')).toEqual(['Premier point.', 'Deuxième point.']);
         fireEvent.click(within(story).getByRole('checkbox', {name: 'Send its bullet points in the AI version'}));
-        expect(text).toHaveValue('Un point de l\'IA.');
+        expect(textsOf(story, 'Point')).toEqual(['Un point de l\'IA.']);
         localStorage.clear();
     });
 
@@ -168,26 +171,30 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
 
-        // a point a line, the AI version changed too, the empty lines left out
+        // a box a point, the AI version changed too; several lines pasted in a box are several points, the empty ones left out
         fireEvent.click(screen.getByRole('checkbox', {name: 'Send its bullet points in the AI version'}));
-        fireEvent.change(screen.getByLabelText('Its bullet points in the e-mail'), {target: {value: 'Mon premier point.\n\n  Mon second point. '}});
+        fireEvent.change(screen.getByRole('textbox', {name: 'Point 1'}), {target: {value: 'Mon premier point.\n\n  Mon second point. '}});
+        expect(textsOf(document.body, 'Point')).toEqual(['Mon premier point.', '  Mon second point. ']);
         expect(screen.getByText(/bullet points changed/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenLastCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, 'points', [1],
             {1: ['Mon premier point.', 'Mon second point.']}, {}, 'light', expect.any(Object)));
 
-        // sent, they are unticked: ticked again. The summary: its paragraphs a blank line between two
+        // sent, they are unticked: ticked again. The summary: a box for each of its paragraphs
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull());
         screen.getAllByRole('checkbox', BOX).slice(0, 2).forEach(box => fireEvent.click(box));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(within(screen.getByRole('group', {name: 'In the e-mail, as'})).getByRole('radio', {name: 'Summary'}));
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
-        const summary = screen.getByLabelText('Its summary in the e-mail');
-        expect(summary).toHaveValue('Ein Digest.\n\nSein Ende.');
-        fireEvent.change(summary, {target: {value: 'Mon résumé.'}});
+        expect(screen.getByRole('group', {name: 'Its summary in the e-mail'})).toBeInTheDocument();
+        expect(textsOf(document.body, 'Passage')).toEqual(['Ein Digest.', 'Sein Ende.']);
+        fireEvent.change(screen.getByRole('textbox', {name: 'Passage 1'}), {target: {value: 'Mon résumé.'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Remove passage 2'}));
+        expect(textsOf(document.body, 'Passage')).toEqual(['Mon résumé.']);
         fireEvent.click(screen.getByRole('button', {name: 'Back to the article’s sentences'}));
-        expect(summary).toHaveValue('Ein Digest.\n\nSein Ende.');
-        fireEvent.change(summary, {target: {value: 'Mon résumé.\n\nSa fin.'}});
+        expect(textsOf(document.body, 'Passage')).toEqual(['Ein Digest.', 'Sein Ende.']);
+        fireEvent.change(screen.getByRole('textbox', {name: 'Passage 1'}), {target: {value: 'Mon résumé.'}});
+        fireEvent.change(screen.getByRole('textbox', {name: 'Passage 2'}), {target: {value: 'Sa fin.'}});
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenLastCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, 'digest', [],
             {1: ['Mon résumé.', 'Sa fin.']}, {}, 'light', expect.any(Object)));
@@ -198,11 +205,10 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(within(screen.getByRole('group', {name: 'In the e-mail, as'})).getByRole('radio', {name: 'Key passages'}));
         fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
-        const passages = screen.getByLabelText('Its key passages in the e-mail');
-        expect(passages).toHaveValue('The first passage of Second story.');
-        fireEvent.change(passages, {target: {value: 'Un passage à moi.'}});
+        expect(textsOf(document.body, 'Passage')).toEqual(['The first passage of Second story.']);
+        fireEvent.change(screen.getByRole('textbox', {name: 'Passage 1'}), {target: {value: 'Un passage à moi.'}});
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
-        fireEvent.change(screen.getByLabelText('Its key passages in the e-mail'), {target: {value: '  '}});
+        fireEvent.change(screen.getByRole('textbox', {name: 'Passage 1'}), {target: {value: '  '}});
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenLastCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, 'passages', [],
             {2: ['Un passage à moi.']}, {}, 'light', expect.any(Object)));

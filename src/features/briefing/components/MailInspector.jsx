@@ -10,11 +10,12 @@
 import {useState} from "react";
 import {ChevronDown, ChevronRight} from "lucide-react";
 import {Button} from "@/components/ui/button.jsx";
-import {Checkbox, Input, Label, Textarea} from "@/components/ui/field.jsx";
+import {Checkbox, Input, Label} from "@/components/ui/field.jsx";
 import {AngleLines, AnalysisLines, ContestedLines, NameLines, OfficialLines} from "@/features/briefing/components/MailAside.jsx";
 import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
 import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
 import {MailPicture} from "@/features/briefing/components/MailPicture.jsx";
+import {MailTextItems} from "@/features/briefing/components/MailTextItems.jsx";
 import {BLOCKS, countOf, hasBlock} from "@/features/briefing/mailBlocks.js";
 import {usePresets} from "@/features/briefing/blockPresets.js";
 import {aiTextOf, editable, two, WAY_NAMES} from "@/features/briefing/useMailDraft.js";
@@ -108,16 +109,14 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                             : `No AI version of the ${WAY_NAMES[way]} of this card: the AI did not write one the article backs (a figure it does not give, or no answer).`}
                     </p>
                 )}
-                {/* what the e-mail sends, the reader changing it as they want (the user, 20.10.2026) */}
-                <Label htmlFor={`mail-text-${id}`}>Its {WAY_NAMES[shown]} in the e-mail</Label>
-                <Textarea id={`mail-text-${id}`} className="mt-1 p-3 text-[0.8125rem]" rows={shown === 'points' ? 4 : 7}
-                          value={draft.texts[id]?.[shown] ?? editable(draft.sentOf(story), shown)}
-                          aria-describedby={`mail-text-help-${id}`} disabled={disabled}
-                          onChange={event => draft.writeText(id, event.target.value)}/>
+                {/* what the e-mail sends, the reader changing it as they want (the user, 20.10.2026): a box for each point or passage, so
+                    where one ends and the next begins is seen (the user, 06.11.2026) */}
+                <MailTextItems id={id} way={shown} label={`Its ${WAY_NAMES[shown]} in the e-mail`} value={draft.texts[id]?.[shown] ?? editable(draft.sentOf(story), shown)}
+                               describedBy={`mail-text-help-${id}`} disabled={disabled} onChange={text => draft.writeText(id, text)}/>
                 <p id={`mail-text-help-${id}`} className="caption mt-1">
                     {draft.inAi[id] && aiText ? 'The AI version' : 'The article’s own sentences'}
                     {draft.ownText(story) ? ', changed by you' : ', as the e-mail sends them'}.
-                    {shown === 'points' ? ' One point a line.' : ' A blank line between two paragraphs.'} Left empty, its own are sent.
+                    {shown === 'points' ? ' A box for each point: Enter adds one under it.' : ' A box for each passage; the e-mail puts […] between two.'} Left empty, its own are sent.
                 </p>
                 {draft.ownText(story) && (
                     <Button size="sm" variant="link" className="mt-1" onClick={() => draft.writeText(id, undefined)}>
