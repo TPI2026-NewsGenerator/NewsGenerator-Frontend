@@ -146,8 +146,8 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
         writeText(storyId, undefined);
     };
 
-    // the countries the e-mail shows for a story: the ones the reader chose, else the ones found; the ones
-    // found again, or null, are no choice (the e-mail then leaves out the ones its title names)
+    // the countries the e-mail shows for a story: the ones the reader chose, else the ones found, whatever its title says (the user,
+    // 06.11.2026); the ones found again, or null, are no choice
     const countriesOf = (story) => countries[story.storyId] ?? story.countries ?? [];
     const chooseCountries = (story, codes) => setCountries(current => {
         const next = {...current};
@@ -174,9 +174,9 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
         if (key === 'countries') return countriesOf(story).length > 0;
         return Boolean(blocksOf(story)[key]);
     };
-    // the block put on or off for these stories (those that have it)
+    // the block put on or off for these stories (those that have it; the countries the reader added by hand count as found)
     const setBlock = (targets, key, on) => {
-        const list = targets.filter(story => hasBlock(story, key));
+        const list = targets.filter(story => hasBlock(story, key) || (key === 'countries' && countriesOf(story).length > 0));
         if (key === 'picture') list.forEach(story => choose(story.storyId, on ? undefined : {kind: 'none'}));
         else if (key === 'countries') list.forEach(story => chooseCountries(story, on ? null : []));
         else setBlocks(current => Object.fromEntries([...Object.entries(current), ...list.map(story => [story.storyId, {...DEFAULT_BLOCKS, ...current[story.storyId], [key]: on}])]));

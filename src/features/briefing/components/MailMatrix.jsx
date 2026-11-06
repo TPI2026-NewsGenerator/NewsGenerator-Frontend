@@ -16,20 +16,24 @@ import {Notice} from "@/components/ui/text.jsx";
 import {StoryInspector} from "@/features/briefing/components/MailInspector.jsx";
 import {MailPreview} from "@/features/briefing/components/MailPreview.jsx";
 import {MailSettings, MailSheet} from "@/features/briefing/components/MailSheet.jsx";
-import {BLOCKS, countOf, hasBlock, PRESETS} from "@/features/briefing/mailBlocks.js";
+import {BLOCKS, countOf, hasBlock} from "@/features/briefing/mailBlocks.js";
+import {usePresets} from "@/features/briefing/blockPresets.js";
 import {two} from "@/features/briefing/useMailDraft.js";
 import {usePhone} from "@/lib/usePhone.js";
 import {cn} from "@/lib/utils.js";
 
-// the presets that set every story at once
-const Presets = ({draft}) => (
-    <div role="group" aria-label="Presets" className="flex flex-wrap items-center gap-2">
-        <span className="kicker">Set every story to</span>
-        {PRESETS.map(preset => (
-            <Button key={preset.value} size="sm" variant="subtle" title={preset.means} onClick={() => draft.applyPreset(preset.on)}>{preset.label}</Button>
-        ))}
-    </div>
-);
+// the presets that set every story at once: what each puts in a story is what the reader set in the settings
+const Presets = ({draft}) => {
+    const {presets} = usePresets('mail');
+    return (
+        <div role="group" aria-label="Presets" className="flex flex-wrap items-center gap-2">
+            <span className="kicker">Set every story to</span>
+            {presets.map(preset => (
+                <Button key={preset.value} size="sm" variant="subtle" title={preset.means} onClick={() => draft.applyPreset(preset.on)}>{preset.label}</Button>
+            ))}
+        </div>
+    );
+};
 
 // the head of a column: what it is, how many stories have it on, and the button that puts it on (or off) for all of them
 const ColumnHead = ({block, draft}) => {
@@ -89,13 +93,17 @@ const StoryCards = ({draft, sending, onNeutralTitle}) => (
                         )}
                     </div>
                     <div className="flex flex-wrap gap-1.5 px-3 pb-3">
-                        {BLOCKS.filter(block => hasBlock(one, block.key)).map(block => (
+                        {BLOCKS.filter(block => hasBlock(one, block.key) || (block.key === 'countries' && draft.countriesOf(one).length > 0)).map(block => (
                             <Pill key={block.key} on={draft.isOn(one, block.key)} label={`${block.label}, ${one.title}`}
                                   disabled={block.key === 'picture' && Boolean(draft.choiceOf(one)?.small)}
                                   onClick={() => draft.setBlock([one], block.key, !draft.isOn(one, block.key))}>
                                 {block.label}
                             </Pill>
                         ))}
+                        {/* no country found: any can be added, in the details of the story, where its countries are open */}
+                        {!hasBlock(one, 'countries') && draft.countriesOf(one).length === 0 && (
+                            <Pill on={false} label={`Add a country, ${one.title}`} onClick={() => draft.select(one.storyId)}>+ Country</Pill>
+                        )}
                     </div>
                     {open && (
                         <div className="border-t border-rule px-3 py-3">
@@ -201,7 +209,7 @@ const WideMatrix = ({draft, sending, onSend, onPreview, onNeutralTitle}) => {
                                     </th>
                                     {BLOCKS.map(block => (
                                         <td key={block.key} className="px-1 py-1 text-center">
-                                            {hasBlock(one, block.key)
+                                            {hasBlock(one, block.key) || (block.key === 'countries' && draft.countriesOf(one).length > 0)
                                                 ? (
                                                     <Checkbox checked={draft.isOn(one, block.key)} className="justify-center py-0"
                                                               disabled={block.key === 'picture' && Boolean(draft.choiceOf(one)?.small)}
@@ -209,7 +217,11 @@ const WideMatrix = ({draft, sending, onSend, onPreview, onNeutralTitle}) => {
                                                         <span className="sr-only">{block.label}, {one.title}</span>
                                                     </Checkbox>
                                                 )
-                                                : <span aria-hidden className="text-ink-mute opacity-50">·</span>}
+                                                : block.key === 'countries'
+                                                    // none found: any country can be added, in the details of the story
+                                                    ? <button type="button" aria-label={`Add a country to “${one.title}”`} title="No country found: add one" onClick={() => choose(one.storyId)}
+                                                              className="cursor-pointer rounded-full px-2 text-[0.8125rem] text-ink-mute hover:bg-paper-deep hover:text-ink">+</button>
+                                                    : <span aria-hidden className="text-ink-mute opacity-50">·</span>}
                                         </td>
                                     ))}
                                 </tr>

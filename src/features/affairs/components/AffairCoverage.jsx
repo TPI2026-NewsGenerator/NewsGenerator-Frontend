@@ -32,7 +32,7 @@ export const AffairCoverage = ({coverage}) => {
 
     return (
         <div className="mt-6">
-            <p className="kicker">
+            <p className="section-title">
                 How widely it was told
                 <InfoTip label="How widely it was told">{NOTE}</InfoTip>
             </p>
@@ -48,7 +48,7 @@ export const AffairCoverage = ({coverage}) => {
                 {coverage.languages.length > LANGUAGES_SHOWN && ` · ${coverage.languages.length - LANGUAGES_SHOWN} more`}
             </p>
 
-            <p className="kicker mt-6">The media, in the order they joined</p>
+            <p className="section-title mt-6">The media, in the order they joined</p>
             <ol className="mt-2 list-none divide-y divide-rule p-0">
                 {media.map(one => (
                     <li key={one.medium} className="panel-text grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-x-3 py-1.5">

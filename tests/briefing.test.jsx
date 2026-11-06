@@ -7,7 +7,8 @@
 
 import '@testing-library/jest-dom';
 import {describe, expect, it, vi} from 'vitest';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {coverageLabel} from '@/features/briefing/corroboration.js';
 
@@ -133,13 +134,32 @@ describe('BriefingCard', () => {
         expect(screen.getAllByRole('link')).toHaveLength(3);
     });
 
-    it('should put the link to the article and the media that cover it at the very bottom of the card', () => {
+    // the way to the article right under its sentences, who else covers it at the very bottom (the user, 06.11.2026)
+    it('should put the link to the article right under the sentences, before the tabs, and the media that cover it at the very bottom of the card', () => {
         render(<BriefingCard item={item()}/>);
         const link = screen.getByRole('link', {name: /Read the article at/});
         const tab = screen.getByRole('button', {name: /^Coverage/});
         const panel = document.getElementById(tab.getAttribute('aria-controls'));
-        expect(panel.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText('Second paragraphe.').compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(link.compareDocumentPosition(tab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(link.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(screen.getByText(/Also covered by/).compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+        // one link to the article only: the media at the bottom do not repeat it
+        expect(screen.getAllByRole('link', {name: /Read the article at/})).toHaveLength(1);
+    });
+
+    // the titles of the parts of a card are titles, and the links are of three kinds (the user, 06.11.2026)
+    it('should write the title of the sentences as a title, not a small label', () => {
+        render(<BriefingCard item={item()}/>);
+        const title = screen.getByText("In the article's words");
+        expect(title).toHaveClass('section-title');
+        expect(title).not.toHaveClass('kicker');
+    });
+
+    it('should show the name of a medium that covers it as a link of the quiet kind, the one to the article as the action', () => {
+        render(<BriefingCard item={item()}/>);
+        expect(within(screen.getByText(/Also covered by/)).getByRole('link', {name: 'media2.fr'})).toHaveClass('medium-link');
+        expect(screen.getByRole('link', {name: /Read the article at/})).toHaveClass('link');
     });
 
     it('should send to read the article of the passages, and name the others as covering it', () => {
@@ -339,6 +359,69 @@ describe('BriefingCard number', () => {
         expect(number).toHaveClass('text-[1.25rem]', 'md:text-[3rem]');
         expect(number).not.toHaveClass('text-[0.8125rem]');
         expect(number).toHaveAttribute('aria-hidden', 'true');
+    });
+});
+
+// the page shows the blocks of the preset the reader chose: all of the card at first, less in "Short" and "Standard" (the user, 06.11.2026)
+describe('BriefingCard with the blocks of a preset', () => {
+    const rich = () => item({
+        thumbnail: 'https://cdn.example/a.jpg', countries: ['FR'], names: [{name: 'FIFA'}], hedged: 'selon nos informations',
+        contested: [{by: 'Infantino', sentence: 'No.', source: 'bild.de', url: 'https://bild.de/a'}],
+        official: [{party: 'UEFA', title: 'A post', url: 'https://uefa.com/a', channel: 'site'}],
+        angles: [{title: 'Another angle', source: 'rfi.fr', url: 'https://rfi.fr/n'}],
+    });
+    const SHORT = ['media', 'contested', 'official', 'unconfirmed'];
+
+    it('should show the whole card without a preset', () => {
+        const {container} = render(<MemoryRouter><BriefingCard item={rich()}/></MemoryRouter>);
+        expect(container.querySelector('img')).not.toBeNull();
+        expect(screen.getByText('France')).toBeInTheDocument();
+        expect(screen.getByRole('list', {name: 'Who it is about'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: /^Coverage/})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: /^Angles/})).toBeInTheDocument();
+    });
+
+    it('should show the title, the text and the badges only in "Short": no picture, countries, names, nor tabs', () => {
+        const {container} = render(<BriefingCard item={rich()} show={SHORT}/>);
+        expect(screen.getByText('Toulon bat Vannes au bout du suspense')).toBeInTheDocument();
+        expect(screen.getByText('Second paragraphe.')).toBeInTheDocument();
+        expect(container.querySelector('img')).toBeNull();
+        expect(screen.queryByText('France')).toBeNull();
+        expect(screen.queryByRole('list', {name: 'Who it is about'})).toBeNull();
+        expect(screen.queryByRole('button', {name: /^Coverage/})).toBeNull();
+        expect(screen.queryByRole('button', {name: /^Angles/})).toBeNull();
+        // the badges, and the notes they lead to, stay
+        expect(screen.getByText('Told by 3 media')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Contested'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Official source'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Unconfirmed'})).toBeInTheDocument();
+    });
+
+    it('should not make "Told by N media" a button to a coverage the preset does not show, nor "and N more" open it', () => {
+        render(<BriefingCard item={item({articles: [1, 2, 3, 4, 5, 6].map(article)})} show={SHORT}/>);
+        expect(screen.queryByRole('button', {name: 'Told by 3 media'})).toBeNull();
+        expect(screen.getByText('Told by 3 media')).toBeInTheDocument();
+        // the others are named in the line at the bottom, the rest opened there
+        expect(screen.getByRole('button', {name: /and 2 more/})).toBeInTheDocument();
+    });
+
+    it('should leave a badge out when its block is not in the preset, with its words beside the card', () => {
+        render(<BriefingCard item={rich()} show={['media', 'official']}/>);
+        expect(screen.queryByRole('button', {name: 'Contested'})).toBeNull();
+        expect(screen.queryByText(/Infantino denies/)).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Unconfirmed'})).toBeNull();
+        expect(screen.getByRole('button', {name: 'Official source'})).toBeInTheDocument();
+    });
+
+    it('should add the picture, the countries, who it is about and the analysis in "Standard", and the other tabs in "Everything"', () => {
+        const STANDARD = [...SHORT, 'picture', 'countries', 'names', 'analysis'];
+        const {container} = render(<MemoryRouter><BriefingCard item={rich()} show={STANDARD} analysis={{why: ['It matters.'], next: [], timeline: []}}/></MemoryRouter>);
+        expect(container.querySelector('img')).not.toBeNull();
+        expect(screen.getByText('France')).toBeInTheDocument();
+        expect(screen.getByRole('list', {name: 'Who it is about'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'AI analysis'})).toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: /^Angles/})).toBeNull();
+        expect(screen.queryByRole('button', {name: /^Coverage/})).toBeNull();
     });
 });
 

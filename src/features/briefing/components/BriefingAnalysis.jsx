@@ -9,7 +9,7 @@
 
 const Part = ({title, children}) => (
     <div>
-        <p className="kicker">{title}</p>
+        <p className="section-title">{title}</p>
         {children}
     </div>
 );
@@ -27,7 +27,7 @@ export const CardAnalysis = ({id, analysis, pending, model}) => {
         <div id={id} className="max-w-[40rem] space-y-6">
             {analysis.why.length > 0 && (
                 <Part title="Why it matters">
-                    <ul className="panel-text mt-2 list-disc space-y-2 pl-5 marker:text-ink-mute">
+                    <ul className="panel-text mt-2.5 list-disc space-y-2 pl-5 marker:text-ink-mute">
                         {analysis.why.map((line, i) => <li key={i}>{line}</li>)}
                     </ul>
                 </Part>

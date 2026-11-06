@@ -40,18 +40,6 @@ export const allCountries = (locale = 'en') => {
         .sort((a, b) => a.name.localeCompare(b.name, locale));
 };
 
-// a text in small letters, without accents, its words between spaces
-const plain = (text) => ` ${String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ')} `;
-
-// The names of the countries of a card to show, in 'locale'; none when its titles name every one of them
-// already, in one of 'languages' (a word starting so counts: "zambien" names Zambia)
-export const countryNames = (countries = [], {titles = [], languages = [], locale = 'en'} = {}) => {
-    if (countries.length === 0) return [];
-    const written = titles.filter(Boolean).map(plain);
-    const tongues = [...new Set([locale, ...languages, 'en'].filter(Boolean))];
-    const named = (code) => tongues.some(language => {
-        const name = plain(countryName(code, language)).trimEnd();
-        return name.trim().length > 0 && written.some(title => title.includes(name));
-    });
-    return countries.every(named) ? [] : countries.map(code => countryName(code, locale));
-};
+// The names of the countries of a card to show, in 'locale': all of them, even when its title names them (the user, 06.11.2026: the
+// rule of 18.10.2026 that left a country out when the title named it hid the country of cards found in the editor)
+export const countryNames = (countries = [], {locale = 'en'} = {}) => countries.map(code => countryName(code, locale));

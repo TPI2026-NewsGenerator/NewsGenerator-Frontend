@@ -23,7 +23,7 @@ const NOTE = 'The AI read the news of the last 30 days, in any language, that be
 // places show it); onFollowed(id or null): it was followed or stopped
 export const AffairRail = ({briefingId, storyId, chip, followed, onFollowed}) => (
     <div>
-        <p className="kicker">
+        <p className="section-title !text-[1rem]">
             This affair
             <InfoTip label="This affair">{NOTE}</InfoTip>
         </p>
@@ -58,7 +58,7 @@ export const AffairPanel = ({briefingId, storyId, chip, followed}) => {
 
     return (
         <div>
-            <p className="kicker">
+            <p className="section-title">
                 This affair
                 <InfoTip label="This affair">{NOTE}</InfoTip>
             </p>

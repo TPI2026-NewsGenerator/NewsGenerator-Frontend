@@ -13,7 +13,7 @@ import {FieldError, Help, Input, Label} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {AccountApi} from "@/features/auth/accountApi.js";
 import {MailLayoutChoice} from "@/features/briefing/components/MailLayoutChoice.jsx";
-import {MailPresets} from "@/features/briefing/components/MailPresets.jsx";
+import {MailPresets, PagePresets} from "@/features/briefing/components/MailPresets.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
@@ -214,8 +214,13 @@ export const SettingsPage = () => {
             </Section>
 
             <Section kicker="Briefing" title="What the presets put in the e-mail"
-                     intro="In the editor of the e-mail, “Short”, “Standard” and “Everything” set what every story carries at once. Here is what each one contains.">
+                     intro="In the editor of the e-mail, “Short”, “Standard” and “Everything” set what every story carries at once. Tick what each one contains.">
                 <MailPresets/>
+            </Section>
+
+            <Section kicker="Briefing" title="What the presets show on the page"
+                     intro="On the page of your briefing, the same three presets choose what each card shows: “Everything” is the whole card, as the page always showed it. Tick what each one contains.">
+                <PagePresets/>
             </Section>
         </PageShell>
     );

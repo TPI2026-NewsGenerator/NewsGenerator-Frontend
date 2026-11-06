@@ -466,6 +466,84 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: []}, 'light', expect.any(Object)));
     });
 
+    // a country is shown whether its title names it or not (the user, 06.11.2026: "Aruba" and "Cameroun" were ticked in the editor and seen
+    // nowhere, the title naming them); and any country can be added, to a story that has none too
+    describe('the countries and the title', () => {
+        const openEditor = async (items, title) => {
+            BriefingApi.getLatest.mockResolvedValue({mail: true, briefing: {...BRIEFING, items}});
+            render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+            await screen.findByText(items[0].title);
+            fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+            fireEvent.click(screen.getByRole('button', {name: `Edit “${title}” in the e-mail`}));
+            showSection('Countries');
+        };
+        const sent = async (countries) => {
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+            expect(BriefingApi.email.mock.calls.at(-1)[9]).toEqual(countries);
+        };
+
+        it('should tick a country its title names, as any other, and send nothing while the reader leaves it as found', async () => {
+            const items = [{...card(1, 'Cameroon sacks its national coach'), countries: ['CM']}, card(2, 'Second story')];
+            await openEditor(items, 'Cameroon sacks its national coach');
+            const section = carries('Cameroon sacks its national coach');
+            expect(within(section).getByRole('checkbox', {name: 'Countries'})).toBeChecked();
+            const group = within(section).getByRole('group', {name: /Countries in the e-mail/});
+            expect(within(group).getByRole('checkbox', {name: /Cameroon/})).toBeChecked();
+            expect(within(group).queryByText(/title names|named in its title/)).toBeNull();
+            await sent({});
+        });
+
+        it('should let the reader take a country its title names out, as any other', async () => {
+            const items = [{...card(1, 'Cameroon sacks its national coach'), countries: ['CM']}, card(2, 'Second story')];
+            await openEditor(items, 'Cameroon sacks its national coach');
+            fireEvent.click(within(carries('Cameroon sacks its national coach')).getByRole('checkbox', {name: /Cameroon/}));
+            await sent({1: []});
+        });
+
+        it('should open the countries of a story that has none at first, and let the reader add any country of the world', async () => {
+            await openEditor([card(1, 'First story'), card(2, 'Second story')], 'First story');
+            const section = carries('First story');
+            expect(within(section).getByText('none found: add one')).toBeInTheDocument();
+            const group = within(section).getByRole('group', {name: /Countries in the e-mail/});
+            // open without a click: the box of the section waits for a country
+            expect(within(section).getByRole('checkbox', {name: 'Countries'})).toBeDisabled();
+            fireEvent.change(within(group).getByRole('combobox', {name: 'Add a country to “First story”'}), {target: {value: 'Arub'}});
+            fireEvent.click(within(group).getByRole('button', {name: 'Aruba'}));
+            expect(within(group).getByRole('checkbox', {name: /Aruba/})).toBeChecked();
+            expect(within(section).getByRole('checkbox', {name: 'Countries'})).toBeChecked();
+            expect(within(section).getByRole('checkbox', {name: 'Countries'})).not.toBeDisabled();
+            await sent({1: ['AW']});
+        });
+
+        it('should put off the countries a reader added by hand to a story that had none, with the box of its section', async () => {
+            await openEditor([card(1, 'First story'), card(2, 'Second story')], 'First story');
+            const section = carries('First story');
+            const group = within(section).getByRole('group', {name: /Countries in the e-mail/});
+            fireEvent.change(within(group).getByRole('combobox', {name: 'Add a country to “First story”'}), {target: {value: 'Arub'}});
+            fireEvent.click(within(group).getByRole('button', {name: 'Aruba'}));
+            fireEvent.click(within(section).getByRole('checkbox', {name: 'Countries'}));
+            expect(within(group).getByRole('checkbox', {name: /Aruba/})).not.toBeChecked();
+            // none found and none ticked is the default: nothing to send
+            await sent({});
+        });
+
+        it('should tick again a country of the list that was unticked when its name is typed, not answer that none is left', async () => {
+            await openEditor([{...card(1, 'First story'), countries: ['FR']}, card(2, 'Second story')], 'First story');
+            const group = within(carries('First story')).getByRole('group', {name: /Countries in the e-mail/});
+            fireEvent.click(within(group).getByRole('checkbox', {name: 'France'}));
+            expect(within(group).getByRole('checkbox', {name: 'France'})).not.toBeChecked();
+            fireEvent.change(within(group).getByRole('combobox', {name: 'Add a country to “First story”'}), {target: {value: 'fran'}});
+            expect(within(group).queryByText(/No country left/)).toBeNull();
+            fireEvent.click(within(group).getByRole('button', {name: 'France'}));
+            expect(within(group).getByRole('checkbox', {name: 'France'})).toBeChecked();
+            // as found again: no choice to send
+            expect(screen.queryByText(/· countries changed/)).toBeNull();
+            await sent({});
+        });
+    });
+
     // the title of a card is changed by default (its bait taken out, or rewritten by the AI): the editor offers the one the medium wrote
     describe('title as published', () => {
         const open = async (changes) => {

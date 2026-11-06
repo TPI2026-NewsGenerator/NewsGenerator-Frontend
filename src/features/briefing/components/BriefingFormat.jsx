@@ -15,17 +15,18 @@ const WAYS_TIP = 'Bullet points: the 3 most important sentences of the article. 
     + 'in 5 to 6 lines. Key passages: up to 5 sentences. The AI only chooses them: they are always the article’s own '
     + 'words, translated when it is written in another language.';
 
-// format: the one chosen; onChange(format); label: what it chooses, the reading of the page by default
-export const BriefingFormat = ({format, onChange, label = 'Read as', disabled = false}) => (
+// format: the one chosen; onChange(format); label: what it chooses, the reading of the page by default; options: [{value, label}] what it
+// chooses among, the ways of reading by default; tip: what the "i" says
+export const BriefingFormat = ({format, onChange, label = 'Read as', disabled = false, options = FORMATS, tip = WAYS_TIP}) => (
     <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-2">
         <p className="kicker">
             {label}
-            <InfoTip label={label}>{WAYS_TIP}</InfoTip>
+            <InfoTip label={label}>{tip}</InfoTip>
         </p>
         {/* the radix group of the ToggleGroup of shadcn: one of them always chosen */}
         <ToggleGroup.Root type="single" value={format} disabled={disabled} onValueChange={value => value && onChange(value)}
                           aria-label={label} className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-paper-deep p-1 [scrollbar-width:none]">
-            {FORMATS.map(({value, label}) => (
+            {options.map(({value, label}) => (
                 <ToggleGroup.Item key={value} value={value}
                                   className={cn('inline-flex h-7 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap gap-2 rounded-full px-3.5 text-[0.8125rem] transition-[color,background-color,box-shadow] duration-200',
                                       'text-ink-mute hover:text-ink data-[state=on]:bg-paper data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=on]:bg-rule',

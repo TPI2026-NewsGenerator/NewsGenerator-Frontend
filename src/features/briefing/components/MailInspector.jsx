@@ -15,7 +15,8 @@ import {AngleLines, AnalysisLines, ContestedLines, NameLines, OfficialLines} fro
 import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
 import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
 import {MailPicture} from "@/features/briefing/components/MailPicture.jsx";
-import {BLOCKS, countOf, hasBlock, PRESETS} from "@/features/briefing/mailBlocks.js";
+import {BLOCKS, countOf, hasBlock} from "@/features/briefing/mailBlocks.js";
+import {usePresets} from "@/features/briefing/blockPresets.js";
 import {aiTextOf, editable, two, WAY_NAMES} from "@/features/briefing/useMailDraft.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
@@ -42,8 +43,9 @@ const Section = ({label, name, checked, onChange, disabled = false, hint, open, 
 
 // the story the reader is changing. draft: see useMailDraft; onNeutralTitle(storyId): the neutral title the AI proposes
 export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false}) => {
-    // the title, the text and the names are open: the names are short, and each can be taken out
-    const [open, setOpen] = useState({title: true, text: true, names: true});
+    // the title, the text and the names are open: the names are short, and each can be taken out. The countries too when none was found:
+    // the reader can add any (the user, 06.11.2026), it would not be found closed behind an unticked box
+    const [open, setOpen] = useState({title: true, text: true, names: true, countries: (story.countries ?? []).length === 0});
     const toggle = (name) => setOpen(current => ({...current, [name]: !current[name]}));
     const id = story.storyId;
     const choice = draft.choiceOf(story);
@@ -52,6 +54,9 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
     const blocks = draft.blocksOf(story);
     const has = (key) => hasBlock(story, key);
     const none = (key) => has(key) ? undefined : 'none';
+    // the countries: none found, any can be added
+    const shownCountries = draft.countriesOf(story);
+    const countriesHint = (story.countries ?? []).length === 0 && shownCountries.length === 0 ? 'none found: add one' : undefined;
     const set = (key) => (on) => draft.setBlock([story], key, on);
     const removedOf = draft.removed[id];
 
@@ -127,9 +132,9 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                              onChoose={next => draft.choose(id, next)} onClose={() => toggle('picture')}/>
             </Section>
 
-            <Section label="Countries" checked={draft.isOn(story, 'countries')} onChange={set('countries')} disabled={!has('countries') && draft.countriesOf(story).length === 0}
-                     hint={none('countries')} open={open.countries} onToggle={() => toggle('countries')}>
-                <MailCountries story={story} chosen={draft.countriesOf(story)} onChange={codes => draft.chooseCountries(story, codes)}/>
+            <Section label="Countries" checked={draft.isOn(story, 'countries')} onChange={set('countries')} disabled={!has('countries') && shownCountries.length === 0}
+                     hint={countriesHint} open={open.countries} onToggle={() => toggle('countries')}>
+                <MailCountries story={story} chosen={shownCountries} onChange={codes => draft.chooseCountries(story, codes)}/>
             </Section>
 
             <p className="kicker pt-3">Badges</p>
@@ -168,11 +173,12 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
 // the same blocks for every story at once: a preset, or one block put on or off for all of those that have it
 export const AllInspector = ({draft}) => {
     const stories = draft.ordered;
+    const {presets} = usePresets('mail');
     return (
         <div role="group" aria-label="What every story carries in the e-mail">
             <p className="caption">Set for every story, then change one in particular by choosing it.</p>
             <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Presets">
-                {PRESETS.map(preset => (
+                {presets.map(preset => (
                     <Button key={preset.value} size="sm" variant="subtle" title={preset.means} onClick={() => draft.applyPreset(preset.on)}>{preset.label}</Button>
                 ))}
             </div>

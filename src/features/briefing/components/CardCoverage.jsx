@@ -31,7 +31,7 @@ export const CardCoverage = ({item}) => {
 
     return (
         <div>
-            <p className="kicker">
+            <p className="section-title">
                 How widely it is told
                 <InfoTip label="How widely it is told">{NOTE}</InfoTip>
             </p>
@@ -67,7 +67,7 @@ export const CardCoverage = ({item}) => {
                 </p>
             )}
 
-            <p className="kicker mt-6">The media, in the order they came in</p>
+            <p className="section-title mt-6">The media, in the order they came in</p>
             <ol className="mt-2 max-w-[40rem] list-none divide-y divide-rule p-0">
                 {list.map(article => (
                     <li key={article.url} className="panel-text grid grid-cols-[6.5rem_1fr] items-baseline gap-x-3 py-1.5">

@@ -28,6 +28,7 @@ import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {keepSize, keptSize} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
+import {keepShow, keptShow, usePresets} from "@/features/briefing/blockPresets.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
@@ -38,6 +39,9 @@ import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
+// what the "i" of the control of what the cards show says
+const SHOW_TIP = 'Short: the title, the text and the badges. Standard: adds the picture, the countries, who it is about and the AI analysis. '
+    + 'Everything: the whole card. What each one contains is set in the settings of your account.';
 const POLL_MS = 3000;
 // the analysis takes minutes after the cards: asked less often
 const ANALYSIS_POLL_MS = 8000;
@@ -75,6 +79,10 @@ export const BriefingPage = () => {
     const [size, setSize] = useState(keptSize);
     // the way the cards are read, the last choice of the reader
     const [format, setFormat] = useState(keptFormat);
+    // what the cards show: the preset the reader chose last, with the blocks they set for it in the settings ("Everything" at first: the whole card)
+    const [show, setShow] = useState(keptShow);
+    const {presets: pagePresets} = usePresets('page');
+    const shown = pagePresets.find(preset => preset.value === show)?.on;
     // the server can send the cards ticked by e-mail
     const [mail, setMail] = useState(false);
     const [sending, setSending] = useState(false);
@@ -181,6 +189,10 @@ export const BriefingPage = () => {
     const chooseFormat = (value) => {
         setFormat(value);
         keepFormat(value);
+    };
+    const chooseShow = (value) => {
+        setShow(value);
+        keepShow(value);
     };
 
     const ticked = ticks.briefingId === briefing?.id ? ticks.storyIds : [];
@@ -319,7 +331,7 @@ export const BriefingPage = () => {
                         The stories of the terms followed keep their place in the briefing */}
                     {briefing.items.map((item, index) => (!onlyFound || item.found?.length > 0) && (
                         <li key={item.storyId} id={`card-${item.storyId}`} className="scroll-mt-6">
-                            <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format}
+                            <BriefingCard item={item} number={index + 1} lede={index === 0 && !onlyFound} marked={onlyFound} format={format} show={shown}
                                           analysis={briefing.analysis?.cards?.[item.storyId]} analysisModel={briefing.analysis?.model}
                                           analysisPending={briefing.analysis?.status === 'running'
                                               && (briefing.analysis.picked ?? []).some(entry => entry.storyId === item.storyId)}
@@ -368,7 +380,12 @@ export const BriefingPage = () => {
     );
 
     // the reading of the cards, in the toolbar while the tab of the briefing is read
-    const reading = tab === 'briefing' && ready && count > 0 && shorter && <BriefingFormat format={format} onChange={chooseFormat}/>;
+    const reading = tab === 'briefing' && ready && count > 0 && (
+        <>
+            {shorter && <BriefingFormat format={format} onChange={chooseFormat}/>}
+            <BriefingFormat label="Show" format={show} onChange={chooseShow} options={pagePresets} tip={SHOW_TIP}/>
+        </>
+    );
     // what the briefing offers for the e-mail, a round icon each in the toolbar (the user, 05.11.2026: a form took a band of the page): ticking
     // every story, a news added by its link. The AI analysis has none: it is seen on the story itself
     const allTicked = ready && count > 0 && briefing.items.every(item => ticked.includes(item.storyId));

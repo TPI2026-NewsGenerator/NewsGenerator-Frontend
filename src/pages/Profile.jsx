@@ -56,7 +56,6 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
             <div className="col-span-12 md:col-span-9">
                 <label htmlFor={id} className="sr-only">Interest {number}</label>
                 <Textarea id={id} rows={2} value={text} onChange={event => setText(event.target.value)}/>
-                {interest.keywords && <p className="caption mt-2">Keywords used to find its sources: {interest.keywords}</p>}
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                     <Button size="sm" variant="primary" disabled={busy || text.trim() === interest.text} onClick={() => onSave({text})}>Save</Button>
                     <Button size="sm" disabled={busy} onClick={() => onSave({weight: secondary ? 1 : 0.85})}
@@ -69,6 +68,38 @@ const Interest = ({interest, number, onSave, onDelete, busy}) => {
                 </div>
             </div>
         </li>
+    );
+};
+
+// The interests as the AI read them, folded at first (the user, 06.11.2026): for most profiles they are the text of the profile again, and
+// there is nothing to correct. They stay what each news is matched on, and the way to weigh them, one click away. The keywords that find
+// their sources are the server's, not shown. onSave(interest, changes), onDelete(interest): what the buttons of an interest do
+const Interests = ({interests, busy, onSave, onDelete}) => {
+    // open when the page is reached by its link (#interests)
+    const [open, setOpen] = useState(() => window.location.hash === '#interests');
+    const secondary = interests.filter(interest => interest.weight < 1).length;
+
+    return (
+        <>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-rule pt-4">
+                <p className="caption">
+                    {interests.length} {interests.length === 1 ? 'interest' : 'interests'}
+                    {secondary > 0 && ` · ${secondary} secondary`}
+                </p>
+                <button type="button" aria-expanded={open} aria-controls="interests-list" onClick={() => setOpen(!open)}
+                        className="link cursor-pointer text-[0.875rem]">
+                    {open ? 'Hide the interests' : 'Show and correct the interests'}
+                </button>
+            </div>
+            {open && (
+                <ol id="interests-list" className="list-none border-t border-rule p-0 mt-4">
+                    {interests.map((interest, index) => (
+                        <Interest key={`${interest.id}:${interest.text}:${interest.weight}`} interest={interest} number={index + 1} busy={busy}
+                                  onSave={changes => onSave(interest, changes)} onDelete={() => onDelete(interest)}/>
+                    ))}
+                </ol>
+            )}
+        </>
     );
 };
 
@@ -542,13 +573,9 @@ export const ProfilePage = () => {
             {data?.interests?.length > 0 && (
                 <Section id="interests" kicker="As the AI read it" title="Your interests"
                          intro="Each one is matched on its own with the news: correct them if the AI misread you.">
-                    <ol className="list-none border-t border-rule p-0">
-                        {data.interests.map((interest, index) => (
-                            <Interest key={`${interest.id}:${interest.text}:${interest.weight}`} interest={interest} number={index + 1} busy={busy}
-                                      onSave={changes => change(() => ProfileApi.updateInterest(interest.id, changes))}
-                                      onDelete={() => change(() => ProfileApi.deleteInterest(interest.id))}/>
-                        ))}
-                    </ol>
+                    <Interests interests={data.interests} busy={busy}
+                               onSave={(interest, changes) => change(() => ProfileApi.updateInterest(interest.id, changes))}
+                               onDelete={interest => change(() => ProfileApi.deleteInterest(interest.id))}/>
                     {/* what the reader does not want is no interest (its vector would bring those news):
                         the briefing reads it in their words and leaves it out */}
                     {data.profile?.refused?.length > 0 && (

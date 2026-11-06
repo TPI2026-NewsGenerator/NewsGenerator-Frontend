@@ -17,9 +17,8 @@ const plain = (text) => String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '
 // the countries offered under what is typed
 const OFFERED = 8;
 
-// story: {storyId, title, countries: [code]} the codes the server found; chosen: the codes the e-mail shows,
-// the ones found while the reader changed nothing; onChange(codes): the codes now ticked, null to go back to
-// the ones found
+// story: {storyId, title, countries: [code]} the codes the server found; chosen: the codes the e-mail shows, the ones found while the
+// reader changed nothing; onChange(codes): the codes now ticked, null to go back to the ones found
 export const MailCountries = ({story, chosen, onChange}) => {
     const found = story.countries ?? [];
     const world = useMemo(() => allCountries(), []);
@@ -31,24 +30,24 @@ export const MailCountries = ({story, chosen, onChange}) => {
     // the ones ticked in the order of the list
     const keep = (codes) => listed.filter(code => codes.includes(code));
     const toggle = (code, kept) => onChange(keep(kept ? [...chosen, code] : chosen.filter(other => other !== code)));
+    // a country of the world: added to the list, or ticked when it is listed already, unticked
     const add = (code) => {
-        if (!code || listed.includes(code)) return;
-        setAdded(current => [...current, code]);
-        onChange([...chosen, code]);
+        if (!code || chosen.includes(code)) return;
+        if (!listed.includes(code)) setAdded(current => [...current, code]);
+        onChange(listed.includes(code) ? keep([...chosen, code]) : [...chosen, code]);
         setTyped('');
     };
-    // the countries of the world not listed yet whose name has what is typed in it, or whose code it is
+    // the countries of the world not shown yet whose name has what is typed in it, or whose code it is
     const text = plain(typed);
     const offered = text
-        ? world.filter(({code, name}) => !listed.includes(code) && (plain(name).includes(text) || code.toLowerCase() === text)).slice(0, OFFERED)
+        ? world.filter(({code, name}) => !chosen.includes(code) && (plain(name).includes(text) || code.toLowerCase() === text)).slice(0, OFFERED)
         : [];
 
     return (
         <fieldset className="min-w-0 border-0 p-0">
             <legend className="sr-only">Countries in the e-mail</legend>
             <p className="caption">
-                Shown above its title. Left as found, they are left out when the title names them already; changed, they are
-                shown as you choose, none ticked shows none.
+                Shown above its title: tick the ones you want, or add any country of the world, even when none was found.
             </p>
             {listed.length > 0 && (
                 <div className="mt-1 flex flex-col">

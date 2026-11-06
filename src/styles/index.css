@@ -278,6 +278,30 @@
         color: var(--ink-mute);
     }
 
+    /* the title of a part of a card ("In the article's words", "Why it matters", "Same affair, other angles"): a title, not a label, in the
+       ink and semibold (the user, 06.11.2026: they were too small to be read as titles). In the column beside a card, 1rem */
+    .section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        line-height: 1.3;
+        color: var(--ink);
+    }
+
+    /* the name of a medium, a link of the quiet kind: the grey and a hairline, as the one of the e-mail (the user, 06.11.2026: the links
+       were blue, grey underlined and grey alone). The title of an item of a list is .panel-link, the way to the article .link */
+    .medium-link {
+        color: var(--ink-mute);
+        text-decoration-line: underline;
+        text-decoration-color: var(--rule);
+        text-underline-offset: 0.25em;
+        transition: color 0.2s;
+    }
+
+    .medium-link:hover {
+        color: var(--ink);
+    }
+
     /* the eyebrow over the head of a page or a dialog: the one place in capitals */
     .kicker-rule {
         font-size: 0.75rem;
