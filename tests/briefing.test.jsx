@@ -425,6 +425,57 @@ describe('BriefingCard with the blocks of a preset', () => {
     });
 });
 
+// the AI version of the sentences is a switch over them, not a link under them (the user, 06.11.2026)
+describe('BriefingCard, the AI version', () => {
+    const withAi = (changes = {}) => item({points: 'Premier point.\n\nSecond point.', ai: {points: ['Un point de l’IA.'], summary: 'Un résumé de l’IA.', model: 'gemma4:31b'}, ...changes});
+
+    it('should offer it as a switch in the row of the title of the sentences, off at first', () => {
+        render(<BriefingCard item={withAi()} format="points"/>);
+        const toggle = screen.getByRole('switch', {name: 'AI version'});
+        expect(toggle).toHaveAttribute('aria-checked', 'false');
+        expect(screen.queryByText('Written by the AI')).toBeNull();
+        // over the sentences, beside their title
+        const title = screen.getByText("In the article's words");
+        expect(title.parentElement).toContainElement(toggle);
+        expect(toggle.compareDocumentPosition(screen.getByText('Premier point.')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        // the link under the sentences is gone
+        expect(screen.queryByRole('button', {name: /AI version/})).toBeNull();
+    });
+
+    it('should show the AI version under the sentences when the switch is on, and take it away when it is off', () => {
+        render(<BriefingCard item={withAi()} format="points"/>);
+        fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
+        expect(screen.getByRole('switch', {name: 'AI version'})).toHaveAttribute('aria-checked', 'true');
+        expect(screen.getByText('Written by the AI')).toBeInTheDocument();
+        expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
+        expect(screen.getByText(/gemma4/)).toBeInTheDocument();
+        // under the sentences of the article, before the link to it
+        expect(screen.getByText('Second point.').compareDocumentPosition(screen.getByText('Written by the AI')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText('Written by the AI').compareDocumentPosition(screen.getByRole('link', {name: /Read the article at/})) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+        fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
+        expect(screen.queryByText('Written by the AI')).toBeNull();
+    });
+
+    it('should show the summary of the AI for the summary, and no switch for the key passages, which the AI did not write again', () => {
+        const {rerender} = render(<BriefingCard item={withAi({digest: 'Un digest.'})} format="digest"/>);
+        fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
+        expect(screen.getByText('Un résumé de l’IA.')).toBeInTheDocument();
+        rerender(<BriefingCard item={withAi()} format="passages"/>);
+        expect(screen.queryByRole('switch', {name: 'AI version'})).toBeNull();
+    });
+
+    it('should show no switch for a card the AI wrote nothing for', () => {
+        render(<BriefingCard item={item({points: 'Premier point.'})} format="points"/>);
+        expect(screen.queryByRole('switch')).toBeNull();
+    });
+
+    it('should put the switch beside the title of a translated text too', () => {
+        render(<BriefingCard item={withAi({translation: 'Translated passage.', pointsTranslation: 'Point traduit.'})} format="points"/>);
+        expect(screen.getByText("In the article's words, translated").parentElement).toContainElement(screen.getByRole('switch', {name: 'AI version'}));
+    });
+});
+
 describe('BriefingCard topic', () => {
     // the feeds give "sport", the page shows it as a name (the user, 02.11.2026)
     it('should show the topic of the card with a capital letter', () => {

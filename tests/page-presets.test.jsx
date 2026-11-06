@@ -45,7 +45,12 @@ const open = async () => {
     await screen.findByText('First story');
     return container;
 };
-const choice = () => screen.getByRole('group', {name: 'Show'});
+// "Read as" and "Show" are in a pill of the toolbar, opened for the one asked (the user, 06.11.2026: two groups of buttons took the toolbar to two lines)
+const pill = () => screen.getByRole('button', {name: /^What the cards show/});
+const choice = () => {
+    if (!screen.queryByRole('group', {name: 'Show'})) fireEvent.click(pill());
+    return screen.getByRole('group', {name: 'Show'});
+};
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.clearAllMocks());
@@ -59,10 +64,23 @@ describe('the preset the page shows its cards in', () => {
         expect(screen.getByRole('button', {name: /^Coverage/})).toBeInTheDocument();
     });
 
-    it('should offer the three presets, next to the way to read the cards', async () => {
+    it('should offer the three presets, with the way to read the cards, in one pill of the toolbar', async () => {
         await open();
+        // closed: one pill saying both
+        expect(screen.queryByRole('group', {name: 'Show'})).toBeNull();
+        expect(pill()).toHaveTextContent('Key passages · Everything');
         expect(within(choice()).getAllByRole('radio').map(radio => radio.textContent)).toEqual(['Short', 'Standard', 'Everything']);
         expect(screen.getByRole('group', {name: 'Read as'})).toBeInTheDocument();
+        // and the way to what each one contains
+        expect(screen.getByRole('link', {name: 'your settings'})).toHaveAttribute('href', '/settings');
+    });
+
+    it('should say the preset chosen in the pill, as it is chosen', async () => {
+        await open();
+        fireEvent.click(within(choice()).getByRole('radio', {name: 'Standard'}));
+        expect(pill()).toHaveTextContent('Key passages · Standard');
+        fireEvent.click(within(screen.getByRole('group', {name: 'Read as'})).getByRole('radio', {name: 'Summary'}));
+        expect(pill()).toHaveTextContent('Summary · Standard');
     });
 
     it('should leave out of the cards what "Short" does not contain, and keep the choice in the browser', async () => {

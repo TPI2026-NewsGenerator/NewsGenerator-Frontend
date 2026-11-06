@@ -18,6 +18,7 @@ import {Marked} from "@/components/news/Marked.jsx";
 import {ORIGINAL_START, paragraphsWithMarks} from "@/features/briefing/marks.js";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
+import {Switch} from "@/components/ui/switch.jsx";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {fieldsOf} from "@/features/briefing/formats.js";
 import {countryNames} from "@/features/briefing/countries.js";
@@ -339,6 +340,13 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
     // the AI version of the points or the summary, absent from the key passages and the briefings before 15.10.2026
     const aiText = format === 'points' ? item.ai?.points : format === 'digest' ? item.ai?.summary : null;
     const [showAi, setShowAi] = useState(false);
+    // a switch in the row of the title of the sentences (the user, 06.11.2026: a link under them was not understood): put on, the AI version is shown under them
+    const aiSwitch = paragraphs.length > 0 && aiText && (
+        <Switch checked={showAi} onCheckedChange={setShowAi} aria-controls={`ai-${item.storyId}`}
+                title="The version the AI wrote of these sentences, shown under them for you to compare">
+            AI version
+        </Switch>
+    );
     // what lies around the news, one strip under it (see CardMore); the glance and the link row open one
     // none chosen yet: the first tab is the one open (the user, 05.11.2026); once the reader opens one, or closes it, theirs stands
     const [chosen, setChosen] = useState(undefined);
@@ -467,7 +475,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     </div>
                 ) : translation.length > 0 ? (
                     <div className="mt-6">
-                        <p className="section-title">In the article's words, translated</p>
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                            <p className="section-title">In the article's words, translated</p>
+                            {aiSwitch}
+                        </div>
                         <div className="body-text mt-3"><Way paragraphs={translation} lede={lede}/></div>
                         <p className="footnote mt-3">
                             Sentences chosen by the AI in the article {lead && <>of {lead.source} </>}and translated by it: it may contain errors, the original is the reference.
@@ -483,7 +494,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     </div>
                 ) : (
                     <div className="mt-6">
-                        <p className="section-title">In the article's words</p>
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                            <p className="section-title">In the article's words</p>
+                            {aiSwitch}
+                        </div>
                         <div className="body-text mt-3"><Way paragraphs={paragraphs} lede={lede}/></div>
                         <p className="footnote mt-3">
                             Sentences chosen by the AI, shown as the article {lead && <>of {lead.source} </>}published them.
@@ -491,18 +505,11 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                     </div>
                 )}
 
+                {/* the AI version, when the switch over the sentences is on: under them, for the reader to compare the two */}
+                {paragraphs.length > 0 && aiText && showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
+
                 {/* the way to the article, right under its sentences (the user, 06.11.2026); who else covers it is at the very bottom */}
                 {lead && <NewsLinks lead={lead} show="article" className="mt-5"/>}
-
-                {paragraphs.length > 0 && aiText && (
-                    <>
-                        <button type="button" onClick={() => setShowAi(!showAi)} aria-expanded={showAi} aria-controls={`ai-${item.storyId}`}
-                                className="mt-4 cursor-pointer text-[0.8125rem] text-action-text hover:underline underline-offset-4">
-                            {showAi ? 'Hide AI version' : 'Show AI version'}
-                        </button>
-                        {showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
-                    </>
-                )}
 
                 {/* what lies around the news, behind one strip: the first open at first */}
                 <CardMore tabs={tabs} open={more} onOpen={setChosen} id={`card-${item.storyId}`}/>

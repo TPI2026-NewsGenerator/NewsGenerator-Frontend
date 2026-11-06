@@ -52,6 +52,10 @@ const BOX = {name: 'Add to the e-mail'};
 // what a story carries is in the frame on the right (see MailInspector): one section each, the picture, the countries and the lines closed until
 // the reader opens them
 const carries = (title) => screen.getByRole('group', {name: `What “${title}” carries in the e-mail`});
+// the way to read the cards and what they show are in a pill of the toolbar (the user, 06.11.2026): opened before its groups are used
+const openView = () => {
+    if (!screen.queryByRole('group', {name: 'Read as'})) fireEvent.click(screen.getByRole('button', {name: /^What the cards show/}));
+};
 const showSection = (name) => {
     const button = screen.queryByRole('button', {name: `Show the details of ${name}`});
     if (button) fireEvent.click(button);
@@ -90,6 +94,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: BRIEFING.items.map(item => ({...item, points: 'A point.', digest: 'A digest.'}))}, mail: true});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
+        openView();
         const page = screen.getByRole('group', {name: 'Read as'});
         fireEvent.click(within(page).getByRole('radio', {name: 'Summary'}));
 
@@ -112,6 +117,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
+        openView();
         fireEvent.click(within(screen.getByRole('group', {name: 'Read as'})).getByRole('radio', {name: 'Bullet points'}));
         fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
@@ -156,6 +162,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item, BRIEFING.items[1]]}, mail: true});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
+        openView();
         fireEvent.click(within(screen.getByRole('group', {name: 'Read as'})).getByRole('radio', {name: 'Bullet points'}));
         screen.getAllByRole('checkbox', BOX).slice(0, 2).forEach(box => fireEvent.click(box));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
@@ -208,6 +215,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
         render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
         await screen.findByText('First story');
+        openView();
         fireEvent.click(within(screen.getByRole('group', {name: 'Read as'})).getByRole('radio', {name: 'Bullet points'}));
         fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));

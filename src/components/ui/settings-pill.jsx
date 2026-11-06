@@ -10,12 +10,13 @@ import {Popover} from "radix-ui";
 import {SlidersHorizontal} from "lucide-react";
 
 // label: what the pill shows ("2 days · 10 cards"); ariaLabel: what it says to the screen readers;
-// title: the head of the panel, none by default; children: its controls
-export const SettingsPill = ({label, ariaLabel, title, children}) => (
+// title: the head of the panel, none by default; children: its controls; icon: the one before the label (sliders by default); wide: a panel
+// of 22 rem for controls that do not fit 18 rem (two groups of buttons)
+export const SettingsPill = ({label, ariaLabel, title, children, icon, wide = false}) => (
     <Popover.Root>
         <Popover.Trigger aria-label={ariaLabel}
                          className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full bg-paper-deep px-3.5 text-[0.8125rem] whitespace-nowrap text-ink transition-colors duration-200 hover:bg-rule/60 data-[state=open]:bg-rule/60">
-            <SlidersHorizontal aria-hidden className="size-3.5 text-ink-mute" strokeWidth={1.75}/>
+            {icon ?? <SlidersHorizontal aria-hidden className="size-3.5 text-ink-mute" strokeWidth={1.75}/>}
             {label}
         </Popover.Trigger>
         <Popover.Portal>
@@ -25,7 +26,7 @@ export const SettingsPill = ({label, ariaLabel, title, children}) => (
                                  event.preventDefault();
                                  event.currentTarget.querySelector('[role="slider"], [role="radio"], input, button:not([aria-label^="What"])')?.focus();
                              }}
-                             className="raised z-50 w-72 space-y-5 rounded-2xl bg-paper p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)] ring-1 ring-rule/60 outline-none animate-in fade-in-0 zoom-in-[0.98]">
+                             className={`raised z-50 ${wide ? 'w-[22rem]' : 'w-72'} max-w-[calc(100vw-2rem)] space-y-5 rounded-2xl bg-paper p-5 shadow-[0_12px_40px_rgba(0,0,0,0.16)] ring-1 ring-rule/60 outline-none animate-in fade-in-0 zoom-in-[0.98]`}>
                 {title && <p className="text-[0.9375rem] font-semibold tracking-[-0.01em]">{title}</p>}
                 {children}
             </Popover.Content>

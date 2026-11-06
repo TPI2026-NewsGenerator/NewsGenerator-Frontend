@@ -9,7 +9,7 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {Tabs} from "radix-ui";
-import {Link2, ListChecks} from "lucide-react";
+import {Eye, Link2, ListChecks} from "lucide-react";
 import {PageShell, Opening, Toolbar} from "@/components/layout/Page.jsx";
 import {SettingsPill} from "@/components/ui/settings-pill.jsx";
 import {Button} from "@/components/ui/button.jsx";
@@ -27,7 +27,7 @@ import {EntityApi} from "@/features/entities/entityApi.js";
 import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {keepSize, keptSize} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
-import {keepFormat, keptFormat} from "@/features/briefing/formats.js";
+import {FORMATS, keepFormat, keptFormat} from "@/features/briefing/formats.js";
 import {keepShow, keptShow, usePresets} from "@/features/briefing/blockPresets.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
@@ -379,12 +379,16 @@ export const BriefingPage = () => {
         </div>
     );
 
-    // the reading of the cards, in the toolbar while the tab of the briefing is read
+    // how the cards are read and what they show, in a pill of the toolbar while the tab of the briefing is read: two groups of three buttons
+    // took the toolbar to two lines on a laptop (the user, 06.11.2026), as the days and the cards of the next briefing did (01.11.2026)
+    const viewLabel = [shorter && FORMATS.find(one => one.value === format)?.label, pagePresets.find(preset => preset.value === show)?.label].filter(Boolean).join(' · ');
     const reading = tab === 'briefing' && ready && count > 0 && (
-        <>
+        <SettingsPill label={viewLabel} ariaLabel={`What the cards show: ${viewLabel}. Change`} wide
+                      icon={<Eye aria-hidden className="size-3.5 text-ink-mute" strokeWidth={1.75}/>}>
             {shorter && <BriefingFormat format={format} onChange={chooseFormat}/>}
             <BriefingFormat label="Show" format={show} onChange={chooseShow} options={pagePresets} tip={SHOW_TIP}/>
-        </>
+            <p className="caption">What each one contains: <Link className="link" to="/settings">your settings</Link>.</p>
+        </SettingsPill>
     );
     // what the briefing offers for the e-mail, a round icon each in the toolbar (the user, 05.11.2026: a form took a band of the page): ticking
     // every story, a news added by its link. The AI analysis has none: it is seen on the story itself
