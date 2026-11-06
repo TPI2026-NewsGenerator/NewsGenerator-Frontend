@@ -21,14 +21,15 @@ import {FollowingNews} from "@/features/briefing/components/FollowingNews.jsx";
 import {useFollowing} from "@/features/briefing/useFollowing.js";
 import {SearchApi} from "@/features/search/api/searchApi.js";
 import {createTranslator} from "@/features/search/translation.js";
-import {DEFAULT_HOURS, keepWatchLimit, keptWatchLimit, spanOf, windowAfter} from "@/features/briefing/windows.js";
+import {DEFAULT_HOURS, spanOf, watchLimitPreference, windowAfter} from "@/features/briefing/windows.js";
 import {BriefingApi, ProfileApi} from "@/features/briefing/api/briefingApi.js";
 import {EntityApi} from "@/features/entities/entityApi.js";
 import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
-import {keepSize, keptSize} from "@/features/briefing/sizes.js";
+import {sizePreference} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
-import {FORMATS, keepFormat, keptFormat} from "@/features/briefing/formats.js";
-import {keepShow, keptShow, usePresets} from "@/features/briefing/blockPresets.js";
+import {FORMATS, formatPreference} from "@/features/briefing/formats.js";
+import {showPreference, usePresets} from "@/features/briefing/blockPresets.js";
+import {usePreference} from "@/features/preferences/usePreference.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
 import {AddNews} from "@/features/briefing/components/AddNews.jsx";
@@ -72,15 +73,15 @@ export const BriefingPage = () => {
     const [chosen, setChosen] = useState(null);
     const hours = chosen ?? windowAfter(briefing?.hours ?? DEFAULT_HOURS);
     // whether the profile follows something (its items in the briefing, or words): the page has a tab for
-    // their news, with the number wanted for each, the last choice of the reader
+    // their news, with the number wanted for each, the last choice of the reader. These four are kept on the account: the same on every device
     const [follows, setFollows] = useState(false);
-    const [watchLimit, setWatchLimit] = useState(keptWatchLimit);
+    const [watchLimit, chooseWatchLimit] = usePreference(watchLimitPreference);
     // the cards of the next briefing, the last choice of the reader
-    const [size, setSize] = useState(keptSize);
+    const [size, chooseSize] = usePreference(sizePreference);
     // the way the cards are read, the last choice of the reader
-    const [format, setFormat] = useState(keptFormat);
+    const [format, chooseFormat] = usePreference(formatPreference);
     // what the cards show: the preset the reader chose last, with the blocks they set for it in the settings ("Everything" at first: the whole card)
-    const [show, setShow] = useState(keptShow);
+    const [show, chooseShow] = usePreference(showPreference);
     const {presets: pagePresets} = usePresets('page');
     const shown = pagePresets.find(preset => preset.value === show)?.on;
     // the server can send the cards ticked by e-mail
@@ -174,25 +175,6 @@ export const BriefingPage = () => {
         if (expired(data)) return;
         if (data.error) setError(data.error);
         else setBriefing(data.briefing);
-    };
-
-    const chooseWatchLimit = (value) => {
-        setWatchLimit(value);
-        keepWatchLimit(value);
-    };
-
-    const chooseSize = (value) => {
-        setSize(value);
-        keepSize(value);
-    };
-
-    const chooseFormat = (value) => {
-        setFormat(value);
-        keepFormat(value);
-    };
-    const chooseShow = (value) => {
-        setShow(value);
-        keepShow(value);
     };
 
     const ticked = ticks.briefingId === briefing?.id ? ticks.storyIds : [];

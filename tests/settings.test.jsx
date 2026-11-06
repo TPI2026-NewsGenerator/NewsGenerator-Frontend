@@ -12,6 +12,9 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter, Route, Routes} from "react-router-dom";
 import {WithSession} from "./session.jsx";
 
+// the page draws two tables of boxes for the presets: the first render takes seconds when the whole suite runs at once
+vi.setConfig({testTimeout: 20000});
+
 vi.mock('@/features/auth/accountApi.js', () => ({AccountApi: {rename: vi.fn(), changeEmail: vi.fn(), changePassword: vi.fn()}}));
 
 const {AccountApi} = await import('@/features/auth/accountApi.js');

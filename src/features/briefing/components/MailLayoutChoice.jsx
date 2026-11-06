@@ -3,12 +3,12 @@
 //  Date: 05.11.2026
 //  File: MailLayoutChoice.jsx
 //  Description: The choice of the layout of the editor of the e-mail in the settings (the user, 05.11.2026): each of the two is a card
-//               with a drawing of it, the three frames being the one at first. Kept in this browser (see mailEditorLayout.js)
+//               with a drawing of it, the three frames being the one at first. Kept on the account (see mailEditorLayout.js)
 //
 
-import {useState} from "react";
 import {RadioGroup} from "radix-ui";
-import {keepLayout, keptLayout, LAYOUTS} from "@/features/briefing/mailEditorLayout.js";
+import {LAYOUTS, layoutPreference} from "@/features/briefing/mailEditorLayout.js";
+import {usePreference} from "@/features/preferences/usePreference.js";
 import {cn} from "@/lib/utils.js";
 
 // a drawing is made of grey bars and a few blue marks, on the grey of the page: it says the layout, not the words
@@ -53,11 +53,7 @@ const MatrixDrawing = () => (
 const DRAWINGS = {frames: FramesDrawing, matrix: MatrixDrawing};
 
 export const MailLayoutChoice = () => {
-    const [layout, setLayout] = useState(keptLayout);
-    const choose = (value) => {
-        setLayout(value);
-        keepLayout(value);
-    };
+    const [layout, choose] = usePreference(layoutPreference);
 
     return (
         <RadioGroup.Root value={layout} onValueChange={choose} aria-label="The editor of the e-mail" className="grid max-w-[46rem] gap-4 sm:grid-cols-2">

@@ -3,8 +3,11 @@
 //  Date: 03.10.2026
 //  File: windows.js
 //  Description: The hours of news a briefing can be written from, as the server takes them (see
-//               briefing-service.js on the server)
+//               briefing-service.js on the server), and the news wanted for each name followed, kept in the browser and on the account
+//               (see features/preferences)
 //
+
+import {preference} from "@/features/preferences/preferences.js";
 
 // 1 to 7 days, chosen on a bar since 14.10.2026 (24 hours, 2 or 7 days before), 2 days by default
 export const MIN_DAYS = 1;
@@ -21,24 +24,19 @@ export const MIN_WATCH = 10;
 export const MAX_WATCH = 100;
 export const WATCH_STEP = 10;
 export const DEFAULT_WATCH = 100;
-const WATCH_KEY = 'newsgenerator.following-news';
 
-// the number the reader chose last, kept in the browser
-export const keptWatchLimit = () => {
-    try {
-        const value = Number(localStorage.getItem(WATCH_KEY));
-        return Number.isInteger(value) && value % WATCH_STEP === 0 && value >= MIN_WATCH && value <= MAX_WATCH ? value : DEFAULT_WATCH;
-    } catch {
-        return DEFAULT_WATCH;
-    }
-};
-export const keepWatchLimit = (limit) => {
-    try {
-        localStorage.setItem(WATCH_KEY, String(limit));
-    } catch {
-        // kept for the page only
-    }
-};
+// the number the reader chose last, kept in the browser and on the account
+export const watchLimitPreference = preference({
+    name: 'followingNews',
+    key: 'newsgenerator.following-news',
+    fallback: DEFAULT_WATCH,
+    parse: (text) => {
+        const value = Number(text);
+        return Number.isInteger(value) && value % WATCH_STEP === 0 && value >= MIN_WATCH && value <= MAX_WATCH ? value : undefined;
+    },
+});
+export const keptWatchLimit = () => watchLimitPreference.kept();
+export const keepWatchLimit = (limit) => watchLimitPreference.keep(limit);
 
 // "24 hours", "3 days": what the reader chose, said in the texts of the page
 export const spanOf = (hours) => hours > 24 && hours % 24 === 0 ? `${hours / 24} days` : `${hours} hours`;

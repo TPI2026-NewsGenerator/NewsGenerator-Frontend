@@ -3,7 +3,7 @@
 //  Date: 02.10.2026
 //  File: Settings.jsx
 //  Description: The settings of the account: its username, its email and its password, each changed
-//               with the password of now, and the layout of the editor of the e-mail, kept in this browser, with what its presets contain
+//               with the password of now, and the layout of the editor of the e-mail, kept on the account, with what its presets contain
 //
 
 import {useEffect, useState} from "react";
@@ -209,7 +209,7 @@ export const SettingsPage = () => {
             </Section>
 
             <Section kicker="Briefing" title="The editor of the e-mail"
-                     intro="How the editor opens when you send stories of your briefing by e-mail. Kept in this browser: change it here when you want the other.">
+                     intro="How the editor opens when you send stories of your briefing by e-mail. Kept on your account, so every device you sign in on has it: change it here when you want the other.">
                 <MailLayoutChoice/>
             </Section>
 

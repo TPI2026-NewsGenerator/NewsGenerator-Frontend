@@ -10,6 +10,9 @@ import {useCallback, useEffect, useState} from "react";
 import {AuthContext} from "./sessionContext.js";
 import {forgetSearch} from "@/features/search/keptSearch.js";
 import {setActiveProfile} from "@/features/profiles/activeProfile.js";
+import {endPreferences, startPreferences} from "@/features/preferences/preferences.js";
+// every preference is known before the account is asked for them
+import "@/features/preferences/registered.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -29,6 +32,12 @@ export const AuthProvider = ({children}) => {
         fetchSession().then(setUser);
     }, []);
 
+    // the display preferences of the account are read once the reader is known (see features/preferences)
+    const reader = user?.id;
+    useEffect(() => {
+        if (reader !== undefined) startPreferences(reader);
+    }, [reader]);
+
     // after the login or the signup set the cookie
     const refresh = useCallback(async () => {
         const reader = await fetchSession();
@@ -42,6 +51,8 @@ export const AuthProvider = ({children}) => {
         forgetSearch();
         // the next reader of this browser has profiles of their own
         setActiveProfile(null);
+        // what waits to go up to the account goes while the session lasts; the preferences stay in the browser, which knows whose they are
+        await endPreferences();
         await fetch(`${API_URL}/session`, {method: 'DELETE'}).catch(() => null);
     }, []);
 

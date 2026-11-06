@@ -5,7 +5,7 @@
 //  Description: What each preset puts in a story, in the settings: the blocks in rows, the presets in columns, a box ticked where the preset puts
 //               it (the user, 05.11.2026), that the reader ticks and unticks to set what each preset contains (the user, 06.11.2026). Two
 //               tables, one for the editor of the e-mail and one for the page of the briefing, each preset with its own blocks in each. What is
-//               at first is in mailBlocks.js, what the reader sets is kept in the browser (see blockPresets.js)
+//               at first is in mailBlocks.js, what the reader sets is kept on the account (see blockPresets.js)
 //
 
 import {Check} from "lucide-react";
@@ -55,7 +55,7 @@ const BlockPresets = ({scope, label, what}) => {
             </table>
             <p className="caption mt-3">
                 Tick what each preset puts {what}. A preset puts a block in the stories that have it only: no “Contested” badge for a story nobody
-                denies. The title and the text are always there. Kept in this browser.
+                denies. The title and the text are always there. Kept on your account.
             </p>
             {changed.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
