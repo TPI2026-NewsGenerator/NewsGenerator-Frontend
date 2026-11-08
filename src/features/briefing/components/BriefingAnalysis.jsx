@@ -59,7 +59,7 @@ export const CardAnalysis = ({id, analysis, pending, model}) => {
                 </Part>
             )}
             <p className="footnote">
-                Written by the AI ({(model ?? '').replace(/:.*$/, '')}) from the articles of this story and the earlier news of its
+                Written by the AI ({(model ?? '').replace(/:\S*/g, '')}) from the articles of this story and the earlier news of its
                 affair, each line from what they say. It can get a fact wrong: the articles are the reference.
             </p>
         </div>

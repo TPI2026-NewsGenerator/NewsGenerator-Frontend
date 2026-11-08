@@ -74,7 +74,7 @@ const AiVersion = ({id, format, text, model, source}) => (
                 : <p>{text}</p>}
         </div>
         <p className="footnote mt-3">
-            Written by the AI{model ? ` (${model.replace(/:.*$/, '')})` : ''} from the article {source && <>of {source} </>}in its own words: it can get a
+            Written by the AI{model ? ` (${model.replace(/:\S*/g, '')})` : ''} from the article {source && <>of {source} </>}in its own words: it can get a
             fact wrong. The article's sentences above are the reference.
         </p>
     </div>

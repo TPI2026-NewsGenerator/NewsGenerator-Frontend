@@ -621,6 +621,11 @@ describe('BriefingCard AI analysis', () => {
         expect(screen.queryByRole('button', {name: 'Hide the AI analysis'})).toBeNull();
     });
 
+    it('should name every model that wrote it, without its version, when deepseek failed on a card and gpt-oss:120b wrote it (8.11.2026)', () => {
+        render(<BriefingCard item={item()} analysis={analysis} analysisModel="deepseek-v4-pro:0813 + gpt-oss:120b"/>);
+        expect(document.getElementById('analysis-1')).toHaveTextContent('Written by the AI (deepseek-v4-pro + gpt-oss)');
+    });
+
     it('should write a line of what could come next as "If X, then Y", with no point before the "then"', () => {
         render(<BriefingCard item={item()} analysis={analysis} analysisModel="deepseek-v4-pro:0813"/>);
         expect(screen.getByText('the vote fails', {exact: false}).closest('li')).toHaveTextContent('If the vote fails, then the plan is dropped.');
