@@ -11,6 +11,8 @@
 export const ORIGINAL_START = '\uE000';
 export const ORIGINAL_END = '\uE001';
 export const withoutOriginalMarks = (text) => text?.replace(/[\uE000\uE001]/g, '') ?? text;
+// the sign after a sentence translated whose figures the server could not match to the original's (in italics too)
+export const UNCHECKED = '\u26A0';
 
 // the text in pieces, the ones of a term marked: [{text, marked}]
 export const segmentsOf = (text, marks = []) => {

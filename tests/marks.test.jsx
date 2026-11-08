@@ -158,6 +158,15 @@ describe('BriefingCard sentences left in their language', () => {
         expect([...container.querySelectorAll('.body-text i')].map(i => i.textContent).join('')).toBe('(Er wurde bestraft.)');
     });
 
+    it('should show a translation whose figures could not be checked in italics with its warning, and say what it means', () => {
+        const unchecked = {...german, translation: `Le VAR arrive. ${String.fromCharCode(0xE000)}Il a reçu une amende de 10 000 $. ⚠${String.fromCharCode(0xE001)}`};
+        const {container, getByText, queryByText} = render(<BriefingCard item={unchecked}/>);
+        expect([...container.querySelectorAll('.body-text i')].map(i => i.textContent)).toEqual(['Il a reçu une amende de 10 000 $. ⚠']);
+        expect(getByText(/translated by the AI, but a figure of the original could not be found/)).toBeInTheDocument();
+        // none of the sentences is left in its language: the other note is not there
+        expect(queryByText(/left in the language of the article/)).toBeNull();
+    });
+
     it('should not say it of a card with none', () => {
         const {queryByText} = render(<BriefingCard item={{...german, translation: 'Le VAR arrive. Il a été puni.'}}/>);
         expect(queryByText(/left in the language of the article/)).toBeNull();

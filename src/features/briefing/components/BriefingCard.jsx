@@ -15,7 +15,7 @@ import {Notice} from "@/components/ui/text.jsx";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
 import {Marked} from "@/components/news/Marked.jsx";
-import {ORIGINAL_START, paragraphsWithMarks} from "@/features/briefing/marks.js";
+import {ORIGINAL_START, UNCHECKED, paragraphsWithMarks} from "@/features/briefing/marks.js";
 import {InfoTip} from "@/components/ui/info-tip.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {Switch} from "@/components/ui/switch.jsx";
@@ -487,7 +487,8 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                         <div className="body-text mt-3"><Way paragraphs={translation} lede={lede}/></div>
                         <p className="footnote mt-3">
                             Sentences chosen by the AI in the article {lead && <>of {lead.source} </>}and translated by it: it may contain errors, the original is the reference.
-                            {item[fields.translation]?.includes(ORIGINAL_START) && ' The sentences in italics, between parentheses, are left in the language of the article: the AI could not translate them with their figures.'}
+                            {item[fields.translation]?.includes(`${ORIGINAL_START}(`) && ' The sentences in italics, between parentheses, are left in the language of the article: the AI could not translate them.'}
+                            {item[fields.translation]?.includes(UNCHECKED) && ` The sentences in italics marked ${UNCHECKED} are translated by the AI, but a figure of the original could not be found in them: check it in the original.`}
                         </p>
                         {original && (
                             <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
