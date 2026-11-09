@@ -321,8 +321,11 @@ const Glance = ({item, onOpen, onNote, on = () => true}) => {
 // added by its link, for the e-mail; item.transferred: that card copied from another briefing of the reader
 const unmarked = (entry) => ({...entry, marks: undefined});
 // onRemove: a news the reader added taken out of the briefing
+// versions: [{briefingId, profile, createdAt, source}] the versions the other profiles of the account have of this news (see the server's
+// card-versions.js), onUseVersion(version) replaces the card with one of them, where it stands; item.version: {briefingId, profile,
+// createdAt} when it already is one, item.previousVersion {title, source} the card it replaced, onRestoreVersion() brings that one back
 // show: the blocks the page shows of the card, the ones of its preset (see mailBlocks.js BLOCKS): all of them without it
-export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected = false, number, lede = false, marked = false, format = 'passages',
+export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions = [], onUseVersion, onRestoreVersion, versionBusy = false, selected = false, number, lede = false, marked = false, format = 'passages',
                                  analysis, analysisPending = false, analysisModel, affair, briefingId, show}) => {
     const on = (block) => !show || show.includes(block);
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
@@ -538,6 +541,31 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, selected 
                             <button type="button" onClick={onRemove}
                                     className="mt-1 block cursor-pointer text-action-text hover:underline underline-offset-4">Take it out</button>
                         )}
+                    </Margin>
+                )}
+                {item.version && (
+                    <Margin kicker={`${item.version.profile ?? 'Another profile'}'s version`}>
+                        This card is the one written for the profile {item.version.profile ?? 'of the other briefing'}, from its own articles
+                        {item.version.createdAt ? ` (briefing of ${when(item.version.createdAt)})` : ''}.
+                        {onRestoreVersion && item.previousVersion && (
+                            <button type="button" onClick={onRestoreVersion} disabled={versionBusy}
+                                    className="mt-1 block cursor-pointer text-action-text hover:underline underline-offset-4 disabled:cursor-wait disabled:opacity-60">
+                                Back to the one of this profile{item.previousVersion.source ? ` (${item.previousVersion.source})` : ''}
+                            </button>
+                        )}
+                    </Margin>
+                )}
+                {!item.version && onUseVersion && versions?.length > 0 && (
+                    <Margin kicker="Another version">
+                        {versions.map(version => (
+                            <span key={version.briefingId} className="mb-1.5 block last:mb-0">
+                                {version.profile ?? 'Another profile'} wrote it from {version.source ?? 'other articles'}, in its briefing of {when(version.createdAt)}.
+                                <button type="button" onClick={() => onUseVersion(version)} disabled={versionBusy}
+                                        className="mt-0.5 block cursor-pointer text-action-text hover:underline underline-offset-4 disabled:cursor-wait disabled:opacity-60">
+                                    Use {version.profile ? `${version.profile}'s` : 'this'} version
+                                </button>
+                            </span>
+                        ))}
                     </Margin>
                 )}
                 {item.project && <Margin kicker="For your project">{item.project}</Margin>}

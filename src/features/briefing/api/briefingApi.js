@@ -115,6 +115,13 @@ export const BriefingApi = {
     // events: [{id, storyIds, at, kind, title, titleTranslation, url, medium, language, media, news, languages, reported,
     // official, denial}], coverage: {media, news, first, peak, days, languages, byMedium}}
     affair: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/affair`),
+    // the other versions the other profiles of the account have of the cards of the briefing (the same news, written from their own
+    // articles): {versions: {storyId: [{briefingId, profile, createdAt, title, source}]}}, the newest briefing of each profile
+    versions: (briefingId) => send(`/briefing/${briefingId}/versions`),
+    // a card replaced where it stands by the version another briefing has of it: {item, analysis}, the card and the analysis written for it
+    // ({why, next, timeline}, or null); and the way back, the card as its profile wrote it
+    takeVersion: (briefingId, storyId, fromBriefingId) => send(`/briefing/${briefingId}/stories/${storyId}/version`, {method: 'POST', body: {fromBriefingId}}),
+    restoreVersion: (briefingId, storyId) => send(`/briefing/${briefingId}/stories/${storyId}/version`, {method: 'DELETE'}),
     // the thumb of the reader on a card: 'up', 'down' or null to take it back (204, no body)
     vote: async (briefingId, storyId, vote) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/vote`, {

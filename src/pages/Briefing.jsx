@@ -169,6 +169,23 @@ export const BriefingPage = () => {
         return () => { current = false; };
     }, [readyId]);
 
+    // the other versions the other profiles of the account have of the cards, {storyId: [{briefingId, profile, createdAt, source}]}: asked
+    // once the briefing is ready, and again after a card is replaced. A failure leaves the cards as they are, with no choice
+    const [versions, setVersions] = useState({});
+    const [versionBusy, setVersionBusy] = useState(null);
+    const loadVersions = useCallback(async (id) => {
+        try {
+            const data = await BriefingApi.versions(id);
+            if (!data.error) setVersions(data.versions ?? {});
+        } catch {
+            // no other version shown
+        }
+    }, []);
+    useEffect(() => {
+        setVersions({});
+        if (readyId !== null) loadVersions(readyId);
+    }, [readyId, loadVersions]);
+
     const start = async () => {
         setError(null);
         const data = await BriefingApi.start(hours, size);
@@ -228,6 +245,26 @@ export const BriefingPage = () => {
             toast.error(`Not taken out: ${err.message}`);
         }
     };
+
+    // a card replaced where it stands by the version another profile has of its news (or taken back as its profile wrote it): the card and
+    // its analysis come from the server, which keeps the card it replaced
+    const changeVersion = async (storyId, ask, success) => {
+        setVersionBusy(storyId);
+        try {
+            const {item, analysis} = await ask();
+            setBriefing(current => current && current.id === briefing.id ? {...current, items: current.items.map(card => card.storyId === storyId ? item : card),
+                ...(analysis && current.analysis?.status === 'ready' ? {analysis: {...current.analysis, cards: {...current.analysis.cards, [storyId]: analysis}}} : {})} : current);
+            toast.success(success);
+            await loadVersions(briefing.id);
+        } catch (err) {
+            toast.error(`Not changed: ${err.message}`);
+        } finally {
+            setVersionBusy(null);
+        }
+    };
+    const takeVersion = (storyId, version) => changeVersion(storyId, () => BriefingApi.takeVersion(briefing.id, storyId, version.briefingId),
+        `The card now shows ${version.profile ?? 'the other profile'}'s version of this news.`);
+    const restoreVersion = (storyId) => changeVersion(storyId, () => BriefingApi.restoreVersion(briefing.id, storyId), 'The card is back as your profile wrote it.');
 
     // shown at once, taken back if the server refuses it
     const vote = async (storyId, value) => {
@@ -318,6 +355,9 @@ export const BriefingPage = () => {
                                           analysisPending={briefing.analysis?.status === 'running'
                                               && (briefing.analysis.picked ?? []).some(entry => entry.storyId === item.storyId)}
                                           affair={affairs[item.storyId]} briefingId={briefing.id}
+                                          versions={versions[item.storyId]} versionBusy={versionBusy === item.storyId}
+                                          onUseVersion={item.imported ? undefined : version => takeVersion(item.storyId, version)}
+                                          onRestoreVersion={item.imported ? undefined : () => restoreVersion(item.storyId)}
                                           onVote={item.imported ? undefined : value => vote(item.storyId, value)}
                                           onRemove={item.imported && mail ? () => removeNews(item.storyId) : undefined}
                                           onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
