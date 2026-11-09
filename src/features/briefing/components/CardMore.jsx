@@ -74,7 +74,11 @@ export const CardMore = ({tabs, open, onOpen, id, className}) => {
                 ))}
             </div>
             {tabs.map(tab => open === tab.key && (
-                <section key={tab.key} id={`${id}-${tab.key}`} aria-labelledby={`${id}-${tab.key}-tab`} className="mt-6 scroll-mt-24">
+                // the section on the one other tone of the page (the user, 9.11.2026: a background around the sections, Angles, analysis...,
+                // to tell them from the article's own text); what is "paper" inside it (the labels of a timeline) takes that tone too, or it
+                // would show as patches
+                <section key={tab.key} id={`${id}-${tab.key}`} aria-labelledby={`${id}-${tab.key}-tab`}
+                         className="mt-5 scroll-mt-24 rounded-2xl bg-paper-deep px-5 py-5 [--color-paper:var(--paper-deep)]">
                     {tab.content}
                 </section>
             ))}
