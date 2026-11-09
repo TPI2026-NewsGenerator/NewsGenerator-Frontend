@@ -18,7 +18,7 @@ export const AiFirstChoice = () => {
             <Switch checked={aiFirst} onCheckedChange={choose}>Start on the AI version</Switch>
             <p className="caption">
                 {aiFirst
-                    ? 'A card shows its AI version under the article’s sentences, and the editor of the e-mail sends it, until you choose the other.'
+                    ? 'A card shows its AI version in place of the article’s sentences, and the editor of the e-mail sends it, until you choose the other.'
                     : 'A card shows the article’s own sentences, and the editor of the e-mail sends them, until you choose the AI version.'}
                 {' '}A card with no AI version, or the key passages, show the article’s sentences.
             </p>

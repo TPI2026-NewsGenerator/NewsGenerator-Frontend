@@ -62,20 +62,23 @@ const Points = ({paragraphs}) => (
 // the sentences of a card in the way the reader chose (see formats.js)
 const WAYS = {passages: Passages, digest: Digest, points: Points};
 
-// The points or the summary written by the AI (see server/services/utils/ai-ways.js), shown under the
-// article's own sentences when the reader asks for it, for the readers to compare the two. text: the
-// points ['...'] or the summary '...'; model: the model that wrote it
-const AiVersion = ({id, format, text, model, source}) => (
-    <div id={id} className="mt-6 rounded-2xl bg-paper-deep px-5 py-4">
-        <p className="section-title !text-accent-ink">Written by the AI</p>
-        <div className="body-text mt-3">
+// The points or the summary written by the AI (see server/services/utils/ai-ways.js), shown IN PLACE of the article's own sentences while the
+// switch over them is on (the user, 9.11.2026: it replaces the normal version, it is not put under it); the switch stays in the row of the
+// title, to go back to the sentences. text: the points ['...'] or the summary '...'; model: the model that wrote it
+const AiVersion = ({id, format, text, model, source, aiSwitch}) => (
+    <div className="mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <p className="section-title !text-accent-ink">Written by the AI</p>
+            {aiSwitch}
+        </div>
+        <div id={id} className="body-text mt-3">
             {format === 'points'
                 ? <Points paragraphs={text.map(point => ({text: point}))}/>
                 : <p>{text}</p>}
         </div>
         <p className="footnote mt-3">
             Written by the AI{model ? ` (${model.replace(/:\S*/g, '')})` : ''} from the article {source && <>of {source} </>}in its own words: it can get a
-            fact wrong. The article's sentences above are the reference.
+            fact wrong. Switch off “AI version” to read the article's own sentences, which are the reference.
         </p>
     </div>
 );
@@ -348,10 +351,19 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
     const [aiFirst] = usePreference(aiFirstPreference);
     const [aiChosen, setAiChosen] = useState(null);
     const showAi = aiChosen ?? aiFirst;
-    // a switch in the row of the title of the sentences (the user, 06.11.2026: a link under them was not understood): put on, the AI version is shown under them
+    // a switch in the row of the title of the sentences (the user, 06.11.2026: a link under them was not understood): put on, the AI version is shown in their place
+    const aiShown = paragraphs.length > 0 && Boolean(aiText) && showAi;
+    // the sentences of the article in their own language, when the card's "Show original" is open: under the translation, or under the AI version
+    const originalBlock = translation.length > 0 && original && (
+        <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
+            <p className="section-title !text-[1rem]">Original, {languageLabel(item.language)}</p>
+            <div lang={item.language ?? undefined} className="body-text mt-3 text-ink/85"><Way paragraphs={paragraphs}/></div>
+            <p className="footnote mt-3">As the article published them.</p>
+        </div>
+    );
     const aiSwitch = paragraphs.length > 0 && aiText && (
         <Switch checked={showAi} onCheckedChange={setAiChosen} aria-controls={`ai-${item.storyId}`}
-                title="The version the AI wrote of these sentences, shown under them for you to compare">
+                title="The version the AI wrote of these sentences, shown in their place: switch it off to read the article's own sentences">
             AI version
         </Switch>
     );
@@ -481,6 +493,11 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                     <div className="mt-6">
                         <Notice>{item.summaryError ?? 'No article of this story could be read (paywall or protected site).'}</Notice>
                     </div>
+                ) : aiShown ? (
+                    <>
+                        <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source} aiSwitch={aiSwitch}/>
+                        {originalBlock}
+                    </>
                 ) : translation.length > 0 ? (
                     <div className="mt-6">
                         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -493,13 +510,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                             {item[fields.translation]?.includes(`${ORIGINAL_START}(`) && ' The sentences in italics, between parentheses, are left in the language of the article: the AI could not translate them.'}
                             {item[fields.translation]?.includes(UNCHECKED) && ` The sentences in italics marked ${UNCHECKED} are translated by the AI, but a figure of the original could not be found in them: check it in the original.`}
                         </p>
-                        {original && (
-                            <div id={`original-${item.storyId}`} className="mt-6 border-l border-rule pl-5">
-                                <p className="section-title !text-[1rem]">Original, {languageLabel(item.language)}</p>
-                                <div lang={item.language ?? undefined} className="body-text mt-3 text-ink/85"><Way paragraphs={paragraphs}/></div>
-                                <p className="footnote mt-3">As the article published them.</p>
-                            </div>
-                        )}
+                        {originalBlock}
                     </div>
                 ) : (
                     <div className="mt-6">
@@ -513,9 +524,6 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                         </p>
                     </div>
                 )}
-
-                {/* the AI version, when the switch over the sentences is on: under them, for the reader to compare the two */}
-                {paragraphs.length > 0 && aiText && showAi && <AiVersion id={`ai-${item.storyId}`} format={format} text={aiText} model={item.ai.model} source={lead?.source}/>}
 
                 {/* the way to the article, right under its sentences (the user, 06.11.2026); who else covers it is at the very bottom */}
                 {lead && <NewsLinks lead={lead} show="article" className="mt-5"/>}

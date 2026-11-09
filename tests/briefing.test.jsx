@@ -434,14 +434,18 @@ describe('BriefingCard, the AI version', () => {
     const aiOffInSettings = () => aiFirstPreference.keep(false);
     afterEach(() => localStorage.removeItem('newsgenerator.ai-first'));
 
-    it('should show it under the sentences from the start, as the settings have it, on at first', () => {
+    it('should show it in place of the sentences from the start, as the settings have it, on at first', () => {
         render(<BriefingCard item={withAi()} format="points"/>);
         expect(screen.getByRole('switch', {name: 'AI version'})).toHaveAttribute('aria-checked', 'true');
         expect(screen.getByText('Written by the AI')).toBeInTheDocument();
         expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
+        // it replaces the normal version (the user, 9.11.2026), it is not put under it
+        expect(screen.queryByText('Premier point.')).toBeNull();
+        expect(screen.queryByText("In the article's words")).toBeNull();
         // the card can still go back to the sentences of the article, alone
         fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
         expect(screen.queryByText('Written by the AI')).toBeNull();
+        expect(screen.getByText('Premier point.')).toBeInTheDocument();
     });
 
     it('should offer it as a switch in the row of the title of the sentences, off when the settings have it off', () => {
@@ -458,20 +462,34 @@ describe('BriefingCard, the AI version', () => {
         expect(screen.queryByRole('button', {name: /AI version/})).toBeNull();
     });
 
-    it('should show the AI version under the sentences when the switch is on, and take it away when it is off', () => {
+    it('should show the AI version in place of the sentences when the switch is on, and put them back when it is off', () => {
         aiOffInSettings();
         render(<BriefingCard item={withAi()} format="points"/>);
+        expect(screen.getByText('Premier point.')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
         expect(screen.getByRole('switch', {name: 'AI version'})).toHaveAttribute('aria-checked', 'true');
         expect(screen.getByText('Written by the AI')).toBeInTheDocument();
         expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
         expect(screen.getByText(/gemma4/)).toBeInTheDocument();
-        // under the sentences of the article, before the link to it
-        expect(screen.getByText('Second point.').compareDocumentPosition(screen.getByText('Written by the AI')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        // the sentences of the article are gone, the switch is in the row of the title of the AI version, before the link to the article
+        expect(screen.queryByText('Premier point.')).toBeNull();
+        expect(screen.queryByText('Second point.')).toBeNull();
+        expect(screen.getByText('Written by the AI').parentElement).toContainElement(screen.getByRole('switch', {name: 'AI version'}));
         expect(screen.getByText('Written by the AI').compareDocumentPosition(screen.getByRole('link', {name: /Read the article at/})) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
         fireEvent.click(screen.getByRole('switch', {name: 'AI version'}));
         expect(screen.queryByText('Written by the AI')).toBeNull();
+        expect(screen.getByText('Second point.')).toBeInTheDocument();
+    });
+
+    it('should show the AI version in place of a translated text too', () => {
+        render(<BriefingCard item={withAi({translation: 'Translated passage.', pointsTranslation: 'Point traduit.'})} format="points"/>);
+        expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
+        expect(screen.queryByText('Point traduit.')).toBeNull();
+        // the original of the sentences stays one click away, under the AI version
+        fireEvent.click(screen.getByRole('button', {name: 'Show original'}));
+        expect(screen.getByText(/^Original,/)).toBeInTheDocument();
+        expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
     });
 
     it('should show the summary of the AI for the summary, and no switch for the key passages, which the AI did not write again', () => {
@@ -489,6 +507,7 @@ describe('BriefingCard, the AI version', () => {
     });
 
     it('should put the switch beside the title of a translated text too', () => {
+        aiOffInSettings();
         render(<BriefingCard item={withAi({translation: 'Translated passage.', pointsTranslation: 'Point traduit.'})} format="points"/>);
         expect(screen.getByText("In the article's words, translated").parentElement).toContainElement(screen.getByRole('switch', {name: 'AI version'}));
     });
