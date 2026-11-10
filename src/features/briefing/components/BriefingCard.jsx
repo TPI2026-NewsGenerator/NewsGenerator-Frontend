@@ -210,15 +210,18 @@ const OfficialSource = ({id, posts, original}) => (
 
 // The picture of one of its articles, the site it is of under it. Asked without the address of the page
 // (some sites refuse their pictures to other sites), and left out when it can't be loaded. illustration:
-// the picture of Wikimedia Commons of who it names, not of the news, said so; a portrait cut nearer its
-// top, where the face is
+// the picture of Wikimedia Commons of who it names, not of the news, said so; a portrait (a picture taller than wide, as the server says it, see
+// isStanding of picture-sizes.js) cut to the landscape nearer its top, where the face is (at 12%: 25% cut the top of the head of the portrait of Infantino of Commons; the user, 10.11.2026, a friend: a standing photo)
+const STANDING_RATIO = 0.9;
 const Picture = ({src, source, illustration = false}) => {
     const [failed, setFailed] = useState(false);
+    const [standing, setStanding] = useState(false);
     if (failed) return null;
     return (
         <figure className="m-0 mt-5">
             <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}
-                 className={`aspect-[16/9] w-full rounded-[18px] bg-paper-deep object-cover ${illustration ? 'object-[50%_25%]' : ''}`}/>
+                 onLoad={event => setStanding(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight < STANDING_RATIO)}
+                 className={`aspect-[16/9] w-full rounded-[18px] bg-paper-deep object-cover ${illustration || standing ? 'object-[50%_12%]' : ''}`}/>
             {source && <figcaption className="caption mt-1.5">{illustration ? 'Illustration' : 'Picture'} — {source}</figcaption>}
         </figure>
     );

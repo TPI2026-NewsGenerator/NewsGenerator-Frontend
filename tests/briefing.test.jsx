@@ -669,3 +669,35 @@ describe('BriefingCard picture', () => {
         expect(container.querySelector('img')).toBeNull();
     });
 });
+
+// a picture taller than wide is cut to the landscape of the card nearer its top, where the face is (the user, 10.11.2026, a friend: a photo in portrait mode)
+describe('BriefingCard with a standing picture', () => {
+    const picture = (container) => container.querySelector('article img');
+    const loaded = (img, width, height) => {
+        Object.defineProperty(img, 'naturalWidth', {value: width, configurable: true});
+        Object.defineProperty(img, 'naturalHeight', {value: height, configurable: true});
+        fireEvent.load(img);
+    };
+
+    it('should cut a picture taller than wide nearer its top, and a landscape one in the middle', () => {
+        const {container} = render(<MemoryRouter><BriefingCard item={item({thumbnail: 'https://cdn.example/portrait.jpg'})}/></MemoryRouter>);
+        expect(picture(container)).not.toHaveClass('object-[50%_12%]');
+        loaded(picture(container), 800, 1200);
+        expect(picture(container)).toHaveClass('object-cover', 'object-[50%_12%]');
+    });
+
+    it('should leave a landscape, a square-ish and a picture of no known size in the middle', () => {
+        for (const [width, height] of [[1600, 900], [1000, 1000], [1000, 1050], [0, 0]]) {
+            const {container, unmount} = render(<MemoryRouter><BriefingCard item={item({thumbnail: 'https://cdn.example/a.jpg'})}/></MemoryRouter>);
+            loaded(picture(container), width, height);
+            expect(picture(container)).not.toHaveClass('object-[50%_12%]');
+            unmount();
+        }
+    });
+
+    it('should cut an illustration nearer its top whatever its size, as before', () => {
+        const illustration = {url: 'https://upload.wikimedia.org/p.jpg', width: 3333, height: 5000, credit: 'Wikimedia Commons'};
+        const {container} = render(<MemoryRouter><BriefingCard item={item({thumbnail: illustration.url, thumbnailSource: 'Wikimedia Commons', illustration})}/></MemoryRouter>);
+        expect(picture(container)).toHaveClass('object-[50%_12%]');
+    });
+});
