@@ -10,30 +10,16 @@
 
 import {useState} from "react";
 import {ArrowDown, ArrowUp} from "lucide-react";
-import {Button, IconButton} from "@/components/ui/button.jsx";
+import {IconButton} from "@/components/ui/button.jsx";
 import {Checkbox} from "@/components/ui/field.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {StoryInspector} from "@/features/briefing/components/MailInspector.jsx";
 import {MailPreview} from "@/features/briefing/components/MailPreview.jsx";
 import {MailSettings, MailSheet} from "@/features/briefing/components/MailSheet.jsx";
 import {BLOCKS, countOf, hasBlock} from "@/features/briefing/mailBlocks.js";
-import {usePresets} from "@/features/briefing/blockPresets.js";
 import {two} from "@/features/briefing/useMailDraft.js";
 import {usePhone} from "@/lib/usePhone.js";
 import {cn} from "@/lib/utils.js";
-
-// the presets that set every story at once: what each puts in a story is what the reader set in the settings
-const Presets = ({draft}) => {
-    const {presets} = usePresets('mail');
-    return (
-        <div role="group" aria-label="Presets" className="flex flex-wrap items-center gap-2">
-            <span className="kicker">Set every story to</span>
-            {presets.map(preset => (
-                <Button key={preset.value} size="sm" variant="subtle" title={preset.means} onClick={() => draft.applyPreset(preset.on)}>{preset.label}</Button>
-            ))}
-        </div>
-    );
-};
 
 // the head of a column: what it is, how many stories have it on, and the button that puts it on (or off) for all of them
 const ColumnHead = ({block, draft}) => {
@@ -140,8 +126,7 @@ const PhoneMatrix = ({draft, sending, onSend, onPreview, onNeutralTitle}) => {
                 )
                 : (
                     <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-                        <Presets draft={draft}/>
-                        <div className="mt-3"><StoryCards draft={draft} sending={sending} onNeutralTitle={onNeutralTitle}/></div>
+                        <div><StoryCards draft={draft} sending={sending} onNeutralTitle={onNeutralTitle}/></div>
                     </div>
                 )}
         </MailSheet>
@@ -168,7 +153,6 @@ const WideMatrix = ({draft, sending, onSend, onPreview, onNeutralTitle}) => {
             <div className="flex min-h-0 flex-1 flex-col">
                 <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-b border-rule px-5 py-2.5">
                     <MailSettings draft={draft} sending={sending}/>
-                    <div className="md:ml-auto"><Presets draft={draft}/></div>
                 </div>
 
                 <div className="max-h-[45%] shrink-0 overflow-auto border-b border-rule">

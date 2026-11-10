@@ -19,7 +19,7 @@ const send = async (method, body) => {
 };
 
 export const PreferencesApi = {
-    // {preferences: {layout, mailPresets, pagePresets, show, format, size, followingNews}}, each key only when the reader set it, or {error}
+    // {preferences: {layout, mailBlocks, pageBlocks, mailPresets, pagePresets, show, format, size, followingNews}}, each key only when the reader set it, or {error}
     get: () => send('GET'),
     // changes: the preferences to change, the others stay as they are -> {preferences}, all of them as now kept, or {error}
     save: (changes) => send('PUT', changes),

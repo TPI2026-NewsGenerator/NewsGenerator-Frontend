@@ -3,7 +3,7 @@
 //  Date: 02.10.2026
 //  File: Settings.jsx
 //  Description: The settings of the account: its username, its email and its password, each changed
-//               with the password of now, and the layout of the editor of the e-mail, kept on the account, with what its presets contain
+//               with the password of now, and the layout of the editor of the e-mail, kept on the account, with the blocks ticked for the e-mail and for the page
 //
 
 import {useEffect, useState} from "react";
@@ -14,7 +14,7 @@ import {Notice} from "@/components/ui/text.jsx";
 import {AccountApi} from "@/features/auth/accountApi.js";
 import {AiFirstChoice} from "@/features/briefing/components/AiFirstChoice.jsx";
 import {MailLayoutChoice} from "@/features/briefing/components/MailLayoutChoice.jsx";
-import {MailPresets, PagePresets} from "@/features/briefing/components/MailPresets.jsx";
+import {MailBlocks, PageBlocks} from "@/features/briefing/components/BlockLists.jsx";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
@@ -219,14 +219,14 @@ export const SettingsPage = () => {
                 <MailLayoutChoice/>
             </Section>
 
-            <Section kicker="Briefing" title="What the presets put in the e-mail"
-                     intro="In the editor of the e-mail, “Short”, “Standard” and “Everything” set what every story carries at once. Tick what each one contains.">
-                <MailPresets/>
+            <Section kicker="Briefing" title="What a story carries in the e-mail"
+                     intro="The editor of the e-mail opens with the blocks ticked here for every story that has them: you can still change them there, story by story or all at once.">
+                <MailBlocks/>
             </Section>
 
-            <Section kicker="Briefing" title="What the presets show on the page"
-                     intro="On the page of your briefing, the same three presets choose what each card shows: “Everything” is the whole card, as the page always showed it. Tick what each one contains.">
-                <PagePresets/>
+            <Section kicker="Briefing" title="What a story carries on the page"
+                     intro="The cards of the page of your briefing show the blocks ticked here: the whole card, as the page always showed it, at first.">
+                <PageBlocks/>
             </Section>
         </PageShell>
     );

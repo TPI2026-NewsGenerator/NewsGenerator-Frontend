@@ -28,7 +28,7 @@ import {BriefingSize} from "@/features/briefing/components/BriefingSize.jsx";
 import {sizePreference} from "@/features/briefing/sizes.js";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
 import {FORMATS, formatPreference} from "@/features/briefing/formats.js";
-import {showPreference, usePresets} from "@/features/briefing/blockPresets.js";
+import {useBlocks} from "@/features/briefing/blockPresets.js";
 import {usePreference} from "@/features/preferences/usePreference.js";
 import {withoutOriginalMarks} from "@/features/briefing/marks.js";
 import {MailBar} from "@/features/briefing/components/MailBar.jsx";
@@ -40,9 +40,6 @@ import {useActiveProfile} from "@/features/profiles/activeProfile.js";
 import {useAuth} from "@/features/auth/useAuth.js";
 import {toast} from "@/lib/toast.js";
 
-// what the "i" of the control of what the cards show says
-const SHOW_TIP = 'Short: the title, the text and the badges. Standard: adds the picture, the countries, who it is about and the AI analysis. '
-    + 'Everything: the whole card. What each one contains is set in the settings of your account.';
 const POLL_MS = 3000;
 // the analysis takes minutes after the cards: asked less often
 const ANALYSIS_POLL_MS = 8000;
@@ -80,10 +77,8 @@ export const BriefingPage = () => {
     const [size, chooseSize] = usePreference(sizePreference);
     // the way the cards are read, the last choice of the reader
     const [format, chooseFormat] = usePreference(formatPreference);
-    // what the cards show: the preset the reader chose last, with the blocks they set for it in the settings ("Everything" at first: the whole card)
-    const [show, chooseShow] = usePreference(showPreference);
-    const {presets: pagePresets} = usePresets('page');
-    const shown = pagePresets.find(preset => preset.value === show)?.on;
+    // what the cards show: the blocks the reader ticked for the page in the settings (the whole card at first)
+    const {list: shown} = useBlocks('page');
     // the server can send the cards ticked by e-mail
     const [mail, setMail] = useState(false);
     const [sending, setSending] = useState(false);
@@ -454,15 +449,14 @@ export const BriefingPage = () => {
         </div>
     );
 
-    // how the cards are read and what they show, in a pill of the toolbar while the tab of the briefing is read: two groups of three buttons
-    // took the toolbar to two lines on a laptop (the user, 06.11.2026), as the days and the cards of the next briefing did (01.11.2026)
-    const viewLabel = [shorter && FORMATS.find(one => one.value === format)?.label, pagePresets.find(preset => preset.value === show)?.label].filter(Boolean).join(' · ');
-    const reading = tab === 'briefing' && ready && count > 0 && (
-        <SettingsPill label={viewLabel} ariaLabel={`What the cards show: ${viewLabel}. Change`} wide
+    // how the cards are read, in a pill of the toolbar while the tab of the briefing is read (the three presets of what the cards show are gone,
+    // the user, 10.11.2026: what they show is ticked in the settings): a briefing written before the shorter ways has nothing to choose
+    const viewLabel = FORMATS.find(one => one.value === format)?.label;
+    const reading = tab === 'briefing' && ready && count > 0 && shorter && (
+        <SettingsPill label={viewLabel} ariaLabel={`How the cards are read: ${viewLabel}. Change`} wide
                       icon={<Eye aria-hidden className="size-3.5 text-ink-mute" strokeWidth={1.75}/>}>
-            {shorter && <BriefingFormat format={format} onChange={chooseFormat}/>}
-            <BriefingFormat label="Show" format={show} onChange={chooseShow} options={pagePresets} tip={SHOW_TIP}/>
-            <p className="caption">What each one contains: <Link className="link" to="/settings">your settings</Link>.</p>
+            <BriefingFormat format={format} onChange={chooseFormat}/>
+            <p className="caption">What each card shows: <Link className="link" to="/settings">your settings</Link>.</p>
         </SettingsPill>
     );
     // what the briefing offers for the e-mail, a round icon each in the toolbar (the user, 05.11.2026: a form took a band of the page): ticking

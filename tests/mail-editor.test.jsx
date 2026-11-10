@@ -204,25 +204,63 @@ describe('the editor of the e-mail, three frames', () => {
         expect(lastBlocks()[2].coverage).toBe(false);
     });
 
-    it('should put the blocks of a preset on for every story that has them, the others off', async () => {
+    it('should have no preset to click: the blocks are ticked in the settings', async () => {
         await open();
-        fireEvent.click(within(everyStory()).getByRole('button', {name: 'Short'}));
-        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
-        expect(lastBlocks()[1]).toEqual({media: true, contested: true, official: true, unconfirmed: true, names: false, analysis: false, angles: false, affair: false, coverage: false});
+        for (const preset of ['Short', 'Standard', 'Everything']) expect(within(everyStory()).queryByRole('button', {name: preset})).toBeNull();
+        expect(screen.getByText(/The editor opens with the blocks ticked in your settings/)).toBeInTheDocument();
     });
 
-    it('should put everything on with the preset "Everything", the affair and its coverage too', async () => {
-        await open();
-        fireEvent.click(within(everyStory()).getByRole('button', {name: 'Everything'}));
-        fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
-        expect(lastBlocks()[1]).toEqual({media: true, contested: true, official: true, unconfirmed: true, names: true, analysis: true, angles: true, affair: true, coverage: true});
+    // the editor opens with the list of the e-mail the reader ticked in the settings (the user, 10.11.2026: the presets are gone, one mode)
+    describe('opened with the list of the settings', () => {
+        const SHORT_LIST = ['media', 'contested', 'official', 'unconfirmed'];
+        const sent = async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalled());
+            return lastBlocks()[1];
+        };
+
+        it('should open with the blocks of the list ticked, the others off', async () => {
+            localStorage.setItem('newsgenerator.mail-blocks', JSON.stringify(SHORT_LIST));
+            await open();
+            expect(await sent()).toEqual({media: true, contested: true, official: true, unconfirmed: true, names: false, analysis: false, angles: false, affair: false, coverage: false});
+        });
+
+        it('should open with every block of the list, the affair and its coverage too, but not the one that was unticked in the settings', async () => {
+            localStorage.setItem('newsgenerator.mail-blocks', JSON.stringify(['contested', 'official', 'unconfirmed', 'names', 'analysis', 'angles', 'affair', 'coverage', 'picture', 'countries']));
+            await open();
+            expect(await sent()).toEqual({media: false, contested: true, official: true, unconfirmed: true, names: true, analysis: true, angles: true, affair: true, coverage: true});
+        });
+
+        it('should open with nothing but the title and the text when the reader ticked no block', async () => {
+            localStorage.setItem('newsgenerator.mail-blocks', '[]');
+            await open();
+            expect(await sent()).toEqual({media: false, contested: false, official: false, unconfirmed: false, names: false, analysis: false, angles: false, affair: false, coverage: false});
+        });
+
+        it('should open with the blocks it always opened with when the reader chose nothing', async () => {
+            await open();
+            expect(await sent()).toEqual(DEFAULT_BLOCKS);
+        });
+
+        it('should open with the preset the reader had changed before, as long as they ticked no list', async () => {
+            // "Short" with two of its four badges: it was changed, so it is the one the e-mail opened with
+            localStorage.setItem('newsgenerator.mail-presets', JSON.stringify({short: ['contested', 'official']}));
+            await open();
+            expect(await sent()).toEqual({media: false, contested: true, official: true, unconfirmed: false, names: false, analysis: false, angles: false, affair: false, coverage: false});
+        });
+
+        it('should still let the reader change a block in the editor, for every story', async () => {
+            localStorage.setItem('newsgenerator.mail-blocks', JSON.stringify(SHORT_LIST));
+            await open();
+            fireEvent.click(within(everyStory()).getByRole('checkbox', {name: 'Angles'}));
+            fireEvent.click(within(everyStory()).getByRole('checkbox', {name: /^Contested/}));
+            expect(await sent()).toMatchObject({contested: false, angles: true, names: false});
+        });
     });
 
     it('should reset what was set when the e-mail is opened again', async () => {
         await open();
-        fireEvent.click(within(everyStory()).getByRole('button', {name: 'Short'}));
+        fireEvent.click(within(everyStory()).getByRole('checkbox', {name: /^Contested/}));
         fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
@@ -365,7 +403,7 @@ describe('the e-mail as it will be sent, beside the editor', () => {
         await open();
         const frame = await screen.findByTitle('The e-mail as it will be sent', {}, {timeout: 4000});
         BriefingApi.emailPreview.mockRejectedValueOnce(new Error('The AI is busy'));
-        fireEvent.click(within(everyStory()).getByRole('button', {name: 'Short'}));
+        fireEvent.click(within(everyStory()).getByRole('checkbox', {name: 'Angles'}));
         expect(await screen.findByText('The AI is busy', {}, {timeout: 4000})).toBeInTheDocument();
         expect(screen.getByTitle('The e-mail as it will be sent')).toBe(frame);
     });
@@ -438,7 +476,7 @@ describe('the editor of the e-mail, three frames on a phone', () => {
         expect(carried().className).toMatch(/w-\[90%\]/);
         expect(carried().className).toMatch(/right-0/);
         expect(within(carried()).getByRole('group', {name: 'What every story carries in the e-mail'})).toBeInTheDocument();
-        fireEvent.click(within(carried()).getByRole('button', {name: 'Everything'}));
+        fireEvent.click(within(carried()).getByRole('checkbox', {name: 'This affair'}));
         fireEvent.click(screen.getByRole('button', {name: 'Close what the e-mail carries'}));
         expect(carried()).toBeNull();
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
@@ -498,9 +536,10 @@ describe('the editor of the e-mail, matrix on a phone', () => {
         expect(within(card).queryByRole('group', {name: /carries in the e-mail/})).toBeNull();
     });
 
-    it('should set every story with a preset, and have the e-mail as it will be sent in a tab of its own', async () => {
+    it('should put the affair of a story on with its button, and have the e-mail as it will be sent in a tab of its own', async () => {
         await open();
-        fireEvent.click(screen.getByRole('button', {name: 'Everything'}));
+        expect(screen.queryByRole('button', {name: 'Everything'})).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'This affair, First story'}));
         expect(screen.getByRole('button', {name: 'This affair, First story'})).toHaveAttribute('aria-pressed', 'true');
         expect(screen.getByRole('tab', {name: 'Stories'})).toHaveAttribute('aria-selected', 'true');
         fireEvent.click(screen.getByRole('tab', {name: 'Preview'}));
@@ -550,9 +589,10 @@ describe('the editor of the e-mail, matrix', () => {
         expect(screen.getByRole('checkbox', {name: 'Coverage, First story'})).not.toBeChecked();
     });
 
-    it('should set every story with a preset, then open a story to change its title and the lines it carries', async () => {
+    it('should put the affair of a story on, then open it to change its title and the lines it carries', async () => {
         await open();
-        fireEvent.click(screen.getByRole('button', {name: 'Everything'}));
+        expect(screen.queryByRole('button', {name: 'Everything'})).toBeNull();
+        fireEvent.click(screen.getByRole('checkbox', {name: 'This affair, First story'}));
         expect(screen.getByRole('checkbox', {name: 'This affair, First story'})).toBeChecked();
         fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
         fireEvent.change(screen.getByLabelText('Its title in the e-mail'), {target: {value: 'A shorter title'}});

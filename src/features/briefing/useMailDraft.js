@@ -10,7 +10,8 @@
 import {useEffect, useMemo, useState} from "react";
 import {aiFirstPreference} from "@/features/briefing/aiFirst.js";
 import {FORMATS} from "@/features/briefing/formats.js";
-import {DEFAULT_BLOCKS, hasBlock, SERVER_BLOCKS} from "@/features/briefing/mailBlocks.js";
+import {DEFAULT_BLOCKS, hasBlock, SERVER_BLOCKS, startingChoices} from "@/features/briefing/mailBlocks.js";
+import {useBlocks} from "@/features/briefing/blockPresets.js";
 import {bestPicture, fileBytes, MAX_FILES_BYTES, sentPicture, shownPicture, tooSmall, usePictureSizes} from "@/features/briefing/mailPictures.js";
 import {usePreference} from "@/features/preferences/usePreference.js";
 
@@ -57,6 +58,7 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures, 
     const [removed, setRemoved] = useState({}); // storyId -> {contested, angles, official, why, next, timeline}: the places taken out
     const [inAi, setInAi] = useState({});       // storyId -> true or false: what the reader chose for it, else the settings' (aiFirst)
     const [aiFirst] = usePreference(aiFirstPreference);
+    const {list: startList} = useBlocks('mail');            // the blocks the editor opens with: the list of the e-mail the reader ticked in the settings
     const [texts, setTexts] = useState({});     // storyId -> {way: the sentences as the reader changes them}
     const [countries, setCountries] = useState({});     // storyId -> the country codes chosen, when they are not the ones found
     const [blocks, setBlocks] = useState({});           // storyId -> the blocks changed (see mailBlocks.js)
@@ -79,14 +81,16 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures, 
     };
 
     const open = () => {
+        // the blocks ticked in the settings: on for every story that has them, off for the others
+        const starting = startingChoices(stories, startList);
         setOrder(stories.map(story => story.storyId));
-        setChoices({});
+        setChoices(starting.choices);
         setTitles({});
         setRemoved({});
         setInAi({});
         setTexts({});
-        setCountries({});
-        setBlocks({});
+        setCountries(starting.countries);
+        setBlocks(starting.blocks);
         setTheme('light');
         setSelected('all');
         setWay(format);
@@ -219,12 +223,6 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures, 
         else if (key === 'countries') list.forEach(story => chooseCountries(story, on ? null : []));
         else setBlocks(current => Object.fromEntries([...Object.entries(current), ...list.map(story => [story.storyId, {...DEFAULT_BLOCKS, ...current[story.storyId], [key]: on}])]));
     };
-    // a preset: every block on or off for every story, according to its list
-    const applyPreset = (on) => {
-        const keys = ['picture', 'countries', ...SERVER_BLOCKS];
-        keys.forEach(key => setBlock(ordered, key, on.includes(key)));
-    };
-
     // what is said of a story in the list of the e-mail: its place in the briefing and what the reader changed in it
     const noteOf = (story) => {
         const choice = choiceOf(story);
@@ -281,7 +279,7 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures, 
     return {
         to, setTo, way, setWay, theme, setTheme, ordered, count: stories.length, selected, select, move, open, close: () => setTo(null),
         noteOf, choiceOf, choose, galleries, titles, setTitle, ownTitle, removed, setRemovedOf, aiOn, setAi, texts, shown, sentOf, ownText, writeText,
-        countries, countriesOf, chooseCountries, blocksOf, isOn, setBlock, applyPreset, payload, submit, error, picturesError, shownPicture,
+        countries, countriesOf, chooseCountries, blocksOf, isOn, setBlock, payload, submit, error, picturesError, shownPicture,
         canImport: Boolean(onProfilesNews && onCopyNews), profilesNews: onProfilesNews, importNews, canFold: Boolean(onFoldNews), foldNews,
     };
 };

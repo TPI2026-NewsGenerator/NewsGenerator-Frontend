@@ -266,7 +266,7 @@ const Badge = ({icon, tone, onClick, children}) => (
 // Under the title, what matters before reading: how widely it is told (its pill opens the coverage), then a badge for each of: someone
 // who denies it, a party that said it itself, an article that says itself it is not confirmed (the user, 05.11.2026). A badge leads
 // to its words in the column beside the card. onOpen(key): a tab; onNote(kind): the note of the column
-// on(block): whether the preset the page is in shows the block; the number of media opens the coverage when that tab is there
+// on(block): whether the list of blocks of the page shows the block; the number of media opens the coverage when that tab is there
 const Glance = ({item, onOpen, onNote, on = () => true}) => {
     const media = on('media') ? item.corroboration?.media ?? 0 : 0;
     const languages = new Set((item.articles ?? []).map(article => article.language).filter(Boolean)).size;
@@ -327,7 +327,7 @@ const unmarked = (entry) => ({...entry, marks: undefined});
 // versions: [{briefingId, profile, createdAt, source}] the versions the other profiles of the account have of this news (see the server's
 // card-versions.js), onUseVersion(version) replaces the card with one of them, where it stands; item.version: {briefingId, profile,
 // createdAt} when it already is one, item.previousVersion {title, source} the card it replaced, onRestoreVersion() brings that one back
-// show: the blocks the page shows of the card, the ones of its preset (see mailBlocks.js BLOCKS): all of them without it
+// show: the blocks the page shows of the card, the ones ticked for the page in the settings (see mailBlocks.js BLOCKS): all of them without it
 export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions = [], onUseVersion, onRestoreVersion, versionBusy = false, selected = false, number, lede = false, marked = false, format = 'passages',
                                  analysis, analysisPending = false, analysisModel, affair, briefingId, show}) => {
     const on = (block) => !show || show.includes(block);

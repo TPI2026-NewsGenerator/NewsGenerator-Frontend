@@ -32,7 +32,7 @@ export const DEFAULT_BLOCKS = {
 // the keys the server takes ('blocks' of the e-mail), the picture and the countries having their own
 export const SERVER_BLOCKS = Object.keys(DEFAULT_BLOCKS);
 
-// the presets of the editor: the blocks each one puts on, for every story that has them
+// the presets of the editor, gone from the editor and the page (the user, 10.11.2026): kept to read what a reader had set (see blockPresets.js legacyList)
 const SHORT = ['media', 'contested', 'official', 'unconfirmed'];
 const STANDARD = [...SHORT, 'picture', 'countries', 'names', 'analysis'];
 export const PRESETS = [
@@ -60,6 +60,20 @@ export const hasBlock = (story, key) => {
         case 'coverage': return Boolean(story.hasArticles);
         default: return false;
     }
+};
+
+// What the editor of the e-mail puts on when it opens (the user, 10.11.2026: the blocks ticked in the settings were not what the editor opened
+// with): for each story, the blocks of the list it has on and the others off. {choices: the pictures left out, countries: the countries taken off,
+// blocks: {storyId: the blocks of the server}}, in the maps of the draft. on: the list of blocks of the e-mail, from the settings
+export const startingChoices = (stories, on) => {
+    const choices = {}, countries = {}, blocks = {};
+    for (const story of stories) {
+        if (!on.includes('picture')) choices[story.storyId] = {kind: 'none'};
+        if (!on.includes('countries') && hasBlock(story, 'countries')) countries[story.storyId] = [];
+        const mine = SERVER_BLOCKS.filter(key => hasBlock(story, key));
+        if (mine.length > 0) blocks[story.storyId] = {...DEFAULT_BLOCKS, ...Object.fromEntries(mine.map(key => [key, on.includes(key)]))};
+    }
+    return {choices, countries, blocks};
 };
 
 // how many of the stories have this block, and how many of them have it on: the column of the matrix, the line of "all the stories"

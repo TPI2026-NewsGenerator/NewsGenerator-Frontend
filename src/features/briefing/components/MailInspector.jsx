@@ -4,7 +4,7 @@
 //  File: MailInspector.jsx
 //  Description: What a story carries in the e-mail, one section for each, the reader putting it on or off: its title, its text, its
 //               picture, its countries, its badges, who it is about, its AI analysis (line by line), its angles (line by line),
-//               its affair and its coverage. And the same for every story at once, with the presets (the user, 05.11.2026)
+//               its affair and its coverage. And the same for every story at once (the user, 05.11.2026; the presets of the buttons are gone, 10.11.2026)
 //
 
 import {useState} from "react";
@@ -17,7 +17,6 @@ import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.
 import {MailPicture} from "@/features/briefing/components/MailPicture.jsx";
 import {MailTextItems} from "@/features/briefing/components/MailTextItems.jsx";
 import {BLOCKS, countOf, hasBlock} from "@/features/briefing/mailBlocks.js";
-import {usePresets} from "@/features/briefing/blockPresets.js";
 import {aiTextOf, editable, two, WAY_NAMES} from "@/features/briefing/useMailDraft.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 import {cn} from "@/lib/utils.js";
@@ -169,18 +168,12 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
     );
 };
 
-// the same blocks for every story at once: a preset, or one block put on or off for all of those that have it
+// the same blocks for every story at once: one block put on or off for all of those that have it. The editor opens with the blocks of the settings
 export const AllInspector = ({draft}) => {
     const stories = draft.ordered;
-    const {presets} = usePresets('mail');
     return (
         <div role="group" aria-label="What every story carries in the e-mail">
-            <p className="caption">Set for every story, then change one in particular by choosing it.</p>
-            <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Presets">
-                {presets.map(preset => (
-                    <Button key={preset.value} size="sm" variant="subtle" title={preset.means} onClick={() => draft.applyPreset(preset.on)}>{preset.label}</Button>
-                ))}
-            </div>
+            <p className="caption">Set for every story, then change one in particular by choosing it. The editor opens with the blocks ticked in your settings.</p>
             <div className="mt-3">
                 {BLOCKS.map(block => {
                     const {having, on} = countOf(stories, block.key, draft.isOn);

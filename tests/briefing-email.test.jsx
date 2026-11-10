@@ -56,7 +56,7 @@ const BOX = {name: 'Add to the e-mail'};
 const carries = (title) => screen.getByRole('group', {name: `What “${title}” carries in the e-mail`});
 // the way to read the cards and what they show are in a pill of the toolbar (the user, 06.11.2026): opened before its groups are used
 const openView = () => {
-    if (!screen.queryByRole('group', {name: 'Read as'})) fireEvent.click(screen.getByRole('button', {name: /^What the cards show/}));
+    if (!screen.queryByRole('group', {name: 'Read as'})) fireEvent.click(screen.getByRole('button', {name: /^How the cards are read/}));
 };
 // the boxes of the sentences the e-mail sends (a box for each point or passage, the user, 06.11.2026): their texts, one by one
 const boxesOf = (scope, noun) => within(scope).queryAllByRole('textbox', {name: new RegExp(`^${noun} \\d+$`)});

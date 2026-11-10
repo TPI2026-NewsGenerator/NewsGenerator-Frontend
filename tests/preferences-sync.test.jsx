@@ -23,13 +23,13 @@ const {keepLayout, keptLayout, layoutPreference} = await import('@/features/brie
 const {keepSize, keptSize, sizePreference} = await import('@/features/briefing/sizes.js');
 const {formatPreference, keepFormat, keptFormat} = await import('@/features/briefing/formats.js');
 const {keepWatchLimit, keptWatchLimit, watchLimitPreference} = await import('@/features/briefing/windows.js');
-const {keepShow, keptShow, showPreference, usePresets} = await import('@/features/briefing/blockPresets.js');
+const {BLOCK_LISTS, showPreference, useBlocks} = await import('@/features/briefing/blockPresets.js');
 
 vi.setConfig({testTimeout: 20000});
 
 const KEYS = {
-    layout: 'newsgenerator.mail-editor', mailPresets: 'newsgenerator.mail-presets', pagePresets: 'newsgenerator.page-presets',
-    show: 'newsgenerator.briefing-show', format: 'newsgenerator.briefing-format', size: 'newsgenerator.briefing-size',
+    layout: 'newsgenerator.mail-editor', mailBlocks: 'newsgenerator.mail-blocks', pageBlocks: 'newsgenerator.page-blocks',
+    mailPresets: 'newsgenerator.mail-presets', pagePresets: 'newsgenerator.page-presets', show: 'newsgenerator.briefing-show', format: 'newsgenerator.briefing-format', size: 'newsgenerator.briefing-size',
     followingNews: 'newsgenerator.following-news',
 };
 
@@ -57,7 +57,9 @@ afterEach(async () => {
 
 describe('a preference before the account is read', () => {
     it('should give what the browser kept at once, with no call, and the one at first when it kept nothing', () => {
-        expect([keptLayout(), keptSize(), keptFormat(), keptShow(), keptWatchLimit()]).toEqual(['frames', 10, 'passages', 'everything', 100]);
+        expect([keptLayout(), keptSize(), keptFormat(), keptWatchLimit()]).toEqual(['frames', 10, 'passages', 100]);
+        // no list of blocks chosen: the lists at first are used (see useBlocks)
+        expect([BLOCK_LISTS.mail.chosen(), BLOCK_LISTS.page.chosen()]).toEqual([undefined, undefined]);
 
         localStorage.setItem(KEYS.size, '20');
         localStorage.setItem(KEYS.layout, 'matrix');
@@ -107,11 +109,11 @@ describe('the account read after the sign-in', () => {
         const {result} = renderHook(() => [usePreference(sizePreference)[0], usePreference(layoutPreference)[0]]);
         expect(result.current).toEqual([10, 'frames']);
 
-        account({size: 30, layout: 'matrix', format: 'points', show: 'short', followingNews: 40});
+        account({size: 30, layout: 'matrix', format: 'points', mailBlocks: ['names', 'picture'], followingNews: 40});
         await signIn();
         // the components draw again with the account's values, and the browser has them for the next time
         expect(result.current).toEqual([30, 'matrix']);
-        expect([keptSize(), keptLayout(), keptFormat(), keptShow(), keptWatchLimit()]).toEqual([30, 'matrix', 'points', 'short', 40]);
+        expect([keptSize(), keptLayout(), keptFormat(), BLOCK_LISTS.mail.chosen(), keptWatchLimit()]).toEqual([30, 'matrix', 'points', ['picture', 'names'], 40]);
         expect(localStorage.getItem(KEYS.size)).toBe('30');
         expect(localStorage.getItem(KEYS.followingNews)).toBe('40');
         // nothing to send: the account already has them
@@ -119,14 +121,27 @@ describe('the account read after the sign-in', () => {
         expect(PreferencesApi.save).not.toHaveBeenCalled();
     });
 
-    it('should show the account\'s presets, the ones it has none of staying as at first', async () => {
-        account({mailPresets: {short: ['picture']}, pagePresets: {standard: ['names', 'picture']}});
-        const {result} = renderHook(() => ({mail: usePresets('mail'), page: usePresets('page')}));
+    it('should show the account\'s lists of blocks, in the order of the blocks, the one it has none of staying as at first', async () => {
+        account({mailBlocks: ['names', 'picture']});
+        const {result} = renderHook(() => ({mail: useBlocks('mail'), page: useBlocks('page')}));
+        const first = result.current.page.list;
         await signIn();
-        expect(result.current.mail.presets.map(preset => [preset.value, preset.changed])).toEqual([['short', true], ['standard', false], ['everything', false]]);
-        expect(result.current.mail.presets[0].on).toEqual(['picture']);
-        expect(result.current.page.presets[1].on).toEqual(['picture', 'names']);
-        expect(result.current.page.presets[0].changed).toBe(false);
+        expect(result.current.mail.list).toEqual(['picture', 'names']);
+        expect(result.current.mail.changed).toBe(true);
+        expect(result.current.page.list).toEqual(first);
+        expect(result.current.page.changed).toBe(false);
+    });
+
+    it('should carry over the presets the account has from before, as long as it has no list of blocks', async () => {
+        // the page: the preset it showed, with the blocks ticked for it; the e-mail: the preset that was changed
+        account({mailPresets: {short: ['picture']}, pagePresets: {standard: ['names', 'picture']}, show: 'standard'});
+        const {result} = renderHook(() => ({mail: useBlocks('mail'), page: useBlocks('page')}));
+        await signIn();
+        expect(result.current.mail.list).toEqual(['picture']);
+        expect(result.current.page.list).toEqual(['picture', 'names']);
+        // a list chosen since wins
+        act(() => BLOCK_LISTS.page.keep(['coverage']));
+        expect(result.current.page.list).toEqual(['coverage']);
     });
 
     it('should send up what the browser kept when the account has none of it, and only that', async () => {
@@ -158,9 +173,10 @@ describe('the account read after the sign-in', () => {
 
     it('should leave out of its reach a value of the account that the page does not offer', async () => {
         localStorage.setItem(KEYS.size, '20');
-        account({size: 25, layout: 'carousel', followingNews: 55, mailPresets: 'all', show: null});
+        account({size: 25, layout: 'carousel', followingNews: 55, mailPresets: 'all', mailBlocks: 'all', pageBlocks: null, show: null});
         await signIn();
-        expect([keptSize(), keptLayout(), keptWatchLimit(), keptShow()]).toEqual([20, 'frames', 100, 'everything']);
+        expect([keptSize(), keptLayout(), keptWatchLimit(), showPreference.kept()]).toEqual([20, 'frames', 100, 'everything']);
+        expect([BLOCK_LISTS.mail.chosen(), BLOCK_LISTS.page.chosen()]).toEqual([undefined, undefined]);
         // not a choice of the account: what the browser had goes up in its place
         await wait();
         expect(PreferencesApi.save).toHaveBeenCalledWith({size: 20});
@@ -239,21 +255,32 @@ describe('a change sent to the account', () => {
         expect(PreferencesApi.save).not.toHaveBeenCalled();
     });
 
-    it('should send the presets whole, the three lists, when the reader ticks a block', async () => {
-        const {result} = renderHook(() => usePresets('page'));
-        act(() => result.current.set('short', 'picture', true));
+    it('should send the list whole when the reader unticks a block of the page, and nothing of the e-mail', async () => {
+        const {result} = renderHook(() => useBlocks('page'));
+        act(() => result.current.set('picture', false));
         await wait();
-        const [{pagePresets}] = PreferencesApi.save.mock.calls[0];
-        expect(Object.keys(pagePresets)).toEqual(['short', 'standard', 'everything']);
-        expect(pagePresets.short).toEqual(['picture', 'media', 'contested', 'official', 'unconfirmed']);
-        expect(PreferencesApi.save.mock.calls[0][0]).not.toHaveProperty('mailPresets');
+        const [{pageBlocks}] = PreferencesApi.save.mock.calls[0];
+        expect(pageBlocks).toEqual(['countries', 'media', 'contested', 'official', 'unconfirmed', 'names', 'analysis', 'angles', 'affair', 'coverage']);
+        expect(PreferencesApi.save.mock.calls[0][0]).not.toHaveProperty('mailBlocks');
     });
 
-    it('should send the preset the page shows and the way a card is read', async () => {
-        keepShow('standard');
+    it('should start the list from the preset of before when the reader ticks a block of it', async () => {
+        localStorage.setItem(KEYS.show, 'short');
+        const {result} = renderHook(() => useBlocks('page'));
+        act(() => result.current.set('picture', true));
+        await wait();
+        expect(PreferencesApi.save).toHaveBeenCalledWith({pageBlocks: ['picture', 'media', 'contested', 'official', 'unconfirmed']});
+    });
+
+    it('should send the list of the e-mail, empty as well, and the way a card is read', async () => {
+        BLOCK_LISTS.mail.keep(['names', 'picture']);
         keepFormat('points');
         await wait();
-        expect(PreferencesApi.save).toHaveBeenCalledWith({show: 'standard', format: 'points'});
+        expect(PreferencesApi.save).toHaveBeenCalledWith({mailBlocks: ['picture', 'names'], format: 'points'});
+        PreferencesApi.save.mockClear();
+        BLOCK_LISTS.mail.keep([]);
+        await wait();
+        expect(PreferencesApi.save).toHaveBeenCalledWith({mailBlocks: []});
     });
 
     it('should never send what stays on the device: the theme, the profile, the last search', async () => {
@@ -353,13 +380,13 @@ describe('another reader, and signing out', () => {
         await signIn(4);
         keepFormat('points');
         // the other reader signs in on the same browser, without the first having signed out
-        account({show: 'short'});
+        account({pageBlocks: ['media']});
         const {result} = renderHook(() => usePreference(sizePreference));
         expect(result.current[0]).toBe(30);
         await signIn(9);
         await wait();
         expect(result.current[0]).toBe(10);
-        expect([keptLayout(), keptFormat(), keptShow()]).toEqual(['frames', 'passages', 'short']);
+        expect([keptLayout(), keptFormat(), BLOCK_LISTS.page.chosen()]).toEqual(['frames', 'passages', ['media']]);
         // the change of the first reader, waiting to go up, never goes up under the cookie of the second
         expect(PreferencesApi.save).not.toHaveBeenCalled();
         expect(localStorage.getItem('newsgenerator.preferences-unsent')).toBeNull();
@@ -421,11 +448,12 @@ describe('the sign-in of the page', () => {
     });
 });
 
-describe('the six preferences, their public helpers', () => {
+describe('the preferences, their public helpers', () => {
     it('should give each one its name on the account and its place in the browser', () => {
-        expect([layoutPreference, sizePreference, formatPreference, showPreference, watchLimitPreference].map(one => [one.name, one.key]))
+        expect([layoutPreference, sizePreference, formatPreference, BLOCK_LISTS.mail, BLOCK_LISTS.page, watchLimitPreference].map(one => [one.name, one.key]))
             .toEqual([
-                ['layout', KEYS.layout], ['size', KEYS.size], ['format', KEYS.format], ['show', KEYS.show], ['followingNews', KEYS.followingNews],
+                ['layout', KEYS.layout], ['size', KEYS.size], ['format', KEYS.format], ['mailBlocks', KEYS.mailBlocks], ['pageBlocks', KEYS.pageBlocks],
+                ['followingNews', KEYS.followingNews],
             ]);
     });
 
