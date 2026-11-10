@@ -456,7 +456,9 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                 {translated && original && item.titleTranslation && (
                     <p lang={item.language ?? undefined} className="caption mt-1 italic">
                         {/* the original of the translation: the title of the card in its language; the title as published, when the AI
-                            rewrote it, has its own button below, so the two originals are not mistaken for each other */}
+                            rewrote it, has its own button below, so the two originals are not mistaken for each other: each line says which it is
+                            (the user, 10.11.2026: a title both translated and rewritten by the AI has two versions to go back to) */}
+                        <span className="kicker mr-2 not-italic">{languageLabel(item.language)}{item.titleRewritten ? ', as the AI rewrote it' : ''}</span>
                         “{item.titleRewritten ? <Marked text={item.title} marks={marks.title}/> : item.titleAsPublished ?? <Marked text={item.title} marks={marks.title}/>}”
                     </p>
                 )}
@@ -472,7 +474,10 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                     </p>
                 )}
                 {item.titleRewritten && item.titleAsPublished && asPublished && (
-                    <p id={`published-${item.storyId}`} lang={item.language ?? undefined} className="caption mt-1 italic">“{item.titleAsPublished}”</p>
+                    <p id={`published-${item.storyId}`} lang={item.language ?? undefined} className="caption mt-1 italic">
+                        <span className="kicker mr-2 not-italic">As the medium wrote it{item.titleTranslation ? `, ${languageLabel(item.language)}` : ''}</span>
+                        “{item.titleAsPublished}”
+                    </p>
                 )}
                 {/* not translated: the title was shortened, the bait of its medium taken out, as published on demand */}
                 {item.titleAsPublished && !item.titleRewritten && !item.titleTranslation && (

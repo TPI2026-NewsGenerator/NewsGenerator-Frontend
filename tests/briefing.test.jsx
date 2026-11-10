@@ -701,3 +701,44 @@ describe('BriefingCard with a standing picture', () => {
         expect(picture(container)).toHaveClass('object-[50%_12%]');
     });
 });
+
+// a title both translated and rewritten by the AI has two versions to go back to, each said on the line that shows it (the user, 10.11.2026)
+describe('BriefingCard, a title translated and rewritten by the AI', () => {
+    const translatedAndRewritten = () => item({title: 'Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen', titleTranslation: 'From this matchday onwards referees will speak',
+        language: 'de', titleAsPublished: 'Historisch: Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen', titleRewritten: true});
+
+    it('should say that the title shown by "Show original" is the one the AI rewrote, in its language', () => {
+        render(<BriefingCard item={translatedAndRewritten()}/>);
+        fireEvent.click(screen.getAllByRole('button', {name: 'Show original'})[0]);
+        expect(screen.getByText('German, as the AI rewrote it')).toBeInTheDocument();
+        expect(screen.queryByText(/As the medium wrote it/)).toBeNull();
+    });
+
+    it('should say that the title shown by "Show the title as published" is the medium\'s own, in its language, not translated', () => {
+        render(<BriefingCard item={translatedAndRewritten()}/>);
+        fireEvent.click(screen.getByRole('button', {name: 'Show the title as published'}));
+        expect(screen.getByText('As the medium wrote it, German')).toBeInTheDocument();
+        expect(screen.getByText('“Historisch: Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen”')).toBeInTheDocument();
+    });
+
+    it('should have both lines open at once, each with its label, and the two buttons apart', () => {
+        render(<BriefingCard item={translatedAndRewritten()}/>);
+        fireEvent.click(screen.getAllByRole('button', {name: 'Show original'})[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Show the title as published'}));
+        expect(screen.getByText('German, as the AI rewrote it')).toBeInTheDocument();
+        expect(screen.getByText('As the medium wrote it, German')).toBeInTheDocument();
+        expect(screen.getByText('“Ab dieser Spieltag sprechen die Schiedsrichter nach den Spielen”')).toBeInTheDocument();
+    });
+
+    it('should say the language only for a title that is translated: a rewritten title in the reader\'s own language is "as the medium wrote it"', () => {
+        render(<BriefingCard item={item({title: 'From this matchday onwards referees will speak', titleAsPublished: 'Historic: from this matchday onwards referees will speak', titleRewritten: true})}/>);
+        fireEvent.click(screen.getByRole('button', {name: 'Show the title as published'}));
+        expect(screen.getByText('As the medium wrote it')).toBeInTheDocument();
+    });
+
+    it('should label a translated title that was not rewritten with its language only', () => {
+        render(<BriefingCard item={item({title: 'Messi signe à Miami', titleTranslation: 'Messi signs in Miami', language: 'fr'})}/>);
+        fireEvent.click(screen.getAllByRole('button', {name: 'Show original'})[0]);
+        expect(screen.getByText('French')).toBeInTheDocument();
+    });
+});
