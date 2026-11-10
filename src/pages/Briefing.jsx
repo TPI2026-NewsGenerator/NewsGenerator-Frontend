@@ -217,20 +217,73 @@ export const BriefingPage = () => {
         }
     };
 
+    // a news added at the end of the briefing and ticked for the e-mail, by its link or copied from another profile's briefing. A news copied from
+    // another briefing comes with its analysis, shown as the cards' are; one read like a card has it written after the answer: the analysis shown
+    // as running with the card among those picked, which the page then asks for until it is written. The ticks are changed from their last state:
+    // several news copied one after the other from the editor of the e-mail are all ticked
+    const showAdded = ({item, analysis, analyzing}) => {
+        setBriefing(current => current && current.id === briefing.id ? {...current, items: [...current.items, item],
+            ...(analysis && current.analysis?.status === 'ready' ? {analysis: {...current.analysis, cards: {...current.analysis.cards, [item.storyId]: analysis}}} : {}),
+            ...(analyzing && current.analysis ? {analysis: {...current.analysis, status: 'running', picked: [...(current.analysis.picked ?? []), {storyId: item.storyId, reason: null}]}} : {})} : current);
+        setTicks(current => ({briefingId: briefing.id, storyIds: [...(current.briefingId === briefing.id ? current.storyIds : []), item.storyId]}));
+    };
+
     // a news added by its link: at the end of the briefing, ticked for the e-mail; true when added
     const addNews = async (url) => {
         try {
-            const {item, analysis, analyzing} = await BriefingApi.addNews(briefing.id, url);
-            // a news copied from another briefing comes with its analysis, shown as the cards' are; one read like a card has it written
-            // after the answer: the analysis shown as running with the card among those picked, which the page then asks for until it is written
-            setBriefing(current => current && current.id === briefing.id ? {...current, items: [...current.items, item],
-                ...(analysis && current.analysis?.status === 'ready' ? {analysis: {...current.analysis, cards: {...current.analysis.cards, [item.storyId]: analysis}}} : {}),
-                ...(analyzing && current.analysis ? {analysis: {...current.analysis, status: 'running', picked: [...(current.analysis.picked ?? []), {storyId: item.storyId, reason: null}]}} : {})} : current);
-            tick([...ticked, item.storyId]);
+            showAdded(await BriefingApi.addNews(briefing.id, url));
             toast.success('The news was added at the end of the briefing, ticked for the e-mail.');
             return true;
         } catch (err) {
             toast.error(`Not added: ${err.message}`);
+            return false;
+        }
+    };
+
+    // what tells a version of a news from another in the message that asks the reader to choose (see MailSameNews): its medium, how many media tell
+    // it and its first point, or the start of its sentences
+    const versionOf = (card) => ({title: card.titleTranslation ?? card.title, source: card.lead?.source ?? null, media: card.corroboration?.media ?? null,
+        excerpt: (card.ai?.points?.[0] ?? withoutOriginalMarks(card.pointsTranslation || card.points || card.digestTranslation || card.digest || card.translation || card.summary || '').split(/\n/)[0]).slice(0, 220)});
+
+    // a news of the briefing of another profile (see MailImport, in the editor of the e-mail), copied as it is there: {storyId, title, source, media,
+    // excerpt, similar} (similar: {storyId, number, title, source, media, excerpt}, the card of this briefing that tells the same news, null for none),
+    // null when the server refused it
+    const copyNews = async (fromBriefingId, storyId) => {
+        try {
+            const added = await BriefingApi.copyNews(briefing.id, fromBriefingId, storyId);
+            if (added.error) throw new Error(added.error);
+            const here = added.similar ? briefing.items.find(card => card.storyId === added.similar.storyId) : null;
+            showAdded(added);
+            if (!added.similar) toast.success('The news was added at the end of the briefing, ticked for the e-mail.');
+            return {storyId: added.item.storyId, ...versionOf(added.item), similar: added.similar && {...added.similar, ...(here ? versionOf(here) : {})}};
+        } catch (err) {
+            toast.error(`Not added: ${err.message}`);
+            return null;
+        }
+    };
+
+    // two cards that tell the same news made one (see MailSameNews): the card 'keep' stays, with the card 'drop' among its angles and media, at the
+    // place of the first of the two; the ticks follow (the one kept is ticked when either was), true when done
+    const foldNews = async (keep, drop) => {
+        try {
+            const done = await BriefingApi.foldNews(briefing.id, keep, drop);
+            if (done.error) throw new Error(done.error);
+            setBriefing(current => {
+                if (!current || current.id !== briefing.id) return current;
+                const items = current.items.filter(card => card.storyId !== keep && card.storyId !== drop);
+                items.splice(done.at, 0, done.item);
+                const cards = current.analysis?.cards;
+                return {...current, items, ...(cards?.[drop] ? {analysis: {...current.analysis, cards: Object.fromEntries(Object.entries(cards).filter(([id]) => Number(id) !== drop))}} : {})};
+            });
+            setTicks(current => {
+                const now = current.briefingId === briefing.id ? current.storyIds : [];
+                const on = now.includes(keep) || now.includes(drop);
+                return {briefingId: briefing.id, storyIds: [...now.filter(id => id !== keep && id !== drop), ...(on ? [keep] : [])]};
+            });
+            toast.success('The two versions are one card now: the other is among its angles and media.');
+            return true;
+        } catch (err) {
+            toast.error(`Not merged: ${err.message}`);
             return false;
         }
     };
@@ -554,6 +607,7 @@ export const BriefingPage = () => {
                                  format={shorter ? format : null}
                                  onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
                                  onNeutralTitle={storyId => BriefingApi.neutralTitle(briefing.id, storyId)}
+                                 onProfilesNews={() => BriefingApi.profilesNews(briefing.id)} onCopyNews={copyNews} onFoldNews={foldNews}
                                  stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
                                      ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
                                          // the title as the medium wrote it, when the card's was shortened or rewritten (the editor offers it), and its language

@@ -17,7 +17,8 @@ import {WithSession} from "./session.jsx";
 vi.setConfig({testTimeout: 20000});
 
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), addNews: vi.fn(), neutralTitle: vi.fn(), pictures: vi.fn(async () => ({pictures: [
+    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), addNews: vi.fn(), neutralTitle: vi.fn(),
+        profilesNews: vi.fn(async () => ({profiles: [], added: 0, max: 10})), copyNews: vi.fn(), foldNews: vi.fn(), pictures: vi.fn(async () => ({pictures: [
         {url: 'https://cdn.example/first.jpg', source: 'media1.fr'}, {url: 'https://cdn.example/other.jpg', source: 'kicker.de'},
     ]}))},
     ProfileApi: {get: vi.fn(async () => ({profile: {text: 'Le football.', language: 'fr'}}))},
@@ -842,6 +843,71 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         await waitFor(() => expect(BriefingApi.addNews).toHaveBeenCalledWith(9, 'https://media4.fr/story'));
         await screen.findByText('Added story');
         await waitFor(() => expect(screen.queryByPlaceholderText('https://…')).toBeNull());
+    });
+
+    // a news of another profile's briefing imported from the editor (the user, 10.11.2026): copied into the briefing, ticked, at the end of the e-mail
+    it('should import a news of another profile from the editor: ticked, at the end of the e-mail, and the one chosen', async () => {
+        BriefingApi.profilesNews.mockResolvedValue({added: 0, max: 10, profiles: [{idProfile: 4, profile: 'Chris', briefingId: 508, createdAt: '2026-11-10T07:12:00.000Z',
+            news: [{storyId: 30, number: 1, title: 'News of Chris', source: 'hln.be', language: 'nl', thumbnail: null, imported: false, inBriefing: false}]}]});
+        BriefingApi.copyNews.mockResolvedValue({item: card(-1, 'News of Chris'), analysis: null, analyzing: false});
+        await renderPage();
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[1]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        const order = screen.getByRole('list', {name: 'The story of the e-mail'});
+        expect(within(order).getAllByRole('listitem')).toHaveLength(1);
+
+        fireEvent.click(screen.getByRole('button', {name: 'Import from a profile'}));
+        fireEvent.click(await screen.findByRole('button', {name: 'Import “News of Chris” into the e-mail'}));
+        await waitFor(() => expect(BriefingApi.copyNews).toHaveBeenCalledWith(9, 508, 30));
+
+        // in the e-mail after the story ticked, the one chosen in the frames; and ticked in the briefing too
+        const list = await screen.findByRole('list', {name: 'The stories of the e-mail, in their order'});
+        await waitFor(() => expect(within(list).getAllByRole('listitem').map(item => item.textContent)).toEqual([expect.stringContaining('Second story'), expect.stringContaining('News of Chris')]));
+        expect(within(list).getByRole('button', {name: 'Edit “News of Chris” in the e-mail'})).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.keyDown(document.activeElement ?? document.body, {key: 'Escape'});
+        await waitFor(() => expect(screen.getByText(/2 stories ticked/)).toBeInTheDocument());
+    });
+
+    it('should let the reader choose which of two versions of the same news they use, the other being folded into it', async () => {
+        BriefingApi.profilesNews.mockResolvedValue({added: 0, max: 10, profiles: [{idProfile: 4, profile: 'Chris', briefingId: 508, createdAt: '2026-11-10T07:12:00.000Z',
+            news: [{storyId: 30, number: 1, title: 'News of Chris', source: 'hln.be', language: 'nl', thumbnail: null, imported: false, inBriefing: false, similarTo: 2}]}]});
+        BriefingApi.copyNews.mockResolvedValue({item: card(-1, 'News of Chris'), analysis: null, analyzing: false, similar: {storyId: 2, number: 2, title: 'Second story', source: 'media2.fr'}});
+        BriefingApi.foldNews.mockResolvedValue({item: card(-1, 'News of Chris'), at: 1, removed: 2});
+        await renderPage();
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[1]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Import from a profile'}));
+        fireEvent.click(await screen.findByRole('button', {name: 'Import “News of Chris” into the e-mail'}));
+
+        // the message names both, the reader keeps the news imported
+        const message = await screen.findByRole('dialog', {name: 'Same news as card 02'});
+        expect(within(message).getByText('Second story')).toBeInTheDocument();
+        fireEvent.click(within(message).getAllByRole('button', {name: 'Use this one'})[1]);
+        await waitFor(() => expect(BriefingApi.foldNews).toHaveBeenCalledWith(9, -1, 2));
+
+        // one story in the e-mail, the one kept, where the first of the two stood; the other is not in the briefing any more
+        await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Same news as card 02'})).toBeNull());
+        const list = await screen.findByRole('list', {name: 'The story of the e-mail'});
+        await waitFor(() => expect(within(list).getAllByRole('listitem').map(item => item.textContent)).toEqual([expect.stringContaining('News of Chris')]));
+        expect(screen.getByText(/The e-mail/)).toBeInTheDocument();
+        fireEvent.keyDown(document.activeElement ?? document.body, {key: 'Escape'});
+        await waitFor(() => expect(screen.getByText(/1 story ticked/)).toBeInTheDocument());
+        expect(screen.queryByRole('heading', {name: 'Second story'})).toBeNull();
+    });
+
+    it('should leave the e-mail as it was when the server refuses the news imported', async () => {
+        BriefingApi.profilesNews.mockResolvedValue({added: 0, max: 10, profiles: [{idProfile: 4, profile: 'Chris', briefingId: 508, createdAt: '2026-11-10T07:12:00.000Z',
+            news: [{storyId: 30, number: 1, title: 'News of Chris', source: 'hln.be', language: 'nl', thumbnail: null, imported: false, inBriefing: false}]}]});
+        BriefingApi.copyNews.mockRejectedValue(new Error('This news is already in the briefing.'));
+        await renderPage();
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Import from a profile'}));
+        fireEvent.click(await screen.findByRole('button', {name: 'Import “News of Chris” into the e-mail'}));
+        await waitFor(() => expect(BriefingApi.copyNews).toHaveBeenCalledTimes(1));
+        // the e-mail is as it was: one story, none added
+        await waitFor(() => expect(screen.getByRole('button', {name: 'Import “News of Chris” into the e-mail'})).toBeEnabled());
+        expect(within(screen.getByRole('list', {name: 'The story of the e-mail'})).getAllByRole('listitem')).toHaveLength(1);
     });
 
     // the AI analysis is seen on the story itself: no tool for it in the toolbar, with an analysis or without (the user, 05.11.2026)

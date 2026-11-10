@@ -11,6 +11,7 @@ import {X} from "lucide-react";
 import {Button} from "@/components/ui/button.jsx";
 import {FieldError, Input, Label} from "@/components/ui/field.jsx";
 import {BriefingFormat} from "@/features/briefing/components/BriefingFormat.jsx";
+import {MailImport} from "@/features/briefing/components/MailImport.jsx";
 import {MailTheme} from "@/features/briefing/components/MailTheme.jsx";
 
 // the colours of the e-mail and the way its sentences are shown: they change what the preview draws
@@ -30,14 +31,19 @@ export const MailSheet = ({draft, sending, onSend, children}) => (
             <Dialog.Content
                             className="raised fixed inset-0 z-50 flex flex-col overflow-hidden bg-paper outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.99] md:inset-6 md:rounded-[22px] md:shadow-[0_24px_80px_rgba(0,0,0,0.22)] md:dark:ring-1 md:dark:ring-rule">
                 <header className="flex shrink-0 items-center gap-3 border-b border-rule px-4 py-2.5 md:px-5 md:py-3">
-                    <Dialog.Title className="text-[1.0625rem] font-medium tracking-[-0.01em]">The e-mail</Dialog.Title>
-                    <Dialog.Description className="caption">
+                    <Dialog.Title className="text-[1.0625rem] font-medium tracking-[-0.01em] whitespace-nowrap">The e-mail</Dialog.Title>
+                    {/* on a phone the room is for the title and the buttons: the count is in the form under the e-mail */}
+                    <Dialog.Description className="caption max-md:sr-only">
                         {draft.count} {draft.count === 1 ? 'story' : 'stories'}, as it will be sent
                     </Dialog.Description>
-                    <Dialog.Close aria-label="Close the editor" disabled={sending}
-                                  className="ml-auto inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-paper-deep text-ink-mute transition-colors hover:text-ink">
-                        <X aria-hidden className="size-4"/>
-                    </Dialog.Close>
+                    <div className="ml-auto flex shrink-0 items-center gap-2">
+                        {/* a news of another profile's briefing imported here, without leaving the editor (the user, 10.11.2026) */}
+                        {draft.canImport && <MailImport draft={draft} disabled={sending}/>}
+                        <Dialog.Close aria-label="Close the editor" disabled={sending}
+                                      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-paper-deep text-ink-mute transition-colors hover:text-ink">
+                            <X aria-hidden className="size-4"/>
+                        </Dialog.Close>
+                    </div>
                 </header>
 
                 {children}

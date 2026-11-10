@@ -25,9 +25,13 @@ import {useMailDraft} from "@/features/briefing/useMailDraft.js";
 // the 'blocks' each story carries ({storyId: {contested, official, ...}}, see mailBlocks.js), true when sent; onPreview(payload): {html}, the
 // e-mail as it will be sent, drawn by the server for what is in the editor; onPictures(storyId): {pictures}, the ones of a story;
 // onNeutralTitle(storyId): {title} or {title: null, reason}, the neutral title the AI proposes for a story, shown against its title (see
-// MailNeutralTitle), none offered without it; onClear: unticks them all; layout: 'frames' or 'matrix', the one chosen in the settings
-export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPreview, onPictures, onNeutralTitle, onClear, layout = keptLayout()}) => {
-    const draft = useMailDraft({stories, accountEmail, format, onPictures});
+// MailNeutralTitle), none offered without it; onClear: unticks them all; layout: 'frames' or 'matrix', the one chosen in the settings;
+// onProfilesNews(): {profiles: [...]}, the news of the briefings of the other profiles, and onCopyNews(fromBriefingId, storyId): one of them
+// copied into the briefing and ticked, answering the storyId it has there (null when refused): the editor offers to import one from a profile
+// (see MailImport), none without them; onFoldNews(keep, drop): two cards of the same news made one, the card 'keep' staying with 'drop' folded
+// into it, true when done (see MailSameNews, offered when a news imported tells the same news as a card of the briefing)
+export const MailBar = ({stories, accountEmail, format = null, sending, onSend, onPreview, onPictures, onNeutralTitle, onProfilesNews, onCopyNews, onFoldNews, onClear, layout = keptLayout()}) => {
+    const draft = useMailDraft({stories, accountEmail, format, onPictures, onProfilesNews, onCopyNews, onFoldNews});
     // the editor hands over what it made: the address and the e-mail, in the order the page's function takes them
     const send = (address, sent) => onSend(address, sent.storyIds, sent.pictures, sent.titles, sent.removed, sent.way, sent.ai, sent.texts, sent.countries, sent.theme, sent.blocks);
     const Editor = layout === 'matrix' ? MailMatrix : MailEditor;

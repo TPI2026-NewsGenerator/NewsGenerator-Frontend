@@ -99,6 +99,26 @@ export const BriefingApi = {
         if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
         return {item: data.item, analysis: data.analysis ?? null, analyzing: Boolean(data.analyzing)};
     },
+    // the news of the newest briefing of each other profile of the account (the last 7 days, the language of this one), to copy one into this
+    // briefing from the editor of the e-mail: {profiles: [{idProfile, profile, briefingId, createdAt, news: [{storyId, number, title, source,
+    // language, thumbnail, imported, inBriefing}]}], added, max}; inBriefing: the news is already here
+    profilesNews: (briefingId) => send(`/briefing/${briefingId}/profiles-news`),
+    // a news of the briefing of another profile copied at the end of this one as it is there, with its analysis: {item, analysis, analyzing},
+    // as addNews gives them (analyzing is false: nothing is written after the answer), and similar: {storyId, number, title, source} the card of
+    // this briefing that tells the same news, null for none
+    copyNews: async (briefingId, fromBriefingId, storyId) => {
+        const response = await fetch(`${API_URL}/briefing/${briefingId}/news/copy`, {
+            method: 'POST',
+            headers: withProfile(HEADERS),
+            body: JSON.stringify({fromBriefingId, storyId}),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
+        return {item: data.item, analysis: data.analysis ?? null, analyzing: Boolean(data.analyzing), similar: data.similar ?? null};
+    },
+    // two cards that tell the same news made one, the reader keeping the card 'keep' with the card 'drop' folded into it (among its angles and
+    // media): {item, at, removed}, the card kept as the page shows it, where it stands in the new list (from 0), the storyId taken out
+    foldNews: (briefingId, keep, drop) => send(`/briefing/${briefingId}/news/fold`, {method: 'POST', body: {keep, drop}}),
     // a news added taken out again (204, no body)
     removeNews: async (briefingId, storyId) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/news/${storyId}`, {method: 'DELETE', headers: withProfile(HEADERS)});

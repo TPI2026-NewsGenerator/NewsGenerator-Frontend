@@ -44,8 +44,11 @@ export const takenOut = (removed = {}) => [
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 
 // stories: the cards ticked, in the order of the briefing (see MailBar); format: the way the page shows the sentences of the cards, the one
-// of the e-mail until the reader chooses another, null for a briefing that has the key passages only; onPictures(storyId): {pictures}
-export const useMailDraft = ({stories, accountEmail, format = null, onPictures}) => {
+// of the e-mail until the reader chooses another, null for a briefing that has the key passages only; onPictures(storyId): {pictures};
+// onProfilesNews(): the news of the briefings of the other profiles, onCopyNews(fromBriefingId, storyId): one of them copied into the briefing,
+// ticked, answering {storyId, title, source, similar} (null when refused): the editor then offers to import one (see MailImport);
+// onFoldNews(keep, drop): two cards of the same news made one, true when done (see MailSameNews)
+export const useMailDraft = ({stories, accountEmail, format = null, onPictures, onProfilesNews, onCopyNews, onFoldNews}) => {
     const [to, setTo] = useState(null);         // null: the editor is closed, the address is not asked yet
     const [way, setWay] = useState(format);     // the way the sentences are shown in the e-mail
     const [order, setOrder] = useState([]);     // the storyIds in the order of the e-mail
@@ -116,8 +119,38 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
         if (target !== 'all') loadGallery(byId.get(target));
     };
 
+    // A news of another profile imported while the editor is open (see MailImport): copied into the briefing and ticked by the page, then put at
+    // the end of the e-mail and chosen, so that the reader can change it at once; {storyId, title, source, similar}, null when it was refused. Its
+    // pictures are asked as soon as it is the one chosen and the page has it
+    const importNews = async (fromBriefingId, storyId) => {
+        const added = await onCopyNews?.(fromBriefingId, storyId);
+        if (!added) return null;
+        setOrder(current => current.includes(added.storyId) ? current : [...current, added.storyId]);
+        setSelected(added.storyId);
+        return added;
+    };
+    // Two cards of the same news made one, the reader keeping the card 'keep' (see MailSameNews): in the e-mail it takes the place of the first of
+    // the two, the other is gone with its changes; true when done
+    const foldNews = async (keep, drop) => {
+        if (!await onFoldNews?.(keep, drop)) return false;
+        setOrder(current => {
+            const at = current.findIndex(id => id === keep || id === drop);
+            if (at < 0) return current;
+            const rest = current.filter(id => id !== keep && id !== drop);
+            rest.splice(at, 0, keep);
+            return rest;
+        });
+        setSelected(keep);
+        return true;
+    };
+    useEffect(() => {
+        const story = selected === 'all' ? null : byId.get(selected);
+        if (story) loadGallery(story);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once a story is chosen and the page has it
+    }, [selected, byId.has(selected)]);
+
     // the pictures of a story whose own is too small, to find a better one
-    const small = ordered.filter(story => tooSmall(sizes, story.thumbnail) && !(story.storyId in galleries)).map(story => story.storyId).join(',');
+    const small =ordered.filter(story => tooSmall(sizes, story.thumbnail) && !(story.storyId in galleries)).map(story => story.storyId).join(',');
     useEffect(() => {
         if (small) small.split(',').forEach(storyId => loadGallery(byId.get(Number(storyId))));
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per story found too small
@@ -249,5 +282,6 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures})
         to, setTo, way, setWay, theme, setTheme, ordered, count: stories.length, selected, select, move, open, close: () => setTo(null),
         noteOf, choiceOf, choose, galleries, titles, setTitle, ownTitle, removed, setRemovedOf, aiOn, setAi, texts, shown, sentOf, ownText, writeText,
         countries, countriesOf, chooseCountries, blocksOf, isOn, setBlock, applyPreset, payload, submit, error, picturesError, shownPicture,
+        canImport: Boolean(onProfilesNews && onCopyNews), profilesNews: onProfilesNews, importNews, canFold: Boolean(onFoldNews), foldNews,
     };
 };
