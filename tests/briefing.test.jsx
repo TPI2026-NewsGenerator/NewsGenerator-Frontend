@@ -7,7 +7,7 @@
 
 import '@testing-library/jest-dom';
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {BriefingCard} from '@/features/briefing/components/BriefingCard.jsx';
 import {aiFirstPreference} from '@/features/briefing/aiFirst.js';
@@ -510,6 +510,59 @@ describe('BriefingCard, the AI version', () => {
         aiOffInSettings();
         render(<BriefingCard item={withAi({translation: 'Translated passage.', pointsTranslation: 'Point traduit.'})} format="points"/>);
         expect(screen.getByText("In the article's words, translated").parentElement).toContainElement(screen.getByRole('switch', {name: 'AI version'}));
+    });
+});
+
+// a card with no AI version, the AI having failed when the briefing was written (11.11.2026): the reader can have it written now
+describe('BriefingCard, the AI version it has none of', () => {
+    afterEach(() => localStorage.removeItem('newsgenerator.ai-first'));
+    const none = (changes = {}) => item({points: 'Premier point.\n\nSecond point.', digest: 'Un digest.', ai: null, ...changes});
+
+    it('should offer to write it in the ways that have one, said before the button, and not in the key passages', () => {
+        const write = vi.fn();
+        const {rerender} = render(<BriefingCard item={none()} format="points" onWriteAi={write}/>);
+        expect(screen.getByText('No AI version for this card.')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Write it now'})).toBeInTheDocument();
+        expect(screen.queryByRole('switch')).toBeNull();
+        // beside the title of the sentences, where the switch will be
+        expect(screen.getByText("In the article's words").parentElement).toContainElement(screen.getByRole('button', {name: 'Write it now'}));
+        rerender(<BriefingCard item={none()} format="digest" onWriteAi={write}/>);
+        expect(screen.getByRole('button', {name: 'Write it now'})).toBeInTheDocument();
+        // the key passages have no AI version at all: nothing to write
+        rerender(<BriefingCard item={none()} format="passages" onWriteAi={write}/>);
+        expect(screen.queryByRole('button', {name: 'Write it now'})).toBeNull();
+        // a page that gives no way to write it offers none, and a card that has it has its switch
+        rerender(<BriefingCard item={none()} format="points"/>);
+        expect(screen.queryByRole('button', {name: 'Write it now'})).toBeNull();
+        rerender(<BriefingCard item={none({ai: {points: ['Un point.'], summary: null, model: 'x'}})} format="points" onWriteAi={write}/>);
+        expect(screen.queryByRole('button', {name: 'Write it now'})).toBeNull();
+        expect(screen.getByRole('switch', {name: 'AI version'})).toBeInTheDocument();
+    });
+
+    it('should ask the page to write it, and show the switch once the card has it', async () => {
+        const {rerender} = render(<BriefingCard item={none()} format="points" onWriteAi={async () => ({ai: {points: ['Un point de l’IA.'], summary: null, model: 'x'}})}/>);
+        fireEvent.click(screen.getByRole('button', {name: 'Write it now'}));
+        // the page puts it in the card: the card shows it
+        rerender(<BriefingCard item={none({ai: {points: ['Un point de l’IA.'], summary: null, model: 'x'}})} format="points" onWriteAi={async () => ({})}/>);
+        await waitFor(() => expect(screen.getByRole('switch', {name: 'AI version'})).toBeInTheDocument());
+        expect(screen.getByText('Un point de l’IA.')).toBeInTheDocument();
+        expect(screen.queryByText('No AI version for this card.')).toBeNull();
+    });
+
+    it('should say why none was written: the AI did not answer, a figure it does not give, the article not read, or the call failed', async () => {
+        const answers = [{ai: null, reason: 'no-answer'}, {ai: null, reason: 'unbacked'}, {ai: null, reason: 'unreadable'}];
+        const write = vi.fn(async () => answers.shift());
+        render(<BriefingCard item={none()} format="points" onWriteAi={write}/>);
+        fireEvent.click(screen.getByRole('button', {name: 'Write it now'}));
+        expect(await screen.findByText(/The AI did not answer: try again in a few minutes/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Write it now'}));
+        expect(await screen.findByText(/a figure it does not give\), so none is kept/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Write it now'}));
+        expect(await screen.findByText(/The article could not be read again/)).toBeInTheDocument();
+        write.mockRejectedValueOnce(new Error('HTTP 500'));
+        fireEvent.click(screen.getByRole('button', {name: 'Write it now'}));
+        expect(await screen.findByText(/The AI version was not written: HTTP 500/)).toBeInTheDocument();
+        expect(write).toHaveBeenCalledTimes(4);
     });
 });
 

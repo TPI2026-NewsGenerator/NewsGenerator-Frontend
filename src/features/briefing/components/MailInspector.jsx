@@ -10,8 +10,9 @@
 import {useState} from "react";
 import {ChevronDown, ChevronRight} from "lucide-react";
 import {Button} from "@/components/ui/button.jsx";
-import {Checkbox, Input, Label} from "@/components/ui/field.jsx";
+import {Checkbox, Input, Label, Textarea} from "@/components/ui/field.jsx";
 import {AngleLines, AnalysisLines, ContestedLines, NameLines, OfficialLines} from "@/features/briefing/components/MailAside.jsx";
+import {AiVersionWriter} from "@/features/briefing/components/AiVersionWriter.jsx";
 import {MailCountries} from "@/features/briefing/components/MailCountries.jsx";
 import {MailNeutralTitle} from "@/features/briefing/components/MailNeutralTitle.jsx";
 import {MailPicture} from "@/features/briefing/components/MailPicture.jsx";
@@ -45,7 +46,7 @@ const Section = ({label, name, checked, onChange, disabled = false, hint, open, 
 export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false}) => {
     // the title, the text and the names are open: the names are short, and each can be taken out. The countries too when none was found:
     // the reader can add any (the user, 06.11.2026), it would not be found closed behind an unticked box
-    const [open, setOpen] = useState({title: true, text: true, names: true, countries: (story.countries ?? []).length === 0});
+    const [open, setOpen] = useState({title: true, description: true, text: true, names: true, countries: (story.countries ?? []).length === 0});
     const toggle = (name) => setOpen(current => ({...current, [name]: !current[name]}));
     const id = story.storyId;
     const choice = draft.choiceOf(story);
@@ -95,18 +96,44 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                 {onNeutralTitle && <MailNeutralTitle key={id} story={story} onAsk={onNeutralTitle} disabled={disabled} onUse={title => draft.setTitle(id, title)}/>}
             </Section>
 
+            {/* the sentence under the title: the reason the card was chosen, or the reader's own words (the user, 11.11.2026, a friend: it could not be changed) */}
+            <Section label="Description" open={open.description} onToggle={() => toggle('description')}
+                     hint={draft.ownWhy(story) !== null ? 'changed' : undefined}>
+                <Label htmlFor={`mail-description-${id}`}>Its description in the e-mail</Label>
+                <Textarea id={`mail-description-${id}`} rows={3} maxLength={500} disabled={disabled}
+                          className="text-[0.9375rem] leading-snug" aria-describedby={`mail-description-help-${id}`}
+                          value={draft.whys[id] ?? story.why ?? ''} onChange={event => draft.setWhy(id, event.target.value)}/>
+                <p id={`mail-description-help-${id}`} className="caption mt-1">
+                    The sentence under the title.
+                    {draft.ownWhy(story) === null && draft.toOther
+                        ? ' This one says why the card was chosen for you: it is not sent to another address, write one to send it.'
+                        : draft.ownWhy(story) === ''
+                            ? ' Cleared: the e-mail has none.'
+                            : draft.ownWhy(story) === null && story.why ? ' This one says why the card was chosen for you: only you get it. Change it to send your words to anyone.' : ''}
+                </p>
+                {draft.ownWhy(story) !== null && (
+                    <Button size="sm" variant="link" className="mt-1" onClick={() => draft.setWhy(id, undefined)}>Back to its own description</Button>
+                )}
+            </Section>
+
             <Section label="Text" open={open.text} onToggle={() => toggle('text')}>
                 {aiText ? (
                     <Checkbox checked={draft.aiOn(story)} className="mb-2 text-[0.8125rem]" onChange={event => draft.setAi(id, event.target.checked)}>
                         Send its {WAY_NAMES[shown]} in the AI version
                     </Checkbox>
                 ) : way && (
-                    // the box is not there: said, rather than left to be looked for
-                    <p className="caption mb-2">
-                        {way === 'passages'
-                            ? 'The key passages have no AI version: choose bullet points or the summary (In the e-mail, as) to send one.'
-                            : `No AI version of the ${WAY_NAMES[way]} of this card: the AI did not write one the article backs (a figure it does not give, or no answer).`}
-                    </p>
+                    // the box is not there: said, rather than left to be looked for; the AI can write it now (it had failed when the briefing was
+                    // written, or its text was refused: 11.11.2026)
+                    <div className="mb-2">
+                        <p className="caption">
+                            {way === 'passages'
+                                ? 'The key passages have no AI version: choose bullet points or the summary (In the e-mail, as) to send one.'
+                                : `No AI version of the ${WAY_NAMES[way]} of this card: the AI did not write one the article backs (a figure it does not give, or no answer).`}
+                        </p>
+                        {way !== 'passages' && draft.writeAi && (
+                            <AiVersionWriter key={id} onWrite={() => draft.writeAi(id)} disabled={disabled} className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1"/>
+                        )}
+                    </div>
                 )}
                 {/* what the e-mail sends, the reader changing it as they want (the user, 20.10.2026): a box for each point or passage, so
                     where one ends and the next begins is seen (the user, 06.11.2026) */}

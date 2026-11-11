@@ -196,10 +196,10 @@ export const BriefingPage = () => {
     // the cards ticked, in the order the reader gave them in the bar, with the pictures, titles and
     // sentences they changed, without the denials and angles they took out, their sentences in the way
     // chosen, sent to the address 'to': true when sent
-    const email = async (to, storyIds, pictures, titles, removed, way, ai, texts, countries, theme, blocks) => {
+    const email = async (to, storyIds, pictures, titles, removed, way, ai, texts, countries, theme, blocks, descriptions) => {
         setSending(true);
         try {
-            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way, ai, texts, countries, theme, blocks);
+            await BriefingApi.email(briefing.id, storyIds, to, pictures, titles, removed, way, ai, texts, countries, theme, blocks, descriptions);
             // sent, they count as read: the next briefings leave them out unless something new happens
             toast.success(`${ticked.length === 1 ? 'The story' : `The ${ticked.length} stories`} sent to ${to}, read now for your next briefings.`);
             tick([]);
@@ -314,6 +314,17 @@ export const BriefingPage = () => {
         `The card now shows ${version.profile ?? 'the other profile'}'s version of this news.`);
     const restoreVersion = (storyId) => changeVersion(storyId, () => BriefingApi.restoreVersion(briefing.id, storyId), 'The card is back as your profile wrote it.');
 
+    // The AI version of a card that has none, written now (the AI had failed when the briefing was written): the card keeps it, here and in the
+    // editor of the e-mail. The answer is the server's, {ai} or {ai: null, reason}; a failure goes to who asked
+    const writeAi = async (storyId) => {
+        const answer = await BriefingApi.writeAiVersion(briefing.id, storyId);
+        if (answer.ai) {
+            setBriefing(current => current && current.id === briefing.id ? {...current, items: current.items.map(card => card.storyId === storyId ? {...card, ai: answer.ai} : card)} : current);
+            toast.success('The AI version is written.');
+        }
+        return answer;
+    };
+
     // shown at once, taken back if the server refuses it
     const vote = async (storyId, value) => {
         const setVote = (to) => setBriefing(current => current && ({
@@ -407,6 +418,7 @@ export const BriefingPage = () => {
                                           onUseVersion={item.imported ? undefined : version => takeVersion(item.storyId, version)}
                                           onRestoreVersion={item.imported ? undefined : () => restoreVersion(item.storyId)}
                                           onVote={item.imported ? undefined : value => vote(item.storyId, value)}
+                                          onWriteAi={() => writeAi(item.storyId)}
                                           onRemove={item.imported && mail ? () => removeNews(item.storyId) : undefined}
                                           onSelect={mail ? checked => tickOne(item.storyId, checked) : undefined}
                                           selected={ticked.includes(item.storyId)}/>
@@ -601,6 +613,7 @@ export const BriefingPage = () => {
                                  format={shorter ? format : null}
                                  onPictures={storyId => BriefingApi.pictures(briefing.id, storyId)}
                                  onNeutralTitle={storyId => BriefingApi.neutralTitle(briefing.id, storyId)}
+                                 onWriteAi={writeAi}
                                  onProfilesNews={() => BriefingApi.profilesNews(briefing.id)} onCopyNews={copyNews} onFoldNews={foldNews}
                                  stories={briefing.items.flatMap((item, index) => ticked.includes(item.storyId)
                                      ? [{storyId: item.storyId, title: item.titleTranslation ?? item.title, number: index + 1,
@@ -608,6 +621,8 @@ export const BriefingPage = () => {
                                          titleAsPublished: item.titleAsPublished ?? null, titleLanguage: item.language ?? null, titleTranslated: Boolean(item.titleTranslation),
                                          // the rewrite the AI wrote when the card was made, that the checks refused: the editor shows it with what they found
                                          titleProposal: item.titleProposal ?? null,
+                                         // the sentence under the title (the reason the card was chosen), the editor lets the reader write their own
+                                         why: item.why ?? null,
                                          thumbnail: item.thumbnail ?? null, thumbnailSource: item.thumbnailSource ?? null,
                                          countries: item.countries ?? [],
                                          contested: item.contested ?? [],

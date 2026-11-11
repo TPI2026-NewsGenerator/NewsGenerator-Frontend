@@ -17,7 +17,7 @@ import {WithSession} from "./session.jsx";
 vi.setConfig({testTimeout: 20000});
 
 vi.mock('@/features/briefing/api/briefingApi.js', () => ({
-    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), addNews: vi.fn(), neutralTitle: vi.fn(),
+    BriefingApi: {affairs: vi.fn(async () => ({affairs: {}})), getLatest: vi.fn(), start: vi.fn(), vote: vi.fn(), email: vi.fn(async () => {}), addNews: vi.fn(), neutralTitle: vi.fn(), writeAiVersion: vi.fn(),
         profilesNews: vi.fn(async () => ({profiles: [], added: 0, max: 10})), copyNews: vi.fn(), foldNews: vi.fn(), pictures: vi.fn(async () => ({pictures: [
         {url: 'https://cdn.example/first.jpg', source: 'media1.fr'}, {url: 'https://cdn.example/other.jpg', source: 'kicker.de'},
     ]}))},
@@ -89,7 +89,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
         // in the order of the briefing, whatever the order they were ticked in
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 3], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 3], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull());
         screen.getAllByRole('checkbox', BOX).forEach(box => expect(box).not.toBeChecked());
     });
@@ -110,7 +110,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(within(inMail).getByRole('radio', {name: 'Bullet points'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', [], {}, {}, 'light', expect.any(Object), {}));
         // the page keeps its own way
         expect(within(page).getByRole('radio', {name: 'Summary'})).toHaveAttribute('data-state', 'on');
         localStorage.clear();
@@ -184,6 +184,49 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         localStorage.clear();
     });
 
+    // the AI having failed while the briefing was written (11.11.2026), the editor can have the version written now, as the card can
+    it('should offer to write the AI version a card has none of, and offer the box to send it once it is there', async () => {
+        localStorage.clear();
+        const item = {...BRIEFING.items[0], digest: 'Ein Digest.', points: 'Erster Punkt.', ai: null};
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
+        BriefingApi.writeAiVersion.mockResolvedValue({ai: {points: ['Un point de l\'IA.'], summary: 'Un résumé de l\'IA.', model: 'deepseek-v4-pro:0813'}});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const story = carries('First story');
+
+        // the key passages have none to write
+        expect(within(story).queryByRole('button', {name: 'Write it now'})).toBeNull();
+        fireEvent.click(within(screen.getByRole('group', {name: 'In the e-mail, as'})).getByRole('radio', {name: 'Bullet points'}));
+        expect(within(story).queryByRole('checkbox', {name: /AI version/})).toBeNull();
+        fireEvent.click(within(story).getByRole('button', {name: 'Write it now'}));
+        expect(BriefingApi.writeAiVersion).toHaveBeenCalledWith(9, 1);
+
+        // the card has it now: the box to send it, ticked as the settings have it
+        expect(await within(story).findByRole('checkbox', {name: 'Send its bullet points in the AI version'})).toBeChecked();
+        expect(within(story).queryByRole('button', {name: 'Write it now'})).toBeNull();
+        localStorage.clear();
+    });
+
+    it('should say in the editor why the AI version was not written', async () => {
+        localStorage.clear();
+        const item = {...BRIEFING.items[0], digest: 'Ein Digest.', points: 'Erster Punkt.', ai: null};
+        BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items: [item]}, mail: true});
+        BriefingApi.writeAiVersion.mockResolvedValue({ai: null, reason: 'no-answer'});
+        render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+        await screen.findByText('First story');
+        fireEvent.click(screen.getAllByRole('checkbox', BOX)[0]);
+        fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        const story = carries('First story');
+        fireEvent.click(within(screen.getByRole('group', {name: 'In the e-mail, as'})).getByRole('radio', {name: 'Summary'}));
+        fireEvent.click(within(story).getByRole('button', {name: 'Write it now'}));
+        expect(await within(story).findByText(/The AI did not answer: try again in a few minutes/)).toBeInTheDocument();
+        localStorage.clear();
+    });
+
     it('should send the bullet points, the summary or the key passages the reader wrote, their own when left as they are', async () => {
         localStorage.clear();
         // the settings have the AI version off here: the box below is ticked by the reader
@@ -205,7 +248,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.getByText(/bullet points changed/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenLastCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, 'points', [1],
-            {1: ['Mon premier point.', 'Mon second point.']}, {}, 'light', expect.any(Object)));
+            {1: ['Mon premier point.', 'Mon second point.']}, {}, 'light', expect.any(Object), {}));
 
         // sent, they are unticked: ticked again. The summary: a box for each of its paragraphs
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull());
@@ -224,7 +267,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.change(screen.getByRole('textbox', {name: 'Passage 2'}), {target: {value: 'Sa fin.'}});
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenLastCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, 'digest', [],
-            {1: ['Mon résumé.', 'Sa fin.']}, {}, 'light', expect.any(Object)));
+            {1: ['Mon résumé.', 'Sa fin.']}, {}, 'light', expect.any(Object), {}));
 
         // the key passages of the second card; the first one's left empty: its own
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull());
@@ -238,7 +281,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.change(screen.getByRole('textbox', {name: 'Passage 1'}), {target: {value: '  '}});
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenLastCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, 'passages', [],
-            {2: ['Un passage à moi.']}, {}, 'light', expect.any(Object)));
+            {2: ['Un passage à moi.']}, {}, 'light', expect.any(Object), {}));
         localStorage.clear();
     }, 30000);
 
@@ -261,7 +304,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', [1], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, 'points', [1], {}, {}, 'light', expect.any(Object), {}));
         localStorage.clear();
     });
 
@@ -289,7 +332,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         ]);
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [3, 2, 1], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [3, 2, 1], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
     });
 
     it('should not ask an order for a single story', async () => {
@@ -307,7 +350,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
         expect(screen.getByLabelText('Send the story to')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
         expect(screen.getByText(/1 story ticked/)).toBeInTheDocument();
@@ -326,7 +369,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
         fireEvent.change(field, {target: {value: ' friend@example.org '}});
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'friend@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'friend@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
     });
 
     it('should send the picture the reader chose for a story, none for another, and their own for the others', async () => {
@@ -371,9 +414,73 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2, 3], 'reader@example.org', {
             1: {url: 'https://cdn.example/other.jpg'}, 2: null,
-        }, {3: 'The third, told my way'}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        }, {3: 'The third, told my way'}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
         // many steps of a dialog opened three times: more than the 5 s of a test when the computer is busy
     }, 30000);
+
+    // the sentence under the title (11.11.2026, a friend: the description could not be changed in the editor)
+    describe('the description under the title', () => {
+        const open = async () => {
+            const items = [{...card(1, 'First story'), why: 'The FTF and LPFT sign a convention.'}, card(2, 'Second story')];
+            BriefingApi.getLatest.mockResolvedValue({briefing: {...BRIEFING, items}, mail: true});
+            render(<MemoryRouter><WithSession user={{id: 4, username: 'reader', email: 'reader@example.org'}}><BriefingPage/></WithSession></MemoryRouter>);
+            await screen.findByText('First story');
+            fireEvent.click(screen.getByRole('button', {name: 'Tick all the stories'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Send email'}));
+            fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+        };
+
+        it('should show the card\'s own, let the reader write theirs, and send it with the e-mail', async () => {
+            await open();
+            const field = screen.getByLabelText('Its description in the e-mail');
+            expect(field).toHaveValue('The FTF and LPFT sign a convention.');
+            // the reason the card was chosen is for the reader's address only
+            expect(screen.getByText(/only you get it/)).toBeInTheDocument();
+            expect(screen.queryByText(/· description changed/)).toBeNull();
+
+            fireEvent.change(field, {target: {value: '  The Togolese federation   hands over its league '}});
+            expect(screen.getByText(/· description changed/)).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object),
+                {1: 'The Togolese federation hands over its league'}));
+        });
+
+        it('should give back the card\'s own description, and send none that was not changed', async () => {
+            await open();
+            const field = screen.getByLabelText('Its description in the e-mail');
+            fireEvent.change(field, {target: {value: 'Another'}});
+            fireEvent.click(screen.getByRole('button', {name: 'Back to its own description'}));
+            expect(field).toHaveValue('The FTF and LPFT sign a convention.');
+            expect(screen.queryByText(/· description changed/)).toBeNull();
+            // the text put back by hand is the card's own too
+            fireEvent.change(field, {target: {value: 'Another'}});
+            fireEvent.change(field, {target: {value: ' The FTF and LPFT  sign a convention. '}});
+            expect(screen.queryByText(/· description changed/)).toBeNull();
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
+        });
+
+        it('should send none when the reader clears it, and write one for a card that has none', async () => {
+            await open();
+            const field = screen.getByLabelText('Its description in the e-mail');
+            fireEvent.change(field, {target: {value: ''}});
+            expect(screen.getByText(/Cleared: the e-mail has none/)).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', {name: 'Edit “Second story” in the e-mail'}));
+            const second = screen.getByLabelText('Its description in the e-mail');
+            expect(second).toHaveValue('');
+            fireEvent.change(second, {target: {value: 'Written for a card without one.'}});
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object),
+                {1: '', 2: 'Written for a card without one.'}));
+        });
+
+        it('should say the reason of the card is not sent to another address', async () => {
+            await open();
+            fireEvent.change(screen.getByLabelText('Send the 2 stories to'), {target: {value: 'friend@example.org'}});
+            fireEvent.click(screen.getByRole('button', {name: 'Edit “First story” in the e-mail'}));
+            expect(screen.getByText(/it is not sent to another address, write one to send it/)).toBeInTheDocument();
+        });
+    });
 
     it('should offer only the pictures wide enough for the e-mail, and put the best of the story instead of an own too small', async () => {
         const offered = BriefingApi.pictures.getMockImplementation();
@@ -418,7 +525,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         // the second keeps its own, wide enough
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
         await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2, 3], 'reader@example.org',
-            {1: {url: 'https://cdn.example/lying-w2000.jpg'}, 3: null}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+            {1: {url: 'https://cdn.example/lying-w2000.jpg'}, 3: null}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
         BriefingApi.pictures.mockImplementation(offered);
 
     });
@@ -457,7 +564,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.getByText(/· 1 angle taken out/)).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {1: {contested: [], angles: [1]}}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {1: {contested: [], angles: [1]}}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
     });
 
     // the countries the server found for a card are not always right (the user, 02.11.2026): ticked or not, or others added
@@ -485,7 +592,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.getByText(/· countries changed/)).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: ['CH', 'DE']}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: ['CH', 'DE']}, 'light', expect.any(Object), {}));
     });
 
     it('should send no country for a story whose countries the reader all unticked, and nothing for one put back as found', async () => {
@@ -506,7 +613,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.getAllByText(/· countries changed/)).toHaveLength(1);
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: []}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {1: []}, 'light', expect.any(Object), {}));
     });
 
     // a country is shown whether its title names it or not (the user, 06.11.2026: "Aruba" and "Cameroun" were ticked in the editor and seen
@@ -615,7 +722,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
 
             fireEvent.click(screen.getByRole('button', {name: 'Use the title as published'}));
             fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'Incredible news! Council votes the budget'}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'Incredible news! Council votes the budget'}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
         });
 
         it('should say the title as published is not translated when the card is', async () => {
@@ -670,7 +777,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
             expect(screen.getByText(/· title changed/)).toBeInTheDocument();
 
             fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'The council votes the budget'}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'The council votes the budget'}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
         });
 
         it('should leave the title as it is when the reader keeps it', async () => {
@@ -743,7 +850,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.click(within(colours).getByRole('radio', {name: 'Dark'}));
         expect(within(colours).getByRole('radio', {name: 'Dark'})).toBeChecked();
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'dark', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'dark', expect.any(Object), {}));
 
         // sent: the next e-mail is light again
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Send email'})).toBeNull());
@@ -770,7 +877,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         expect(screen.getByText(/1 official source taken out/)).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {1: {official: [0]}}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {}, {}, {1: {official: [0]}}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
     });
 
     it('should join an image of the reader, and refuse a file that is not one', async () => {
@@ -787,7 +894,7 @@ describe('BriefingPage e-mail of the cards ticked', () => {
         fireEvent.change(input, {target: {files: [new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'photo.png', {type: 'image/png'})]}});
         await screen.findByText('Your image: photo.png, joined to the e-mail.');
         fireEvent.click(screen.getByRole('button', {name: 'Send'}));
-        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {1: {data: 'iVBORw=='}}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object)));
+        await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1], 'reader@example.org', {1: {data: 'iVBORw=='}}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
     });
 
     it('should tick them all, and untick them all', async () => {

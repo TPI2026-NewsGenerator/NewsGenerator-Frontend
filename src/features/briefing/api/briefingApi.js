@@ -24,12 +24,12 @@ const send = async (path, {method = 'GET', body} = {}) => {
 
 // what an e-mail is made of beside its stories and its address, only what the reader chose (a map left empty is not sent), the same for the
 // e-mail and for its preview
-const mailBody = ({pictures, titles, removed, format, ai, texts, countries, theme, blocks}) => {
+const mailBody = ({pictures, titles, removed, format, ai, texts, countries, theme, blocks, descriptions}) => {
     const some = (map) => map && Object.keys(map).length > 0;
     return {
         ...(some(pictures) ? {pictures} : {}), ...(some(titles) ? {titles} : {}), ...(some(removed) ? {removed} : {}),
         ...(format ? {format} : {}), ...(ai?.length ? {ai} : {}), ...(some(texts) ? {texts} : {}), ...(some(countries) ? {countries} : {}),
-        ...(theme === 'dark' ? {theme} : {}), ...(some(blocks) ? {blocks} : {}), ...(browserTimeZone() ? {timeZone: browserTimeZone()} : {}),
+        ...(theme === 'dark' ? {theme} : {}), ...(some(blocks) ? {blocks} : {}), ...(some(descriptions) ? {descriptions} : {}), ...(browserTimeZone() ? {timeZone: browserTimeZone()} : {}),
     };
 };
 
@@ -63,26 +63,35 @@ export const BriefingApi = {
     // points or paragraphs the reader wrote instead of the card's in that way; countries: {storyId: [code]}, the
     // countries (codes ISO 3166-1) the reader chose for some cards instead of the ones found, [] for none; theme:
     // 'light' (the default, not sent) or 'dark', the colours of the e-mail; blocks: {storyId: {media, contested, official, unconfirmed, names,
-    // analysis, angles, affair, coverage}}, what each story carries (see mailBlocks.js). The hours of the e-mail are the ones of the
+    // analysis, angles, affair, coverage}}, what each story carries (see mailBlocks.js); descriptions: {storyId: text}, the sentence under the title
+    // the reader wrote for some cards, "" for none. The hours of the e-mail are the ones of the
     // time zone of this browser, always sent
-    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai, texts, countries, theme, blocks) => {
+    email: async (briefingId, storyIds, to, pictures, titles, removed, format, ai, texts, countries, theme, blocks, descriptions) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email`, {
             method: 'POST',
             headers: withProfile(HEADERS),
-            body: JSON.stringify({storyIds, to, ...mailBody({pictures, titles, removed, format, ai, texts, countries, theme, blocks})}),
+            body: JSON.stringify({storyIds, to, ...mailBody({pictures, titles, removed, format, ai, texts, countries, theme, blocks, descriptions})}),
         });
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? `HTTP ${response.status}`);
     },
     // the e-mail as it will be sent, for what is in the editor (the same fields as the e-mail, `way` for its format): {html}, the page the
     // e-mail is made of, nothing is sent and no story is counted as read
-    emailPreview: async (briefingId, {storyIds, pictures, titles, removed, way, ai, texts, countries, theme, blocks}) => {
+    emailPreview: async (briefingId, {storyIds, pictures, titles, removed, way, ai, texts, countries, theme, blocks, descriptions}) => {
         const response = await fetch(`${API_URL}/briefing/${briefingId}/email/preview`, {
             method: 'POST',
             headers: withProfile(HEADERS),
-            body: JSON.stringify({storyIds, ...mailBody({pictures, titles, removed, format: way, ai, texts, countries, theme, blocks})}),
+            body: JSON.stringify({storyIds, ...mailBody({pictures, titles, removed, format: way, ai, texts, countries, theme, blocks, descriptions})}),
         });
         const answer = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(answer.error ?? `HTTP ${response.status}`);
+        return answer;
+    },
+    // the AI version of a card that has none, written now from its article read again: {ai: {points, summary, model}}, or {ai: null, reason} with
+    // reason 'no-answer' (the AI did not answer), 'unbacked' (what it wrote was refused for a figure the article does not give) or 'unreadable'.
+    // A call the server refused or did not answer throws (the answer of a failed call is {error}, see readAnswer)
+    writeAiVersion: async (briefingId, storyId) => {
+        const answer = await send(`/briefing/${briefingId}/stories/${storyId}/ai-version`, {method: 'POST'});
+        if (answer?.error) throw new Error(answer.error);
         return answer;
     },
     // a news added at the end of the briefing by its link: answers {item, analysis, analyzing}, its card (read and completed like the

@@ -28,6 +28,7 @@ import {CardAnalysis} from "@/features/briefing/components/BriefingAnalysis.jsx"
 import {AffairPanel, AffairRail} from "@/features/affairs/components/AffairSection.jsx";
 import {CardCoverage} from "@/features/briefing/components/CardCoverage.jsx";
 import {CardMore} from "@/features/briefing/components/CardMore.jsx";
+import {AiVersionWriter} from "@/features/briefing/components/AiVersionWriter.jsx";
 import {cn, capitalized} from "@/lib/utils.js";
 import {pageOf} from "@/features/entities/entityApi.js";
 
@@ -331,7 +332,7 @@ const unmarked = (entry) => ({...entry, marks: undefined});
 // card-versions.js), onUseVersion(version) replaces the card with one of them, where it stands; item.version: {briefingId, profile,
 // createdAt} when it already is one, item.previousVersion {title, source} the card it replaced, onRestoreVersion() brings that one back
 // show: the blocks the page shows of the card, the ones ticked for the page in the settings (see mailBlocks.js BLOCKS): all of them without it
-export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions = [], onUseVersion, onRestoreVersion, versionBusy = false, selected = false, number, lede = false, marked = false, format = 'passages',
+export const BriefingCard = ({item: given, onVote, onWriteAi, onSelect, onRemove, versions = [], onUseVersion, onRestoreVersion, versionBusy = false, selected = false, number, lede = false, marked = false, format = 'passages',
                                  analysis, analysisPending = false, analysisModel, affair, briefingId, show}) => {
     const on = (block) => !show || show.includes(block);
     const item = marked ? given : {...unmarked(given), angles: given.angles?.map(unmarked), contested: given.contested?.map(unmarked)};
@@ -370,6 +371,9 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
             AI version
         </Switch>
     );
+    // A card with no AI version (the AI failed when the briefing was written) offers to write it now, in the ways that have one: the points and the summary
+    const aiWriter = Boolean(onWriteAi) && paragraphs.length > 0 && (format === 'points' || format === 'digest') && !aiText
+        && <AiVersionWriter onWrite={onWriteAi} lead="No AI version for this card."/>;
     // what lies around the news, one strip under it (see CardMore); the glance and the link row open one
     // none chosen yet: the first tab is the one open (the user, 05.11.2026); once the reader opens one, or closes it, theirs stands
     const [chosen, setChosen] = useState(undefined);
@@ -510,7 +514,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                     <div className="mt-6">
                         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                             <p className="section-title">In the article's words, translated</p>
-                            {aiSwitch}
+                            {aiSwitch || aiWriter}
                         </div>
                         <div className="body-text mt-3"><Way paragraphs={translation} lede={lede}/></div>
                         <p className="footnote mt-3">
@@ -524,7 +528,7 @@ export const BriefingCard = ({item: given, onVote, onSelect, onRemove, versions 
                     <div className="mt-6">
                         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                             <p className="section-title">In the article's words</p>
-                            {aiSwitch}
+                            {aiSwitch || aiWriter}
                         </div>
                         <div className="body-text mt-3"><Way paragraphs={paragraphs} lede={lede}/></div>
                         <p className="footnote mt-3">

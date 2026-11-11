@@ -30,6 +30,31 @@ describe('BriefingApi.email', () => {
         expect(sent()).not.toHaveProperty('theme');
     });
 
+    it('should send the descriptions the reader wrote, an empty one for none, and nothing when there are none (11.11.2026)', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ok: true})));
+        await BriefingApi.email(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', {}, {1: 'My words.', 2: ''});
+        expect(sent().descriptions).toEqual({1: 'My words.', 2: ''});
+        await BriefingApi.email(9, [1], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', {}, {});
+        expect(sent()).not.toHaveProperty('descriptions');
+        vi.stubGlobal('fetch', vi.fn(async () => ({ok: true, json: async () => ({html: '<p>x</p>'})})));
+        await BriefingApi.emailPreview(9, {storyIds: [1], descriptions: {1: 'Preview.'}});
+        expect(sent().descriptions).toEqual({1: 'Preview.'});
+    });
+
+    it('should ask the server to write the AI version of a card, and throw when the server refuses or does not answer (11.11.2026)', async () => {
+        const answered = (status, body) => vi.fn(async () => ({ok: status < 400, status, text: async () => body}));
+        vi.stubGlobal('fetch', answered(200, JSON.stringify({ai: {points: ['A point.'], summary: null, model: 'x'}})));
+        expect(await BriefingApi.writeAiVersion(9, 3)).toEqual({ai: {points: ['A point.'], summary: null, model: 'x'}});
+        expect(globalThis.fetch.mock.calls[0][0]).toMatch(/\/briefing\/9\/stories\/3\/ai-version$/);
+        expect(globalThis.fetch.mock.calls[0][1].method).toBe('POST');
+        vi.stubGlobal('fetch', answered(200, JSON.stringify({ai: null, reason: 'no-answer'})));
+        expect(await BriefingApi.writeAiVersion(9, 3)).toEqual({ai: null, reason: 'no-answer'});
+        vi.stubGlobal('fetch', answered(404, JSON.stringify({error: 'Unknown card.'})));
+        await expect(BriefingApi.writeAiVersion(9, 3)).rejects.toThrow('Unknown card.');
+        vi.stubGlobal('fetch', answered(502, '<html>Bad gateway</html>'));
+        await expect(BriefingApi.writeAiVersion(9, 3)).rejects.toThrow(/may be restarting or busy/);
+    });
+
     it('should send no time zone when the browser tells none', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => ({ok: true})));
         const resolved = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({});
