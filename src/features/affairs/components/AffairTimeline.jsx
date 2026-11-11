@@ -33,9 +33,9 @@ const MEDIA_SHOWN = 6;
 // what the articles of an event say of it: the words of the media, never a verdict (see hedging.js, statements.js and
 // contested.js on the server)
 const MARKS = {
-    reported: {label: 'Reported', tone: 'accent', means: (event) => `The articles that tell it say they have no confirmation (“${event.reported}”). It says how they present it, not whether it is true.`},
-    official: {label: 'Official', tone: 'official', means: () => 'A party this event is about announced it itself, in a statement or a release one of the articles reports.'},
-    denial: {label: 'Contested', tone: 'accent', means: () => 'One of the articles reports that someone named denies it. Nobody is said to be right.'},
+    reported: {label: 'Unverified', tone: 'accent', means: (event) => `The articles, taken together, tell it as unconfirmed (“${event.reported}”). It says how they present it, not whether it is true.`},
+    official: {label: 'Official', tone: 'official', means: () => 'A party this event is about issued a statement or a communiqué itself (or announced a decision), and one of the articles reports it.'},
+    denial: {label: 'Contested', tone: 'accent', means: () => 'One of the articles reports that someone named disputes it: a denial, a rejection or a formal challenge such as an appeal. Nobody is said to be right.'},
 };
 // the colour of a marker when its event is denied (orange, as "Contested" everywhere) or announced by a party (green, as "Official source"):
 // filled, small ones too. Both at once, the denial: it is what the reader is to be warned of (the user, 05.11.2026)
@@ -264,12 +264,12 @@ export const AffairTimeline = ({events, coverage}) => {
             <p className="caption mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span>{events.length} events, {keys} key. Click one to read it.</span>
                 <span>
-                    Big marker: told by many media · hollow: other event · dashed: reported ·{' '}
+                    Big marker: told by many media · hollow: other event · dashed: unverified ·{' '}
                     <span className="text-accent-ink">orange: contested</span> · <span className="text-official">green: official</span> · grey bars: media writing each day
                 </span>
                 <InfoTip label="The line">
                     Each event is a fact told by one or several media, in any language, at the date of its first news. A key event brings something new and is told
-                    by two media or more, or announced or denied by a party. The AI chose the events; the dates, the media and the marks are counted from the news.
+                    by two media or more, or announced or denied by a party. The AI chose the events and read their marks (official, contested, reported) in their news; the dates and the media are counted.
                 </InfoTip>
             </p>
 
