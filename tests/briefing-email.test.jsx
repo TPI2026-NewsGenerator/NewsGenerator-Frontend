@@ -814,16 +814,45 @@ describe('BriefingPage e-mail of the cards ticked', () => {
             expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('The council votes the budget');
         });
 
-        it('should show the proposal the briefing was written with when the editor opens, with its warning, no button to press', async () => {
+        // the user, 12.11.2026, a friend: the proposal was shown but the title of the e-mail was not the neutral one, he had only to accept it
+        it('should open the e-mail with the proposal the briefing was written with as its title, with its warning, and send it', async () => {
             await openEditor('Incredible news! The council votes the budget', {titleProposal: {title: 'The council votes the budget', problem: 'second opinion'}});
             const proposal = screen.getByRole('group', PROPOSAL);
+            expect(proposal).toHaveTextContent('Neutral title, the one of the e-mail');
             expect(proposal).toHaveTextContent('The council votes the budget');
-            expect(within(proposal).getByRole('note')).toHaveTextContent('a second reading by the AI says it may not tell exactly the same fact');
+            expect(within(proposal).getByRole('note')).toHaveTextContent('Check it before you send it: a second reading by the AI says it may not tell exactly the same fact');
             expect(BriefingApi.neutralTitle).not.toHaveBeenCalled();
-            // not applied by itself: the reader reads it first
-            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('Incredible news! The council votes the budget');
-            fireEvent.click(within(proposal).getByRole('button', {name: 'Keep the title'}));
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('The council votes the budget');
+            expect(within(proposal).queryByRole('button', {name: 'Use it anyway'})).toBeNull();
+
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {1: 'The council votes the budget'}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
+        });
+
+        it('should put the title of the card back, and send none, when the reader keeps it', async () => {
+            await openEditor('Incredible news! The council votes the budget', {titleProposal: {title: 'The council votes the budget', problem: 'name lost'}});
+            fireEvent.click(within(screen.getByRole('group', PROPOSAL)).getByRole('button', {name: 'Keep the title'}));
             expect(screen.queryByRole('group', PROPOSAL)).toBeNull();
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('Incredible news! The council votes the budget');
+            expect(screen.queryByText(/· title changed/)).toBeNull();
+
+            fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+            await waitFor(() => expect(BriefingApi.email).toHaveBeenCalledWith(9, [1, 2], 'reader@example.org', {}, {}, {}, undefined, [], {}, {}, 'light', expect.any(Object), {}));
+        });
+
+        it('should offer the proposal to use again when the reader changes the title by hand, and change nothing for a proposal that is the title', async () => {
+            await openEditor('Incredible news! The council votes the budget', {titleProposal: {title: 'The council votes the budget', problem: 'name lost'}});
+            fireEvent.change(screen.getByLabelText('Its title in the e-mail'), {target: {value: 'My own title'}});
+            const proposal = screen.getByRole('group', PROPOSAL);
+            expect(proposal).toHaveTextContent('Neutral title proposed');
+            fireEvent.click(within(proposal).getByRole('button', {name: 'Use it anyway'}));
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('The council votes the budget');
+        });
+
+        it('should open with the title of the card when the proposal is that title', async () => {
+            await openEditor('The council votes the budget', {titleProposal: {title: 'The council votes the budget', problem: 'name lost'}});
+            expect(screen.getByLabelText('Its title in the e-mail')).toHaveValue('The council votes the budget');
+            expect(screen.queryByText(/· title changed/)).toBeNull();
         });
 
         it('should say when the AI could not be asked, and leave the title alone', async () => {

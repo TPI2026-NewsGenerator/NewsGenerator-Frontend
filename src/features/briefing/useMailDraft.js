@@ -44,6 +44,13 @@ export const takenOut = (removed = {}) => [
     [(removed.why?.length ?? 0) + (removed.next?.length ?? 0) + (removed.timeline?.length ?? 0), 'analysis line', 'analysis lines'],
 ].filter(([count]) => count > 0).map(([count, one, many]) => `${count} ${count === 1 ? one : many} taken out`).join(' · ');
 
+// The titles the e-mail opens with: the neutral title the AI wrote for a story and the checks of the server refused (item.titleProposal, see the briefing
+// service), in the e-mail and not in the card (the user, 12.11.2026, a friend: the proposal was there but the title was not the neutral one, he had only to
+// accept it). The editor shows it against the title of the card with what the checks found, and the reader keeps the title in one click
+export const startingTitles = (stories) => Object.fromEntries(stories
+    .filter(story => story.titleProposal?.title && story.titleProposal.title !== story.title)
+    .map(story => [story.storyId, story.titleProposal.title]));
+
 // stories: the cards ticked, in the order of the briefing (see MailBar); format: the way the page shows the sentences of the cards, the one
 // of the e-mail until the reader chooses another, null for a briefing that has the key passages only; onPictures(storyId): {pictures};
 // onWriteAi(storyId): the AI version of a story that has none, written now (see AiVersionWriter); onProfilesNews(): the news of the briefings of the other profiles, onCopyNews(fromBriefingId, storyId): one of them copied into the briefing,
@@ -86,7 +93,7 @@ export const useMailDraft = ({stories, accountEmail, format = null, onPictures, 
         const starting = startingChoices(stories, startList);
         setOrder(stories.map(story => story.storyId));
         setChoices(starting.choices);
-        setTitles({});
+        setTitles(startingTitles(stories));
         setWhys({});
         setRemoved({});
         setInAi({});

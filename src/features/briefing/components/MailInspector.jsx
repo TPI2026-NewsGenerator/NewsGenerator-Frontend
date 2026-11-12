@@ -93,7 +93,8 @@ export const StoryInspector = ({draft, story, onNeutralTitle, disabled = false})
                     </div>
                 )}
                 {/* the AI proposes, the reader reads it against the title and uses it or not */}
-                {onNeutralTitle && <MailNeutralTitle key={id} story={story} onAsk={onNeutralTitle} disabled={disabled} onUse={title => draft.setTitle(id, title)}/>}
+                {onNeutralTitle && <MailNeutralTitle key={id} story={story} onAsk={onNeutralTitle} disabled={disabled} current={draft.titles[id] ?? story.title}
+                                                     onUse={title => draft.setTitle(id, title)} onKeep={() => draft.setTitle(id, story.title)}/>}
             </Section>
 
             {/* the sentence under the title: the reason the card was chosen, or the reader's own words (the user, 11.11.2026, a friend: it could not be changed) */}

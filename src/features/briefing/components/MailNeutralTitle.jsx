@@ -6,7 +6,9 @@
 //               title of the card, word by word, and uses it or not: a rewrite can change the meaning, so nothing is
 //               put in the e-mail without being read (the user, 03.11.2026: "l'IA propose, le lecteur valide"). The proposal of
 //               the briefing is there when the editor opens, a button asks for another; a proposal the checks found something
-//               against is shown too, with what they found, for the reader to decide (the user, 06.11.2026)
+//               against is shown too, with what they found, for the reader to decide (the user, 06.11.2026). Since 12.11.2026 the
+//               proposal of the briefing is the title the e-mail opens with (see startingTitles), not the card: the reader reads it
+//               against the title with what the checks found, and keeps the title of the card in one click
 //
 
 import {useState} from "react";
@@ -45,8 +47,11 @@ const Words = ({words, tone}) => (
 );
 
 // story: {storyId, title, titleProposal} the title of the card, and the proposal the briefing was written with, {title, problem}, if it had
-// one; onAsk(): the neutral title the server proposes, {title, problem?} or {title: null, reason}; onUse(title): the proposal the reader uses
-export const MailNeutralTitle = ({story, onAsk, onUse, disabled = false}) => {
+// one; onAsk(): the neutral title the server proposes, {title, problem?} or {title: null, reason}; onUse(title): the proposal the reader uses;
+// current: the title the e-mail has now; onKeep(): the reader keeps the title of the card. The proposal of the briefing is the title the editor
+// opens with (see startingTitles): the panel then says so, with what the checks found, and "Keep the title" puts the title of the card back
+// (the user, 12.11.2026, a friend: the neutral title should be the default, not a suggestion to accept)
+export const MailNeutralTitle = ({story, onAsk, onUse, onKeep, current, disabled = false}) => {
     const [answer, setAnswer] = useState(() => story.titleProposal?.title && story.titleProposal.title !== story.title
         ? {status: 'ready', title: story.titleProposal.title, problem: story.titleProposal.problem ?? null} : null);
 
@@ -61,6 +66,8 @@ export const MailNeutralTitle = ({story, onAsk, onUse, disabled = false}) => {
     };
 
     const diff = answer?.status === 'ready' ? wordDiff(story.title, answer.title) : null;
+    // the e-mail has the proposal as its title already: the reader keeps the title of the card or leaves it
+    const inUse = answer?.status === 'ready' && current === answer.title;
     return (
         <div className="mt-1">
             <Button size="sm" variant="link" onClick={ask} loading={answer?.status === 'loading'} disabled={disabled}
@@ -71,19 +78,27 @@ export const MailNeutralTitle = ({story, onAsk, onUse, disabled = false}) => {
                 <div className="mt-2 border border-rule p-3" role="group" aria-label="Neutral title proposed by the AI">
                     <p className="kicker">The title of the card</p>
                     <p className="mt-0.5 text-[0.9375rem]"><Words words={diff.before} tone="out"/></p>
-                    <p className="kicker mt-3">Neutral title proposed</p>
+                    <p className="kicker mt-3">{inUse ? 'Neutral title, the one of the e-mail' : 'Neutral title proposed'}</p>
                     <p className="mt-0.5 text-[0.9375rem] font-medium"><Words words={diff.after} tone="in"/></p>
                     <p className="caption mt-2">
                         Written by the AI from the title and the sentences of the card. Read it against the title: a rewrite can change what it says.
                     </p>
                     {answer.problem && (
-                        <p role="note" className="caption mt-2 !text-accent-ink">Check it before you use it: {WARNINGS[answer.problem] ?? 'the checks found something against it'}.</p>
+                        <p role="note" className="caption mt-2 !text-accent-ink">
+                            {inUse ? 'Check it before you send it' : 'Check it before you use it'}: {WARNINGS[answer.problem] ?? 'the checks found something against it'}.
+                        </p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-2">
-                        <Button size="sm" variant={answer.problem ? 'subtle' : 'primary'} onClick={() => { onUse(answer.title); setAnswer(null); }}>
-                            {answer.problem ? 'Use it anyway' : 'Use this title'}
-                        </Button>
-                        <Button size="sm" variant="subtle" onClick={() => setAnswer(null)}>Keep the title</Button>
+                        {inUse ? (
+                            <Button size="sm" variant="subtle" onClick={() => { onKeep(); setAnswer(null); }}>Keep the title</Button>
+                        ) : (
+                            <>
+                                <Button size="sm" variant={answer.problem ? 'subtle' : 'primary'} onClick={() => { onUse(answer.title); setAnswer(null); }}>
+                                    {answer.problem ? 'Use it anyway' : 'Use this title'}
+                                </Button>
+                                <Button size="sm" variant="subtle" onClick={() => setAnswer(null)}>Keep the title</Button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
