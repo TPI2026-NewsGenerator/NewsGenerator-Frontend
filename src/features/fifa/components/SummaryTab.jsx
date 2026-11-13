@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 13.11.2026
 //  File: SummaryTab.jsx
-//  Description: The first tab of the sheet of an association: what it says of each candidate in a few plain lines, BUILT BY THE CODE from what the sheet holds (no AI writes these
+//  Description: The second tab of the sheet of an association (after Positions, which the sheet opens on): what it says of each candidate in a few plain lines, BUILT BY THE CODE from what the sheet holds (no AI writes these
 //               lines, the server sends them as data): the position and since when (or "set by a reader", or what it was before), how many sentences of the news say it, in how many
 //               media and the last one, who said it (a speaker who binds the association is named as such), the key sentences word for word with their medium as a link, the other
 //               side when the news go both ways, and where the confederation and the other associations of it stand. Under them, the summary an AI writes when a reader asks for it.

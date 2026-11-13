@@ -143,7 +143,8 @@ describe('the sheet, Your vote', () => {
     it('should offer For, Against, No position and Remove my vote on the candidate chosen in the list, and only on it', async () => {
         show('/fifa?c=QMOCK1');
         await mapReady();
-        const sheet = await openSheet('GER');
+        // Albania: the news hold something on A, B and C (a card each)
+        const sheet = await openSheet('ALB');
         const group = control(sheet, 'A');
         for (const name of ['For', 'Against', 'No position']) expect(within(group).getByRole('button', {name})).toBeEnabled();
         // nothing to take back yet

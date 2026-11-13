@@ -106,7 +106,7 @@ describe('the tab Notes', () => {
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
         await within(sheet).findByRole('region', {name: 'Mock candidate A'});
-        expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Summary', 'Positions', 'Leadership profile', 'Notes']);
+        expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Positions', 'Summary', 'Leadership profile', 'Notes']);
     });
 
     it('should list the notes newest first, with who wrote them and when, and the "+" button, and no sources', async () => {

@@ -246,8 +246,8 @@ describe('the field in the block "which candidate does it lean towards?" (no can
         const block = blockOf(sheet);
         expect(within(block).getByLabelText(FIELD)).toBeInTheDocument();
         expect(within(block).getByText(/It goes with the candidate you choose below \(not with Confirm nor None\)/)).toBeInTheDocument();
-        // the cards below only read: no field there
-        expect(within(cardOf(sheet)).queryByLabelText(FIELD)).toBeNull();
+        // the cards below only read: no field there (Germany: a card for B only, the news hold nothing on A)
+        expect(within(cardOf(sheet, 'B')).queryByLabelText(FIELD)).toBeNull();
     });
 
     it('should send the link with the candidate chosen, join it to the FOR vote, and list it under that candidate', async () => {
@@ -259,7 +259,9 @@ describe('the field in the block "which candidate does it lean towards?" (no can
         const sources = await waitFor(() => { const found = sourcesOf(cardOf(sheet, 'B'), 'Mock candidate B'); expect(found).not.toBeNull(); return found; });
         expect(sources).toHaveTextContent('For · by reader');
         expect(within(sources).getByRole('link', {name: /newspaper\.example/})).toHaveAttribute('href', LINK);
-        expect(sourcesOf(cardOf(sheet, 'A'))).toBeNull();
+        // under that candidate only: the one link of the sheet is in its list (Germany has no card for A, the news hold nothing on it)
+        expect(within(sheet).getAllByRole('link', {name: /newspaper\.example/})).toHaveLength(1);
+        expect(within(sheet).queryByRole('region', {name: 'Mock candidate A'})).toBeNull();
         expect(within(blockOf(sheet)).getByLabelText(FIELD)).toHaveValue('');
     });
 
@@ -348,8 +350,10 @@ describe('the sources listed under the position of a candidate', () => {
     });
 
     it('should show no list under a candidate that has none, and the sources of a candidate only under it', async () => {
-        show();
+        // Mexico holds a vote for A only: B is the candidate chosen in the list, so that it has a card too ("All" shows both)
+        show('/fifa?c=QMOCK2');
         const sheet = await openSheet('MEX');
+        fireEvent.click(within(sheet).getByRole('radio', {name: 'All'}));
         expect(sourcesOf(cardOf(sheet, 'A'))).not.toBeNull();
         expect(sourcesOf(cardOf(sheet, 'B'), 'Mock candidate B')).toBeNull();
         // the tab Notes does not list sources any more

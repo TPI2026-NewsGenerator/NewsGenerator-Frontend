@@ -115,7 +115,8 @@ describe('the block, with no candidate chosen', () => {
     it('should not be there when a candidate is chosen: the card of that candidate has "Confirm this position ✓" and the fold, first', async () => {
         show('/fifa?c=QMOCK2');
         await mapReady();
-        fireEvent.click(shape('FRA'));
+        // Spain: the news hold something on A and B (a card each), B is the candidate chosen
+        fireEvent.click(shape('ESP'));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
         const first = await within(sheet).findByRole('region', {name: 'Mock candidate B'});
@@ -128,17 +129,26 @@ describe('the block, with no candidate chosen', () => {
         expect(within(cardOf(sheet, 'A')).queryByRole('button', {name: /^Confirm/})).toBeNull();
     });
 
-    it('should leave the cards of the candidates read-only: what the news read, no button of a vote, the sentences and the groups kept', async () => {
+    it('should leave the cards of the candidates read-only: what the news read, no button of a vote, on every card (India: A, B and C)', async () => {
         show();
-        const sheet = await openSheet('NGA');
+        const sheet = await openSheet('IND');
         for (const candidate of ['A', 'B', 'C']) {
             const card = cardOf(sheet, candidate);
             expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
             expect(within(card).queryByRole('button', {name: /^Confirm/})).toBeNull();
             expect(within(card).queryByRole('group', {name: /^Your vote/})).toBeNull();
         }
-        // the position, who confirmed it, the groups of sentences stay
+        // the block is the only place with a Confirm button
+        expect(within(sheet).getAllByRole('button', {name: /^Confirm/})).toHaveLength(1);
+    });
+
+    it('should keep on the read-only card the position, who confirmed it and the groups of sentences (Nigeria)', async () => {
+        show();
+        const sheet = await openSheet('NGA');
         const card = cardOf(sheet);
+        expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
+        expect(within(card).queryByRole('button', {name: /^Confirm/})).toBeNull();
+        expect(within(card).queryByRole('group', {name: /^Your vote/})).toBeNull();
         expect(within(card).getAllByText('Declared support').length).toBeGreaterThan(0);
         expect(within(card).getByText(/^Confirmed by Mock reader 3, Mock reader 1/)).toBeInTheDocument();
         expect(within(card).getByRole('group', {name: 'Declared sentences on Mock candidate A'})).toBeInTheDocument();

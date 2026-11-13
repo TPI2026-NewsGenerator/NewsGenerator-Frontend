@@ -2,11 +2,12 @@
 //  Author: Fabian Rostello
 //  Date: 13.11.2026
 //  File: fifa-summary.test.jsx
-//  Description: The tab "Summary" of the sheet of an association, the first one (the sheet opens on it): what the association says of each candidate in plain lines BUILT BY THE
+//  Description: The tab "Summary" of the sheet of an association, the second one (the sheet opens on Positions): what the association says of each candidate in plain lines BUILT BY THE
 //               CODE (position and since when, set by a reader or changed from, the sentences declared and probable with the media and the last date, who said it, the key
 //               sentences word for word with their medium as a link, the other side, the confederation and the other associations), and the summary an AI writes ONLY when a reader
 //               asks for it (the button, the wait, what the server refuses, the claims with their numbered chips, a summary written before the sheet changed, a summary asked by
-//               another reader). The tab Positions follows the order of the summary. Information only: nothing here confirms or votes
+//               another reader). The tab Positions follows the order of the summary, and leaves out the candidates the news say nothing of for the association (but the
+//               one chosen in the list of the page). Information only: nothing here confirms or votes
 //
 //  The associations, the readers and the AI summaries are the invented ones of bench/fifa/mock-data.mjs
 //
@@ -56,12 +57,13 @@ const show = (url = '/fifa') => render(<MemoryRouter initialEntries={[url]}><Fif
 const mapReady = () => screen.findByRole('group', {name: 'Map of the 211 FIFA member associations'});
 // hidden: the page behind an open sheet is aria-hidden, and the map is still the thing looked at
 const shape = (fifa) => screen.getByRole('button', {name: new RegExp(`^[^,]+, ${fifa},`), hidden: true});
-// the sheet of an association, on the tab it opens on (Summary), once it has been read
-const openSheet = async (fifa) => {
+// the sheet of an association, once it has been read, on the tab asked (Summary by default; the sheet opens on Positions: null leaves it there)
+const openSheet = async (fifa, tab = 'Summary') => {
     await mapReady();
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     await waitFor(() => expect(within(sheet).queryByText('Reading the sheet…')).toBeNull());
+    if (tab) fireEvent.mouseDown(within(sheet).getByRole('tab', {name: tab}));
     return sheet;
 };
 const cardOf = (sheet, candidate = 'A') => within(sheet).getByRole('region', {name: `Mock candidate ${candidate}: summary`});
@@ -149,13 +151,19 @@ describe('the mock: summary', () => {
 });
 
 describe('the tab Summary: the lines the code builds', () => {
-    it('should be the first tab and the one the sheet opens on, before Positions', async () => {
+    it('should be the second tab: the sheet opens on Positions, then Summary, Leadership profile, Notes', async () => {
         show();
-        const sheet = await openSheet('ESP');
-        expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Summary', 'Positions', 'Leadership profile', 'Notes']);
+        const sheet = await openSheet('ESP', null);
+        expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Positions', 'Summary', 'Leadership profile', 'Notes']);
+        expect(within(sheet).getByRole('tab', {name: 'Positions'})).toHaveAttribute('aria-selected', 'true');
+        expect(within(sheet).getByRole('tab', {name: 'Summary'})).toHaveAttribute('aria-selected', 'false');
+        // the cards of Positions are in the page, the lines of the summary are not
+        expect(within(sheet).getAllByRole('region', {name: /^Mock candidate [A-E]$/}).length).toBeGreaterThan(0);
+        expect(within(sheet).queryByRole('region', {name: /: summary$/})).toBeNull();
+        expect(within(sheet).queryByRole('heading', {name: 'AI summary'})).toBeNull();
+        // one click opens the summary: the candidates of the summary, in its order; nothing of the tab Positions is in the page any more
+        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Summary'}));
         expect(within(sheet).getByRole('tab', {name: 'Summary'})).toHaveAttribute('aria-selected', 'true');
-        expect(within(sheet).getByRole('tab', {name: 'Positions'})).toHaveAttribute('aria-selected', 'false');
-        // the candidates of the summary, in its order; nothing of the tab Positions is in the page
         expect(within(sheet).getAllByRole('region', {name: /: summary$/}).map(card => card.getAttribute('aria-label'))).toEqual(['Mock candidate A: summary', 'Mock candidate B: summary']);
         expect(within(sheet).queryByRole('region', {name: 'Mock candidate A'})).toBeNull();
         expect(within(sheet).getByText(/built by the code from the sheet: no AI wrote them/i)).toBeInTheDocument();
@@ -299,6 +307,7 @@ describe('the tab Summary: the lines the code builds', () => {
         show(`/fifa?a=${sheetOf('AFC').member.qid}`);
         const sheet = await screen.findByRole('dialog');
         await waitFor(() => expect(within(sheet).queryByText('Reading the sheet…')).toBeNull());
+        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Summary'}));
         expect(within(sheet).getAllByRole('region', {name: /: summary$/}).length).toBeGreaterThan(0);
         expect(within(sheet).queryByText(/ itself: /)).toBeNull();
         expect(within(sheet).queryByText(/Other associations of/)).toBeNull();
@@ -314,19 +323,21 @@ describe('the tab Summary: the lines the code builds', () => {
     });
 });
 
-describe('the tab Positions follows the order of the summary', () => {
+describe('the tab Positions follows the order of the summary (the candidates left out: see fifa-cards.test.jsx)', () => {
     const cards = (sheet) => within(sheet).getAllByRole('region', {name: /^Mock candidate [A-E]$/}).map(card => card.getAttribute('aria-label').replace('Mock candidate ', ''));
+    const chips = (sheet) => within(within(sheet).getByRole('radiogroup', {name: 'Candidate shown'})).getAllByRole('radio').map(chip => chip.closest('label').textContent);
 
-    it('should list the cards as the summary lists the candidates, the ones it does not hold after them', async () => {
+    it('should open on Positions, with the cards in the order the summary lists the candidates', async () => {
         // the server lists B before A on this sheet
         answerOf = (sheet) => ({...sheet, summary: {candidates: [...sheet.summary.candidates].reverse()}});
         show();
-        const sheet = await openSheet('ESP');
-        expect(within(sheet).getAllByRole('region', {name: /: summary$/}).map(card => card.getAttribute('aria-label'))).toEqual(['Mock candidate B: summary', 'Mock candidate A: summary']);
-        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+        const sheet = await openSheet('ESP', null);
         await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
-        expect(cards(sheet).slice(0, 2)).toEqual(['B', 'A']);
-        expect(cards(sheet).length).toBe(MOCK_SUBJECTS.length);
+        expect(cards(sheet)).toEqual(['B', 'A']);
+        expect(chips(sheet)).toEqual(['All', 'Mock candidate B', 'Mock candidate A']);
+        // and the summary lists them in the same order
+        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Summary'}));
+        expect(within(sheet).getAllByRole('region', {name: /: summary$/}).map(card => card.getAttribute('aria-label'))).toEqual(['Mock candidate B: summary', 'Mock candidate A: summary']);
     });
 
     it('should keep the order it had with no summary on the sheet (an older server)', async () => {
@@ -336,11 +347,11 @@ describe('the tab Positions follows the order of the summary', () => {
             return older;
         };
         show();
-        const sheet = await openSheet('ESP');
-        expect(within(sheet).getByText('Nothing to summarise yet: no sentence of the news ties this association to a candidate.')).toBeInTheDocument();
-        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+        const sheet = await openSheet('ESP', null);
         await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
-        expect(cards(sheet).slice(0, 2)).toEqual(['A', 'B']);
+        expect(cards(sheet)).toEqual(['A', 'B']);
+        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Summary'}));
+        expect(within(sheet).getByText('Nothing to summarise yet: no sentence of the news ties this association to a candidate.')).toBeInTheDocument();
     });
 });
 

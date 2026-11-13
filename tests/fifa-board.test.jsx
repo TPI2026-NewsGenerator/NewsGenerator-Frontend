@@ -76,10 +76,10 @@ describe('FifaBoard', () => {
         const sheet = await screen.findByRole('dialog');
         expect(await within(sheet).findByText('Declared support')).toBeInTheDocument();
         expect(within(sheet).getByRole('heading', {name: 'Brazil'})).toBeInTheDocument();
-        // the sheet opens on the summary, the first tab
-        expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Summary', 'Positions', 'Leadership profile', 'Notes']);
-        expect(within(sheet).getByRole('tab', {name: 'Summary'})).toHaveAttribute('aria-selected', 'true');
-        expect(within(sheet).getByRole('tab', {name: 'Positions'})).toBeInTheDocument();
+        // the sheet opens on Positions, the first tab, then the summary
+        expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Positions', 'Summary', 'Leadership profile', 'Notes']);
+        expect(within(sheet).getByRole('tab', {name: 'Positions'})).toHaveAttribute('aria-selected', 'true');
+        expect(within(sheet).getByRole('tab', {name: 'Summary'})).toHaveAttribute('aria-selected', 'false');
         expect(within(sheet).getByRole('tab', {name: 'Leadership profile'})).toBeInTheDocument();
         expect(within(sheet).getByRole('tab', {name: 'Notes'})).toBeInTheDocument();
         // the sources are under the positions: no tab of sources any more

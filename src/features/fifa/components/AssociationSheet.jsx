@@ -2,8 +2,9 @@
 //  Author: Fabian Rostello
 //  Date: 12.11.2026
 //  File: AssociationSheet.jsx
-//  Description: The sheet of one association, opened from the map, the list or the timeline. It opens on the tab "Summary" (SummaryTab.jsx: plain lines built by the code, then the
-//               summary an AI writes when a reader asks for it; information only), then Positions, Leadership profile and Notes. The tab Positions: its position on each candidate (with the
+//  Description: The sheet of one association, opened from the map, the list or the timeline. It opens on the tab Positions, then Summary (SummaryTab.jsx: plain lines built by the code, then the
+//               summary an AI writes when a reader asks for it; information only), Leadership profile and Notes. The tab Positions leaves out the candidates the news say nothing of
+//               for this association (but the one chosen in the list of the page) and says so when none is left. The tab Positions: its position on each candidate (with the
 //               words, since when, what it was before), its leadership, and every sentence of the news behind it with the link,
 //               the medium, the date and who spoke. A sentence that is about the election and the association but not known to be
 //               a position carries the badge "Uncertain" and the reason, and never colours the map. A reader can say which candidate the
@@ -301,8 +302,8 @@ const VoteHistory = ({votes, subjects}) => (
 // vote, resolves {ok} or {error} (extra: {source}); onMapStale(): the page asks the map again (a page the AI read changed the positions, or was deleted)
 const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, admin, onVote, onLean, onMapStale}) => {
     const [loaded, setLoaded] = useState({data: null, error: null});
-    // the sheet opens on the summary (information only); the tab Positions has the buttons that confirm and vote
-    const [tab, setTab] = useState('summary');
+    // the sheet opens on the tab Positions (the user's choice, 13.11.2026), then the Summary (information only)
+    const [tab, setTab] = useState('positions');
     const [round, setRound] = useState(0);
     // how many times the sheet read itself again for a source the AI was still reading
     const rechecks = useRef(0);
@@ -358,7 +359,10 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
     const signals = useMemo(() => data?.signals ?? [], [data]);
     // the cards in the order of the summary of the sheet (the candidate chosen in the list of the page first; the candidates it holds nothing on last), and the one the reader
     // shows with the chips above them: the candidate chosen in the list, else all
-    const ordered = useMemo(() => orderBySummary(subjects, data?.summary?.candidates ?? null, data?.positions, levels, candidate), [subjects, data, levels, candidate]);
+    const all = useMemo(() => orderBySummary(subjects, data?.summary?.candidates ?? null, data?.positions, levels, candidate), [subjects, data, levels, candidate]);
+    // the candidates the news say nothing of for this association are left out (the server sends a position only when it holds something), except the one chosen in the list of the page:
+    // its card keeps the buttons with which a reader takes a position on it
+    const ordered = useMemo(() => all.filter(subject => data?.positions?.[subject.qid] || subject.qid === candidate), [all, data, candidate]);
     const [picked, setPicked] = useState(candidate ?? 'all');
     const shown = picked !== 'all' && ordered.some(subject => subject.qid === picked) ? ordered.filter(subject => subject.qid === picked) : ordered;
     // The sources of the choices that stand, newest first; while the AI reads one the sheet says so and reads itself again after a while (the AI takes 10 to 60 s)
@@ -396,8 +400,8 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
             {data?.mock && <p className="caption mb-3 rounded-xl bg-paper-deep px-3 py-2">Mock data: nothing here is a real position.</p>}
             <Tabs.Root value={tab} onValueChange={setTab}>
                 <Tabs.List aria-label="Sheet" className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-paper-deep p-1 [scrollbar-width:none]">
-                    <Tabs.Trigger value="summary" className={TAB}>Summary</Tabs.Trigger>
                     <Tabs.Trigger value="positions" className={TAB}>Positions</Tabs.Trigger>
+                    <Tabs.Trigger value="summary" className={TAB}>Summary</Tabs.Trigger>
                     <Tabs.Trigger value="leadership" className={TAB}>Leadership profile</Tabs.Trigger>
                     <Tabs.Trigger value="notes" className={TAB}>Notes</Tabs.Trigger>
                 </Tabs.List>
@@ -417,6 +421,7 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
                                            onChoose={choose} onConfirm={subject => vote(subject, 'confirm')}/>
                             )}
                             <CandidateBar subjects={ordered} value={shown.length === ordered.length ? 'all' : picked} onChange={setPicked}/>
+                            {ordered.length === 0 && <p className="mt-4 text-[0.9375rem] text-ink-mute">No news name this association with a candidate yet.</p>}
                             {shown.map(subject => (
                                 <PositionCard key={subject.qid} subject={subject} member={member} entry={data.positions?.[subject.qid]} levels={levels}
                                               history={(data.history ?? []).filter(one => one.subject_qid === subject.qid)}

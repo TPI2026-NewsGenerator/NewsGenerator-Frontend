@@ -65,13 +65,17 @@ const show = (url = '/fifa', props = {}) => render(<MemoryRouter initialEntries=
 const mapReady = () => screen.findByRole('group', {name: 'Map of the 211 FIFA member associations'});
 // hidden: the page behind an open sheet is aria-hidden, and the map is still the thing looked at
 const shape = (fifa) => screen.getByRole('button', {name: new RegExp(`^[^,]+, ${fifa},`), hidden: true});
+// the sheet of an association, on the tab Positions (the one it opens on), once it has been read: an association the news say nothing of has no card, so the sheet is read when
+// the accordion "Sources" (always there) is
+const readSheet = async (sheet) => {
+    fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+    await within(sheet).findByRole('region', {name: 'Sources'});
+    return sheet;
+};
 const openSheet = async (fifa) => {
     await mapReady();
     fireEvent.click(shape(fifa));
-    const sheet = await screen.findByRole('dialog');
-    fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    await within(sheet).findByRole('region', {name: 'Mock candidate A'});
-    return sheet;
+    return readSheet(await screen.findByRole('dialog'));
 };
 const cardOf = (sheet, candidate = 'A') => within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
 const pagesOf = (card, name = 'Mock candidate A') => within(card).queryByRole('group', {name: `Pages added about ${name}`});
@@ -216,9 +220,7 @@ describe('the accordion "Sources"', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         // Uruguay: a page being read
         fireEvent.click(shape('URU'));
-        const uruguay = await screen.findByRole('dialog');
-        fireEvent.mouseDown(within(uruguay).getByRole('tab', {name: 'Positions'}));
-        await within(uruguay).findByRole('region', {name: 'Mock candidate A'});
+        const uruguay = await readSheet(await screen.findByRole('dialog'));
         expect(sourcesHeader(uruguay)).toHaveTextContent('1 page · 1 being read');
     });
 
