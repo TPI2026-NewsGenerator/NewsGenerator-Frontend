@@ -89,6 +89,21 @@
     --accent-ink: #BF4800;
     --official: #248A3D;
 
+    /* the map "The FIFA presidency": one colour per candidate (the order is fixed, a candidate keeps its colour), validated with the
+       dataviz validator on the white page: adjacent pairs CVD >= 9.1, the first three also in all pairs (a map shows them together).
+       Never the only sign of a position: the hatch, the dotted ring and the words say it too. "no" is the ink, not a candidate's
+       colour, so an opposition is never taken for the support of another */
+    --cand-1: #2A78D6;
+    --cand-2: #EB6834;
+    --cand-3: #1BAF7A;
+    --cand-4: #EDA100;
+    --cand-5: #E87BA4;
+    --cand-6: #008300;
+    --map-land: #F0F0F3;
+    --map-unknown: #DCDCE1;
+    --map-no-strong: color-mix(in srgb, var(--ink) 82%, var(--paper));
+    --map-no-soft: color-mix(in srgb, var(--ink) 42%, var(--paper));
+
     --background: var(--paper);
     --foreground: var(--ink);
     --card: var(--paper);
@@ -132,6 +147,14 @@
         --action-text: #2997FF;
         --accent-ink: #FF9F0A;
         --official: #30D158;
+        --cand-1: #3987E5;
+        --cand-2: #D95926;
+        --cand-3: #199E70;
+        --cand-4: #C98500;
+        --cand-5: #D55181;
+        --cand-6: #008300;
+        --map-land: #252528;
+        --map-unknown: #3F3F43;
     }
 }
 
@@ -144,6 +167,14 @@
     --action-text: #2997FF;
     --accent-ink: #FF9F0A;
     --official: #30D158;
+    --cand-1: #3987E5;
+    --cand-2: #D95926;
+    --cand-3: #199E70;
+    --cand-4: #C98500;
+    --cand-5: #D55181;
+    --cand-6: #008300;
+    --map-land: #252528;
+    --map-unknown: #3F3F43;
 }
 
 /* what floats over the page (a dialog, a menu, a panel, a note) is a step lighter in the dark, its greys
@@ -384,6 +415,115 @@
         content-visibility: auto;
         contain-intrinsic-size: auto 220px;
     }
+}
+
+/* the map of the FIFA presidency (features/fifa): colours are the variables of the theme, the strokes keep their width whatever the zoom,
+   a marker keeps its size in pixels (--s is the scale of the screen, set by WorldMap) */
+.fifa-map svg {
+    touch-action: pan-x pan-y;
+}
+
+.fifa-map[data-zoomed="true"] svg {
+    touch-action: none;
+}
+
+.fifa-sea {
+    fill: transparent;
+    pointer-events: all;
+}
+
+.fifa-land {
+    fill: var(--map-land);
+    stroke: var(--paper);
+    stroke-width: 0.5px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
+.fifa-shape {
+    stroke: var(--paper);
+    stroke-width: 0.6px;
+    vector-effect: non-scaling-stroke;
+    cursor: pointer;
+    outline: none;
+    transition: opacity 0.15s;
+}
+
+/* the dotted ring of Uncertain: signals about the election and the association, no position to colour */
+.fifa-shape[data-ring] {
+    stroke: var(--ink-mute);
+    stroke-width: 1.4px;
+    stroke-dasharray: 2 2.5;
+}
+
+/* a position older than 90 days: kept, faded */
+.fifa-shape[data-stale],
+.fifa-marker[data-stale] {
+    opacity: 0.5;
+}
+
+.fifa-shape[data-dim],
+.fifa-marker[data-dim] {
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.fifa-marker {
+    cursor: pointer;
+    outline: none;
+    transform: scale(calc(1 / var(--s, 1)));
+}
+
+.fifa-hit {
+    fill: transparent;
+}
+
+.fifa-pip {
+    transform: scale(var(--m, 1));
+}
+
+.fifa-dot {
+    stroke: var(--ink-mute);
+    stroke-width: 1px;
+}
+
+.fifa-ring {
+    fill: none;
+    stroke: var(--ink-mute);
+    stroke-width: 1.4px;
+    stroke-dasharray: 2 2.5;
+}
+
+.fifa-marker:hover .fifa-dot {
+    stroke: var(--ink);
+    stroke-width: 2px;
+}
+
+.fifa-marker[data-selected] .fifa-dot {
+    stroke: var(--ink);
+    stroke-width: 2.4px;
+}
+
+.fifa-marker:focus-visible .fifa-dot {
+    stroke: var(--action);
+    stroke-width: 3px;
+}
+
+.fifa-outline {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.6px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
+.fifa-outline[data-state="selected"] {
+    stroke-width: 2.4px;
+}
+
+.fifa-outline[data-state="focus"] {
+    stroke: var(--action);
+    stroke-width: 2.8px;
 }
 
 /* the server works: a short bar runs along a hairline */

@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 28.09.2026
 //  File: Masthead.jsx
-//  Description: The bar on top of every page: the name, five sections, the profile read, who reads, their
+//  Description: The bar on top of every page: the name, six sections, the profile read, who reads, their
 //               settings and the theme. It stays on top, translucent; a hairline under it once the page scrolls
 //
 
@@ -20,6 +20,7 @@ const SECTIONS = [
     {to: '/affairs', label: 'Affairs'},
     {to: '/following', label: 'Following'},
     {to: '/search', label: 'Search'},
+    {to: '/fifa', label: 'FIFA'},
     {to: '/profile', label: 'Profile'},
 ];
 

@@ -3,7 +3,7 @@
 //  Date: 06.11.2026
 //  File: masthead.test.jsx
 //  Description: The sections of the bar on top of every page, in the order the user chose (06.11.2026): Briefing, Affairs, Following,
-//               Search, Profile, in the bar and in the menu of a phone
+//               Search, then FIFA (12.11.2026), the profile last, in the bar and in the menu of a phone
 //
 
 import '@testing-library/jest-dom';
@@ -16,16 +16,16 @@ vi.mock('@/features/profiles/ProfileSwitcher.jsx', () => ({ProfileSwitcher: () =
 
 const {Masthead} = await import('@/features/navbar/components/Masthead.jsx');
 
-const ORDER = ['Briefing', 'Affairs', 'Following', 'Search', 'Profile'];
+const ORDER = ['Briefing', 'Affairs', 'Following', 'Search', 'FIFA', 'Profile'];
 const user = {id: 1, username: 'reader', admin: false};
 const show = () => render(<MemoryRouter initialEntries={['/briefing']}><Masthead user={user} onSignOut={vi.fn()}/></MemoryRouter>);
 
 describe('Masthead, its sections', () => {
-    it('should list them in the bar as Briefing, Affairs, Following, Search, Profile', () => {
+    it('should list them in the bar as Briefing, Affairs, Following, Search, FIFA, Profile', () => {
         show();
         const bar = screen.getByRole('navigation', {name: 'Sections'});
         expect(within(bar).getAllByRole('link').map(link => link.textContent)).toEqual(ORDER);
-        expect(within(bar).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/briefing', '/affairs', '/following', '/search', '/profile']);
+        expect(within(bar).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/briefing', '/affairs', '/following', '/search', '/fifa', '/profile']);
     });
 
     it('should list them in the same order in the menu of a phone', () => {

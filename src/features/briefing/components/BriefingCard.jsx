@@ -11,6 +11,7 @@ import {Link} from "react-router-dom";
 import {CircleHelp, Megaphone, Radio, TriangleAlert} from "lucide-react";
 import {FaRegThumbsDown, FaRegThumbsUp, FaThumbsDown, FaThumbsUp} from "react-icons/fa";
 import {IconButton} from "@/components/ui/button.jsx";
+import {Badge} from "@/components/ui/badge.jsx";
 import {Notice} from "@/components/ui/text.jsx";
 import {NewsLinks} from "@/components/news/NewsLinks.jsx";
 import {LanguageMark} from "@/components/news/LanguageMark.jsx";
@@ -253,20 +254,8 @@ const Margin = ({id, kicker, tone, children}) => (
     </div>
 );
 
-// A badge of the glance: what the reader should see at once, without opening anything. tone 'warn' (orange) for what is said against the
-// news or what the article itself says is not confirmed, 'official' (green) for what a party said itself
-const BADGE_TONES = {
-    warn: 'border-accent-ink/30 bg-accent-ink/10 text-accent-ink hover:bg-accent-ink/15',
-    official: 'border-official/30 bg-official/10 text-official hover:bg-official/15',
-};
-const Badge = ({icon, tone, onClick, children}) => (
-    <button type="button" onClick={onClick}
-            className={cn('inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors', BADGE_TONES[tone])}>
-        {icon}
-        {children}
-    </button>
-);
-
+// The badges of the glance (components/ui/badge.jsx): what the reader should see at once, without opening anything. 'warn' (orange) for what
+// is said against the news or what the article itself says is not confirmed, 'official' (green) for what a party said itself
 // Under the title, what matters before reading: how widely it is told (its pill opens the coverage), then a badge for each of: someone
 // who denies it, a party that said it itself, an article that says itself it is not confirmed (the user, 05.11.2026). A badge leads
 // to its words in the column beside the card. onOpen(key): a tab; onNote(kind): the note of the column
