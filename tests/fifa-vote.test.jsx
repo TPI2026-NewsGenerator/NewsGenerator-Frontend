@@ -158,7 +158,7 @@ describe('the sheet, Your vote', () => {
             expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
             expect(within(within(card).getByRole('group', {name: /^Your vote: /})).getAllByRole('button')).toHaveLength(4);
         }
-        // and the block of the candidate leaned toward is not there: a candidate is chosen
+        // and there is no block "Which candidate does it lean towards?": the strip is how a reader goes to the vote
         expect(within(sheet).queryByRole('heading', {name: /lean towards/})).toBeNull();
     });
 

@@ -4,9 +4,9 @@
 //  File: SummaryTab.jsx
 //  Description: The second tab of the sheet of an association (after Positions, which the sheet opens on): what it says of each candidate in a few plain lines, BUILT BY THE CODE from what the sheet holds (no AI writes these
 //               lines, the server sends them as data): the position and since when (or "set by a reader", or what it was before), how many sentences of the news say it, in how many
-//               media and the last one, who said it (a speaker who binds the association is named as such), the key sentences word for word with their medium as a link, the other
-//               side when the news go both ways, and where the confederation and the other associations of it stand. Under them, the summary an AI writes when a reader asks for it.
-//               Information only: nothing here confirms or votes (the tab Positions does)
+//               media and the last one, who said it (a speaker who binds the association is named as such), the latest change, and where the confederation and the other associations of it
+//               stand. Under them, the summary an AI writes when a reader asks for it. It is a summary: the sentences of the news themselves, with their media, are in the tab Positions
+//               (the server sends the key sentences too: they are not drawn here). Information only: nothing here confirms or votes (the tab Positions does)
 //
 
 import {ExternalLink, UserCheck} from "lucide-react";
@@ -27,7 +27,7 @@ const MediumLink = ({url, medium}) => url
     ? <a href={url} target="_blank" rel="noopener noreferrer" className="medium-link inline-flex items-center gap-1">{medium}<ExternalLink aria-hidden className="size-3"/></a>
     : <span>{medium}</span>;
 
-// one side of the news on a candidate: how many sentences, how many media, the last one, who said it, and the key sentences word for word
+// one side of the news on a candidate: how many sentences, how many media, the last one and who said it
 const Side = ({side, name}) => {
     const sentences = side.declared + side.probable;
     return (
@@ -41,21 +41,6 @@ const Side = ({side, name}) => {
                     Said by {speaker.name}{(speaker.role || speaker.binds) && ` (${[speaker.role, speaker.binds ? 'speaks for the association' : null].filter(Boolean).join(', ')})`}
                 </p>
             ))}
-            {side.key.length > 0 && (
-                <ul aria-label={`Key sentences ${STANCES[side.stance]?.toLowerCase() ?? side.stance} ${name}`} className="mt-2 space-y-3">
-                    {side.key.map(one => (
-                        <li key={one.id}>
-                            <blockquote className="panel-text border-l-2 border-rule pl-3.5">“{one.sentence}”</blockquote>
-                            <p className="caption mt-1 flex flex-wrap items-center gap-x-3">
-                                <MediumLink url={one.url} medium={one.medium}/>
-                                <span>{dateOf(one.published_at)}</span>
-                                <span>{one.level === 'declared' ? 'Declared' : 'Probable'}</span>
-                                {one.speaker && <span>{one.speaker}{one.role && `, ${one.role}`}</span>}
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            )}
         </div>
     );
 };
@@ -130,7 +115,7 @@ export const SummaryTab = ({summary, context, levels, aiSummary, aiAvailable, re
     const candidates = summary?.candidates ?? [];
     return (
         <>
-            <p className="caption max-w-[60ch]">These lines are built by the code from the sheet: no AI wrote them. The sentences are the news' own, word for word.</p>
+            <p className="caption max-w-[60ch]">These lines are built by the code from the sheet: no AI wrote them. The sentences of the news, with their media, are in the tab Positions.</p>
             {candidates.length === 0
                 ? <p className="mt-4 text-[0.9375rem] text-ink-mute">Nothing to summarise yet: no sentence of the news ties this association to a candidate.</p>
                 : <div className="mt-4">{candidates.map(one => <CandidateSummary key={one.subject_qid} one={one} levels={levels} context={context}/>)}</div>}

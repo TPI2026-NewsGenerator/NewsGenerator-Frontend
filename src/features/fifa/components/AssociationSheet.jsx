@@ -3,18 +3,20 @@
 //  Date: 12.11.2026
 //  File: AssociationSheet.jsx
 //  Description: The sheet of one association, opened from the map, the list or the timeline. It opens on the tab Positions, then Summary (SummaryTab.jsx: plain lines built by the code, then the
-//               summary an AI writes when a reader asks for it; information only), Leadership profile and Notes. The tab Positions starts with a STRIP of cards, one for every candidate of
-//               the map (the ones the news say nothing of too: "No known position"), each with its colour, its status for this association and "Review →"; the reader selects one
-//               (the candidate chosen in the list of the page is selected from the start) and its detail comes under the strip: its position (with the words, since when, what it
-//               was before), "Confirm this position ✓", the vote ("Supported by {country}", "Not supported", "No position", "Remove my vote": the last vote of any reader decides for
-//               everyone, the reading of the news stays under it) and every sentence of the news behind it with the link, the medium, the date and who spoke. A sentence that is
-//               about the election and the association but not known to be a position carries the badge "Uncertain" and the reason, and never colours the map. A reader can say which
-//               candidate the association leans toward (it has one vote): with no candidate chosen in the list, one block under the detail ("Confirm {candidate} ✓", or choose
-//               another, or none), then the control "Add a source". A reader can join a source (the link of a page that says it) to their choice: the sheet lists the
-//               sources under the position of each candidate, with what the AI made of the page, and reads itself again while one is being read. The tab
-//               "Notes" has the notes every reader can write and the history of the votes. A reader can also add the link of a PAGE with no candidate chosen
-//               ("Add a source"): the AI reads it like a news for every candidate and what it finds counts for the positions (the sentences carry "Added by X from
-//               a page"); the sheet asks the map again when the AI has finished. The sheet gives the sources; it never gives a verdict on a person
+//               summary an AI writes when a reader asks for it; information only, no sentence of the news), Leadership profile and Notes. The tab Positions starts with a STRIP of cards, one for every
+//               candidate of the map (the ones the news say nothing of too: "No known position"), each with its colour, its status for this association and "Review →": the strip is the
+//               filter of the tab, and it is there on EVERY sheet, with positions or without. One line under it says what is shown. With NO card selected ("all"): the rundown, one card
+//               after the other for every candidate the news say something of, READ ONLY (its position, since when and what it was before, every sentence of the news behind it with the
+//               link, the medium, the date and who spoke, then the dated signals and the key moments); with no news at all on the association, the line says there is no position yet.
+//               With ONE card selected (the candidate chosen in the list of the page is selected from the start; a second click unselects it): only the detail of that candidate, with
+//               "Confirm this position ✓" and the vote ("Supported by {country}", "Not supported", "No position", "Remove my vote": the last vote of any reader decides for everyone,
+//               the reading of the news stays under it) with its field "Add a source (link)", even when the news say nothing of the candidate (the vote and a line that says so). A
+//               sentence that is about the election and the association but not known to be a position carries the badge "Uncertain" and the reason, and never colours the map. A reader
+//               can join a source (the link of a page that says it) to their vote: the sheet lists the sources under the position of each candidate, with what the AI made of the
+//               page, and reads itself again while one is being read. The tab "Notes" has the notes every reader can write and the history of the votes. A reader can also add the
+//               link of a PAGE with no candidate chosen ("Add a source", the last thing of the tab Positions): the AI reads it like a news for every candidate and what it finds counts
+//               for the positions (the sentences carry "Added by X from a page"); the sheet asks the map again when the AI has finished. The sheet gives the sources; it never gives
+//               a verdict on a person
 //
 
 import {useEffect, useMemo, useRef, useState} from "react";
@@ -34,10 +36,9 @@ import {PositionTimeline} from "@/features/fifa/components/PositionTimeline.jsx"
 import {READING_TAG, isReading} from "@/features/fifa/candidates.js";
 import {SourceList} from "@/features/fifa/components/SourceList.jsx";
 import {Swatch} from "@/features/fifa/components/Swatch.jsx";
-import {LeanBlock} from "@/features/fifa/components/LeanBlock.jsx";
 import {VoteControl} from "@/features/fifa/components/VoteControl.jsx";
 import {MAX_RECHECKS, RECHECK_AFTER_MS, anyPending, placedUnder} from "@/features/fifa/sourceChecks.js";
-import {candidateFill, colouredStrengths, orderBySummary, dotsFill, labelOf, leanOf, mapFill, patternKeyOf, readEntry, reasonOf, sideOf, strengthOf} from "@/features/fifa/positions.js";
+import {candidateFill, colouredStrengths, orderBySummary, dotsFill, labelOf, mapFill, patternKeyOf, readEntry, reasonOf, sideOf, strengthOf} from "@/features/fifa/positions.js";
 import {languageLabel} from "@/features/briefing/profileWords.js";
 
 const TAB = 'inline-flex h-7 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full px-3.5 text-[0.8125rem] text-ink-mute transition-[color,background-color,box-shadow] duration-200 hover:text-ink data-[state=active]:bg-paper data-[state=active]:text-ink data-[state=active]:shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:data-[state=active]:bg-rule';
@@ -175,10 +176,10 @@ const ConfirmBlock = ({position, confirmed, reader, onVote}) => {
 
 // mine: this reader's last decision on this candidate, removable: they have one or a confirmation to take back; reader: their name; sources: the sources joined
 // to the choices that stand on this candidate; pages: the pages readers added that speak of it (the AI read a position in them), pageContext: {subjects, signals, admin,
-// onDeleted} for them; onVote(value, extra): the vote, resolves {ok} or {error} (extra: {source}). It is the detail of the candidate selected in the strip: the button that confirms the position
-// shown and the vote ("Supported by {country}", "Not supported", "No position") are always there, then what the news hold; for a candidate the news say nothing of, only the vote
-// and a line that says so
-const PositionCard = ({subject, member, entry, levels, history, signals, sources, pages, pageContext, mine, removable, reader, onVote}) => {
+// onDeleted} for them; onVote(value, extra): the vote, resolves {ok} or {error} (extra: {source}). A candidate of the rundown: its position and what the news hold. interactive: it is the
+// candidate SELECTED in the strip, so the button that confirms the position shown and the vote ("Supported by {country}", "Not supported", "No position") are there too; for a candidate
+// the news say nothing of, only the vote and a line that says so. In the rundown of "all" the cards are read only (interactive false): the strip is how a reader goes to the vote
+const PositionCard = ({subject, member, entry, levels, history, signals, sources, pages, pageContext, mine, removable, reader, onVote, interactive = true}) => {
     const {human, position, aiPosition, confirmedByReader} = readEntry(entry, levels);
     const quiet = !entry && signals.length === 0 && history.length === 0 && sources.length === 0 && pages.length === 0;
     const side = sideOf(position);
@@ -221,8 +222,8 @@ const PositionCard = ({subject, member, entry, levels, history, signals, sources
             )}
             <SourceList sources={sources} name={subject.name}/>
             <PagesOfCandidate pages={pages} name={subject.name} {...pageContext}/>
-            {!quiet && <ConfirmBlock position={position} confirmed={entry?.confirmed ?? null} reader={reader} onVote={onVote}/>}
-            <VoteControl subject={subject} member={member} mine={mine} removable={removable} onVote={onVote}/>
+            {interactive && !quiet && <ConfirmBlock position={position} confirmed={entry?.confirmed ?? null} reader={reader} onVote={onVote}/>}
+            {interactive && <VoteControl subject={subject} member={member} mine={mine} removable={removable} onVote={onVote}/>}
             {quiet && <p className="caption mt-4 max-w-[60ch]">No news name this association with {subject.name} yet.</p>}
             {!quiet && <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1 text-[0.875rem]">
                 {entry?.since && sideOf(aiPosition) !== 'unknown' && <><dt className="text-ink-mute">Since</dt><dd>{dateOf(entry.since)}</dd></>}
@@ -280,7 +281,7 @@ const VoteHistory = ({votes, subjects}) => (
 // The content of the sheet of one association; the page gives it a key, so the tab and the list start over with each association
 // reader: the name of the reader (whose vote is "mine"); admin: they are an administrator (they can delete any note); onVote(member, subject, value, extra): the
 // vote, resolves {ok} or {error} (extra: {source}); onMapStale(): the page asks the map again (a page the AI read changed the positions, or was deleted)
-const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, admin, onVote, onLean, onMapStale}) => {
+const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, admin, onVote, onMapStale}) => {
     const [loaded, setLoaded] = useState({data: null, error: null});
     // the sheet opens on the tab Positions (the user's choice, 13.11.2026), then the Summary (information only)
     const [tab, setTab] = useState('positions');
@@ -325,21 +326,12 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
         if (answer?.ok) readAgain();
         return answer;
     };
-    // a reader says which candidate the association leans toward (with a source maybe): sent, the sheet read again
-    const choose = async (subject, extra) => {
-        const answer = await onLean(data?.member ?? known, subject, extra);
-        if (answer?.ok) readAgain();
-        return answer;
-    };
     const member = data?.member ?? known;
-    // the candidate it leans toward, from the positions the sheet has just read
-    const lean = useMemo(() => data ? leanOf({positions: data.positions}, levels, subjects) : null, [data, levels, subjects]);
-    // something of this reader to take back on the association: a decision or a confirmation on any candidate
-    const removableAny = subjects.some(subject => removableOn(subject.qid));
     const signals = useMemo(() => data?.signals ?? [], [data]);
     // the cards of the strip: EVERY candidate of the map, in the order of the summary of the sheet (the ones it lists first, supported ones first, then the ones the news say
-    // nothing of in their order). The reader selects one: the detail under the strip is the one of that candidate, with the vote. The candidate chosen in the list of the page is
-    // selected from the start; a candidate that is no longer on the map selects nothing
+    // nothing of in their order). The strip is the filter of the tab: with one card selected, the detail under it is the one of that candidate (with the vote, even when the news say
+    // nothing of it); with none, the rundown of the candidates the news say something of (withNews, below), read only. The candidate chosen
+    // in the list of the page is selected from the start; a candidate that is no longer on the map selects nothing
     const ordered = useMemo(() => orderBySummary(subjects, data?.summary?.candidates ?? null, data?.positions, levels), [subjects, data, levels]);
     const [selected, setSelected] = useState(candidate ?? null);
     const current = ordered.find(subject => subject.qid === selected) ?? null;
@@ -367,6 +359,24 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
     // a page deleted takes the signals it gave with it: the sheet and the map are read again
     const dropPage = (id) => { keepSources(list => list.filter(one => one.id !== id)); readAgain(); onMapStale?.(); };
     const pageContext = {subjects, signals, admin, onDeleted: dropPage};
+    // The candidates of the rundown of "all": the ones the news (or a reader) say something of. The server keeps an association on the map when anything was read at all, even a
+    // passage it left out, so an entry can hold nothing to show (no position, no signal, nothing Uncertain, no vote, no source): such a candidate has a card in the strip and none here
+    const withNews = useMemo(() => ordered.filter(subject => {
+        const entry = data?.positions?.[subject.qid];
+        if (!entry) return false;
+        const {human, position, confirmedByReader} = readEntry(entry, levels);
+        return sideOf(position) !== 'unknown' || Boolean(human) || confirmedByReader || entry.signals_count > 0 || entry.uncertain_count > 0
+            || signals.some(one => one.subject_qid === subject.qid) || (data.history ?? []).some(one => one.subject_qid === subject.qid)
+            || sources.some(one => one.subject_qid === subject.qid);
+    }), [ordered, data, levels, signals, sources]);
+    // the card of a candidate: interactive for the one selected in the strip (its vote), read only in the rundown of all
+    const cardOf = (subject, interactive) => (
+        <PositionCard key={subject.qid} subject={subject} member={member} entry={data.positions?.[subject.qid]} levels={levels}
+                      history={(data.history ?? []).filter(one => one.subject_qid === subject.qid)}
+                      signals={signals.filter(one => one.subject_qid === subject.qid)} sources={choiceSources.filter(one => one.subject_qid === subject.qid)}
+                      pages={pageSources.filter(one => placedUnder(one, subjects) && one.subject_qid === subject.qid)} pageContext={pageContext}
+                      mine={mineOn(subject.qid)} removable={removableOn(subject.qid)} reader={reader} onVote={(value, extra) => vote(subject.qid, value, extra)} interactive={interactive}/>
+    );
     // the notes of readers: kept in what the sheet has read (a note added or deleted is there at once), read again with the sheet
     const keepNotes = (change) => setLoaded(previous => previous.data ? {...previous, data: {...previous.data, notes: change(previous.data.notes ?? [])}} : previous);
     // the summary an AI wrote when this reader asked: kept in what the sheet has read (the request lives here, so it goes on when another tab is open)
@@ -393,22 +403,18 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
                         </Tabs.Content>
                         <Tabs.Content value="positions" className="mt-6 outline-none">
                             <CandidateStrip subjects={ordered} positions={data.positions} levels={levels} selected={current?.qid ?? null} onSelect={setSelected}/>
-                            {ordered.length === 0 && <p className="text-[0.9375rem] text-ink-mute">No candidate is on the map yet.</p>}
-                            {current && (
-                                <div className="mt-5">
-                                    <PositionCard key={current.qid} subject={current} member={member} entry={data.positions?.[current.qid]} levels={levels}
-                                                  history={(data.history ?? []).filter(one => one.subject_qid === current.qid)}
-                                                  signals={signals.filter(one => one.subject_qid === current.qid)} sources={choiceSources.filter(one => one.subject_qid === current.qid)}
-                                                  pages={pageSources.filter(one => placedUnder(one, subjects) && one.subject_qid === current.qid)} pageContext={pageContext}
-                                                  mine={mineOn(current.qid)} removable={removableOn(current.qid)} reader={reader} onVote={(value, extra) => vote(current.qid, value, extra)}/>
-                                </div>
-                            )}
-                            {!candidate && (
-                                <div className="mt-6">
-                                    <LeanBlock member={member} subjects={subjects} lean={lean} reader={reader} removable={removableAny}
-                                               onChoose={choose} onConfirm={subject => vote(subject, 'confirm')}/>
-                                </div>
-                            )}
+                            {ordered.length === 0
+                                ? <p className="mt-4 text-[0.9375rem] text-ink-mute">No candidate is on the map yet.</p>
+                                : (
+                                    <p className="caption mt-3 max-w-[60ch]">
+                                        {current
+                                            ? `Only ${current.name}. Select its card again to see all the candidates.`
+                                            : withNews.length > 0
+                                                ? 'All the candidates the news name with this association. Select a card to see one alone and to take a position.'
+                                                : `No position is known for ${member?.name ?? 'this association'} yet. Select a candidate above to take one.`}
+                                    </p>
+                                )}
+                            {(current || withNews.length > 0) && <div className="mt-5">{current ? cardOf(current, true) : withNews.map(subject => cardOf(subject, false))}</div>}
                             <div className="mt-6">
                                 <PageSources qid={qid} pages={pageSources.filter(one => !placedUnder(one, subjects))} subjects={subjects} signals={signals} admin={admin}
                                              onAdded={addPage} onDeleted={dropPage}/>
@@ -450,7 +456,7 @@ const SheetBody = ({qid, member: known, subjects, levels, candidate, reader, adm
 };
 
 // qid: the association (a member of the map), '' when the sheet is closed; row: what the map knows of it already (the title does not wait)
-export const AssociationSheet = ({qid, row, subjects, levels, candidate, reader, admin = false, onVote, onLean, onMapStale, onClose}) => {
+export const AssociationSheet = ({qid, row, subjects, levels, candidate, reader, admin = false, onVote, onMapStale, onClose}) => {
     const member = row?.member;
     // the focus goes back to the association on the map, the list or the timeline, where the sheet was opened
     const last = useRef('');
@@ -463,7 +469,7 @@ export const AssociationSheet = ({qid, row, subjects, levels, candidate, reader,
         <Sheet open={Boolean(qid)} onOpenChange={open => { if (!open) onClose(); }} onCloseAutoFocus={giveBack}
                kicker={member ? `${member.level === 'confederation' ? 'Confederation' : 'Association'} · ${member.fifa}${member.level === 'association' ? ` · ${member.confederation}` : ''}` : 'Association'}
                title={member?.name ?? 'Association'} description={member?.association ?? member?.name}>
-            {qid && <SheetBody key={qid} qid={qid} member={member} subjects={subjects} levels={levels} candidate={candidate} reader={reader} admin={admin} onVote={onVote} onLean={onLean} onMapStale={onMapStale}/>}
+            {qid && <SheetBody key={qid} qid={qid} member={member} subjects={subjects} levels={levels} candidate={candidate} reader={reader} admin={admin} onVote={onVote} onMapStale={onMapStale}/>}
         </Sheet>
     );
 };

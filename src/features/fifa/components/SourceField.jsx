@@ -3,7 +3,7 @@
 //  Date: 12.11.2026
 //  File: SourceField.jsx
 //  Description: The optional field "Add a source (link)" next to a choice of a candidate: the link of a page that says what the reader chose. It is sent with the
-//               choice (the vote For or Against, or the candidate chosen in the block "which candidate does it lean towards"); the AI reads the page in the
+//               choice (the vote "Supported by {country}" or "Not supported" of the detail of a candidate); the AI reads the page in the
 //               background and it never changes a colour. What the server refuses (not an address, private, too many) is said by the choice, not here
 //
 

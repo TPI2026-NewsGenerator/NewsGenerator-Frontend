@@ -24,7 +24,7 @@ import {MOCK_SUBJECTS, SOURCE_READ_MS, buildMock, pageReadingsOf, readSourceInpu
 vi.setConfig({testTimeout: 30000});
 configure({asyncUtilTimeout: 10000});
 
-const {api} = vi.hoisted(() => ({api: {map: vi.fn(), association: vi.fn(), presidents: vi.fn(), confederations: vi.fn(), vote: vi.fn(), lean: vi.fn(), addSource: vi.fn(), deleteSource: vi.fn()}}));
+const {api} = vi.hoisted(() => ({api: {map: vi.fn(), association: vi.fn(), presidents: vi.fn(), confederations: vi.fn(), vote: vi.fn(), addSource: vi.fn(), deleteSource: vi.fn()}}));
 vi.mock('@/features/fifa/fifaApi.js', () => ({FifaApi: api}));
 // the sheet reads itself again 30 s after a source was found pending, twice at most: here after 60 ms, and for as long as the page is pending, to see it happen
 vi.mock('@/features/fifa/sourceChecks.js', async (original) => ({...(await original()), RECHECK_AFTER_MS: 60, MAX_RECHECKS: 1000}));
@@ -261,20 +261,19 @@ describe('the accordion "Sources"', () => {
 });
 
 describe('the control "Add a source"', () => {
-    it('should be in the sheet with no candidate to choose, apart from the lean block, with what it does said under it', async () => {
+    it('should be the last thing of the tab Positions, under the strip of the candidates, with what it does said under it', async () => {
         show();
         const sheet = await openSheet('GER');
         const section = sourcesSection(sheet);
         const button = within(section).getByRole('button', {name: 'Add a source'});
         expect(button).toHaveAttribute('aria-expanded', 'false');
         expect(within(section).getByText('The AI reads the page like a news: what it finds about this association counts for the positions.')).toBeInTheDocument();
-        // the field of the lean block is the other one, for a choice
-        const block = within(sheet).getByRole('region', {name: /^Which candidate does .* lean towards\?$/});
-        expect(within(block).getByLabelText('Add a source (link)')).toBeInTheDocument();
-        expect(block.contains(button)).toBe(false);
-        // under it: the strip of the candidates comes first in the tab Positions, then the block of the choice, then the control to add a source
-        expect(block.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        expect(within(sheet).getByRole('group', {name: 'Candidates and their status'}).compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        // no other place to add a source on the sheet but the vote of a candidate selected: the block "Which candidate does it lean towards?" is gone, with its field
+        expect(within(sheet).queryByRole('region', {name: /lean towards/})).toBeNull();
+        expect(within(sheet).queryByLabelText('Add a source (link)')).toBeNull();
+        const strip = within(sheet).getByRole('group', {name: 'Candidates and their status'});
+        expect(strip.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(within(sheet).getByRole('tabpanel').lastElementChild.contains(section)).toBe(true);
     });
 
     it('should be there with a candidate chosen in the list too', async () => {

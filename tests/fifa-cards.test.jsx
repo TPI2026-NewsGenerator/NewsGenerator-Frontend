@@ -2,10 +2,12 @@
 //  Author: Fabian Rostello
 //  Date: 13.11.2026
 //  File: fifa-cards.test.jsx
-//  Description: The strip of the candidates at the top of the tab Positions of the sheet of an association (the tab the sheet opens on): one card for EVERY candidate of the map, the
-//               ones the news say nothing of too, each with the colour of the candidate on its left edge, its name, its status for the association in the words of the rest of the
-//               page ("Declared support", "Uncertain: signals, no position", "No known position", "Set by a reader", "Confirmed by a reader") and "Review →" ("Take a position →" when
-//               no position is known); in the order of the summary of the sheet. A card is a button: it selects the candidate (one at a time) and its detail comes under the strip with the
+//  Description: The strip of the candidates at the top of the tab Positions of the sheet of an association (the tab the sheet opens on), on EVERY sheet: one card for EVERY candidate
+//               of the map, the ones the news say nothing of too, each with the colour of the candidate on its left edge, its name, its status for the association in the words of
+//               the rest of the page ("Declared support", "Uncertain: signals, no position", "No known position", "Set by a reader", "Confirmed by a reader") and "Review →"
+//               ("Take a position →" when no position is known); in the order of the summary of the sheet. The strip is the FILTER of the tab: a card is a button that selects the
+//               candidate (one at a time, a second click unselects it). With none selected: one line under the strip, then the rundown, one READ ONLY card after the other for every
+//               candidate the news say something of (or the line "No position is known for {country} yet" when they say nothing); with one selected: its detail only, with the
 //               vote ("Supported by {country}", "Not supported", "No position", "Remove my vote"), for a candidate the news say nothing of the vote and a line that says so
 //
 //  The associations, the candidates and the positions are the invented ones of bench/fifa/mock-data.mjs
@@ -78,8 +80,22 @@ const markOf = (button) => button.children.length === 4 ? button.children[2].tex
 const letters = (sheet) => buttons(sheet).map(button => nameOf(button).replace('Mock candidate ', ''));
 const cardOfLetter = (sheet, candidate) => buttons(sheet).find(button => nameOf(button) === `Mock candidate ${candidate}`);
 const pressed = (sheet) => buttons(sheet).filter(button => button.getAttribute('aria-pressed') === 'true').map(button => nameOf(button).replace('Mock candidate ', ''));
-// the detail of the candidate selected: the card of the sheet
+// the cards of the candidates under the strip: the detail of the one selected, or the rundown of all (the ones the news say something of)
 const detailsOf = (sheet) => within(sheet).queryAllByRole('region', {name: /^Mock candidate [A-E]$/}).map(card => card.getAttribute('aria-label').replace('Mock candidate ', ''));
+// the candidates the news hold something on for an association, in the order of the strip
+// the candidates the news (or a reader) say something of on this association: an entry of the sheet that holds something to show (an entry of the map can hold nothing: a reading of
+// the news that left everything out)
+const newsOf = (sheet, fifa) => {
+    const answer = buildMock({candidates}).association(qidOf(fifa));
+    const held = Object.entries(answer.positions)
+        .filter(([qid, entry]) => entry.position !== 'inconnue' || entry.human || entry.confirmed || entry.signals_count > 0 || entry.uncertain_count > 0
+            || (answer.signals ?? []).some(one => one.subject_qid === qid) || (answer.history ?? []).some(one => one.subject_qid === qid)
+            || (answer.sources ?? []).some(one => one.subject_qid === qid))
+        .map(([qid]) => qid);
+    return letters(sheet).filter(letter => held.includes(candidates.find(subject => subject.name === `Mock candidate ${letter}`).qid));
+};
+const regionOf = (sheet, candidate) => within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
+const FOLLOWS = Node.DOCUMENT_POSITION_FOLLOWING;
 const select = (sheet, candidate) => { fireEvent.click(cardOfLetter(sheet, candidate)); return within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`}); };
 
 beforeEach(() => {
@@ -93,16 +109,19 @@ beforeEach(() => {
 });
 
 describe('the strip of the candidates', () => {
-    it('should be the first thing of the tab Positions, above the block of the choice and the control "Add a source"', async () => {
+    it('should be the first thing of the tab Positions, above the line that says what is shown, the cards and the control "Add a source"', async () => {
         show();
         const sheet = await openSheet('ESP');
         const panel = within(sheet).getByRole('tabpanel');
         expect(panel.firstElementChild).toBe(stripOf(sheet));
-        const block = within(sheet).getByRole('region', {name: /^Which candidate does .* lean towards\?$/});
+        // no block "Which candidate does {country} lean towards?" on any sheet: the strip does what it did (vote, source, confirm, none, remove)
+        expect(within(sheet).queryByRole('region', {name: /lean towards/})).toBeNull();
+        expect(within(sheet).queryByRole('button', {name: 'None / undecided'})).toBeNull();
+        expect(within(sheet).queryByRole('button', {name: 'Remove my choice'})).toBeNull();
         const sources = within(sheet).getByRole('region', {name: 'Sources'});
-        expect(stripOf(sheet).compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        // under the block of the choice: the control to add a source
-        expect(block.compareDocumentPosition(sources) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(stripOf(sheet).compareDocumentPosition(sources) & FOLLOWS).toBeTruthy();
+        // no field for a source before a candidate is selected: the one of the vote is in its detail
+        expect(within(sheet).queryAllByLabelText('Add a source (link)')).toHaveLength(0);
     });
 
     it('should have a card for every candidate, the ones the news say nothing of too, with their status (Spain: declared on A, probable on B, nothing on C)', async () => {
@@ -111,19 +130,24 @@ describe('the strip of the candidates', () => {
         expect(letters(sheet)).toEqual(['A', 'B', 'C']);
         expect(buttons(sheet).map(statusOfCard)).toEqual(['Declared support', 'Probable support', 'No known position']);
         expect(buttons(sheet).map(linkOf)).toEqual(['Review →', 'Review →', 'Take a position →']);
-        // nothing is selected, so no detail is shown
+        // nothing is selected: the rundown of the candidates the news say something of (not C)
         expect(pressed(sheet)).toEqual([]);
-        expect(detailsOf(sheet)).toEqual([]);
+        expect(detailsOf(sheet)).toEqual(['A', 'B']);
     });
 
-    it('should say "No known position" on every card when the news say nothing of any candidate (the United States), and keep the block of the choice', async () => {
+    it('should say "No known position" on every card when the news say nothing of any candidate (the United States), and keep the strip with a line that says so', async () => {
         show();
         const sheet = await openSheet('USA');
         expect(letters(sheet)).toEqual(['A', 'B', 'C']);
         expect(buttons(sheet).map(statusOfCard)).toEqual(['No known position', 'No known position', 'No known position']);
         expect(buttons(sheet).map(linkOf)).toEqual(['Take a position →', 'Take a position →', 'Take a position →']);
-        expect(within(sheet).getByRole('region', {name: /^Which candidate does .* lean towards\?$/})).toBeInTheDocument();
+        expect(within(sheet).getByText('No position is known for United States yet. Select a candidate above to take one.')).toBeInTheDocument();
         expect(within(sheet).queryByText('No candidate is on the map yet.')).toBeNull();
+        // no card under the strip, and nothing that is the block of the choice
+        expect(detailsOf(sheet)).toEqual([]);
+        expect(within(sheet).queryByRole('region', {name: /lean towards/})).toBeNull();
+        // the control "Add a source" stays at the bottom of the tab
+        expect(within(sheet).getByRole('region', {name: 'Sources'})).toBeInTheDocument();
     });
 
     it('should say "Uncertain: signals, no position" when the news hold only Uncertain signals on a candidate (Turkey: A)', async () => {
@@ -238,16 +262,18 @@ describe('selecting a candidate', () => {
         expect(new URLSearchParams(seen.search).get('c')).toBeNull();
     });
 
-    it('should unselect the candidate on a second click on its card: the strip alone again', async () => {
+    it('should unselect the candidate on a second click on its card: the rundown of all again', async () => {
         show();
         const sheet = await openSheet('IND');
         select(sheet, 'A');
+        expect(detailsOf(sheet)).toEqual(['A']);
         fireEvent.click(cardOfLetter(sheet, 'A'));
         expect(pressed(sheet)).toEqual([]);
-        expect(detailsOf(sheet)).toEqual([]);
+        // the rundown of all comes back: the candidates the news say something of
+        expect(detailsOf(sheet)).toEqual(newsOf(sheet, 'IND'));
     });
 
-    it('should start with the candidate chosen in the list of the page selected, and no block of the choice (a candidate is chosen)', async () => {
+    it('should start with the candidate chosen in the list of the page selected, whether or not the news say something of it', async () => {
         show('/fifa?c=QMOCK3');
         const sheet = await openSheet('ESP');
         expect(pressed(sheet)).toEqual(['C']);
@@ -269,7 +295,7 @@ describe('selecting a candidate', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         const second = await openSheet('ESP');
         expect(pressed(second)).toEqual([]);
-        expect(detailsOf(second)).toEqual([]);
+        expect(detailsOf(second)).toEqual(['A', 'B']);
     });
 
     it('should show the whole detail of a candidate the news hold something on: its position, the button that confirms it, the vote with no fold, the sentences', async () => {
@@ -298,6 +324,107 @@ describe('selecting a candidate', () => {
         expect(within(detail).queryByRole('button', {name: /^Confirm/})).toBeNull();
         expect(within(detail).queryByText('Established')).toBeNull();
         expect(within(detail).queryByRole('group', {name: /sentences on/})).toBeNull();
+    });
+});
+
+describe('the rundown with no card selected', () => {
+    it('should draw a card for every candidate the news say something of, in the order of the strip and under the line that says what is shown (Spain: A and B)', async () => {
+        show();
+        const sheet = await openSheet('ESP');
+        expect(detailsOf(sheet)).toEqual(['A', 'B']);
+        const line = within(sheet).getByText('All the candidates the news name with this association. Select a card to see one alone and to take a position.');
+        expect(stripOf(sheet).compareDocumentPosition(line) & FOLLOWS).toBeTruthy();
+        expect(line.compareDocumentPosition(regionOf(sheet, 'A')) & FOLLOWS).toBeTruthy();
+        expect(regionOf(sheet, 'A').compareDocumentPosition(regionOf(sheet, 'B')) & FOLLOWS).toBeTruthy();
+        // the control "Add a source" comes last
+        expect(regionOf(sheet, 'B').compareDocumentPosition(within(sheet).getByRole('region', {name: 'Sources'})) & FOLLOWS).toBeTruthy();
+        // C, which the news say nothing of, has a card in the strip but none here
+        expect(within(sheet).queryByRole('region', {name: 'Mock candidate C'})).toBeNull();
+    });
+
+    it('should not draw a candidate whose entry holds nothing to show, and say no position is known when none holds anything (Gibraltar: read in the news, nothing left)', async () => {
+        show();
+        const sheet = await openSheet('GIB');
+        // the strip has a card for every candidate; the rundown has none: no position, no signal, nothing Uncertain, no vote
+        expect(buttons(sheet).length).toBeGreaterThan(0);
+        expect(detailsOf(sheet)).toEqual([]);
+        expect(within(sheet).queryByText('0 signals')).toBeNull();
+        expect(within(sheet).getByText('No position is known for Gibraltar yet. Select a candidate above to take one.')).toBeInTheDocument();
+    });
+
+    it('should show in each card the position, the sentences grouped with the link of the medium and who spoke, then the dated signals (Spain: A)', async () => {
+        show();
+        const sheet = await openSheet('ESP');
+        const card = regionOf(sheet, 'A');
+        expect(within(card).getAllByText('Declared support').length).toBeGreaterThan(0);
+        const declared = within(card).getByRole('group', {name: 'Declared sentences on Mock candidate A'});
+        expect(within(declared).getAllByRole('link').length).toBeGreaterThan(0);
+        for (const link of within(declared).getAllByRole('link')) expect(link).toHaveAttribute('href', expect.stringMatching(/^https?:\/\//));
+        expect(within(declared).getAllByText(/speaks for the association|Speaker not named|does not speak for the association/).length).toBeGreaterThan(0);
+        expect(within(card).getByRole('group', {name: 'Mock candidate A: dated signals'})).toBeInTheDocument();
+        // the figures of the news
+        expect(within(card).getByText('Established')).toBeInTheDocument();
+        // the probable position of B is read apart, with its own group of sentences
+        expect(within(regionOf(sheet, 'B')).getByRole('group', {name: 'Probable sentences on Mock candidate B'})).toBeInTheDocument();
+    });
+
+    it('should be read only: no button that confirms, no vote, no field for a source, the strip above is how a reader goes to the vote', async () => {
+        show();
+        const sheet = await openSheet('ESP');
+        for (const letter of ['A', 'B']) {
+            const card = regionOf(sheet, letter);
+            expect(within(card).queryByRole('button', {name: /^Confirm/})).toBeNull();
+            expect(within(card).queryByRole('group', {name: /^Your vote: /})).toBeNull();
+            expect(within(card).queryByRole('button', {name: /^Supported by /})).toBeNull();
+            expect(within(card).queryByLabelText('Add a source (link)')).toBeNull();
+        }
+        expect(api.vote).not.toHaveBeenCalled();
+        // one click on a card of the strip: the same candidate, with the button that confirms and the vote
+        const detail = select(sheet, 'A');
+        expect(within(detail).getByRole('button', {name: /^Confirm/})).toBeInTheDocument();
+        expect(within(detail).getByRole('group', {name: /^Your vote: /})).toBeInTheDocument();
+    });
+
+    it('should show one candidate alone when its card is selected, with a line that says so, and all of them again with a second click', async () => {
+        show();
+        const sheet = await openSheet('ESP');
+        select(sheet, 'B');
+        expect(detailsOf(sheet)).toEqual(['B']);
+        expect(within(sheet).getByText('Only Mock candidate B. Select its card again to see all the candidates.')).toBeInTheDocument();
+        expect(within(sheet).queryByText(/^All the candidates the news name/)).toBeNull();
+        fireEvent.click(cardOfLetter(sheet, 'B'));
+        expect(detailsOf(sheet)).toEqual(['A', 'B']);
+        expect(within(sheet).getByText(/^All the candidates the news name/)).toBeInTheDocument();
+    });
+
+    it('should show a candidate the news say nothing of only when its card is selected: the vote and the line that says so', async () => {
+        show();
+        const sheet = await openSheet('ESP');
+        const detail = select(sheet, 'C');
+        expect(detailsOf(sheet)).toEqual(['C']);
+        expect(within(detail).getByText('No news name this association with Mock candidate C yet.')).toBeInTheDocument();
+        expect(within(detail).getByRole('group', {name: /^Your vote: /})).toBeInTheDocument();
+    });
+
+    it('should show the candidates a reader voted on even when the news say nothing of them (Qatar: a vote of "no position" on A)', async () => {
+        show();
+        const sheet = await openSheet('QAT');
+        expect(detailsOf(sheet)).toEqual(newsOf(sheet, 'QAT'));
+        expect(detailsOf(sheet)).toContain('A');
+    });
+
+    it('should say there are no candidate on the map, not that no position is known, when the map has none', async () => {
+        candidates = [];
+        serve();
+        show();
+        await mapReady();
+        fireEvent.click(shape('ESP'));
+        const sheet = await screen.findByRole('dialog');
+        fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+        await within(sheet).findByText('No candidate is on the map yet.');
+        expect(within(sheet).getByText('No candidate is on the map yet.')).toBeInTheDocument();
+        expect(within(sheet).queryByText(/^No position is known for/)).toBeNull();
+        expect(detailsOf(sheet)).toEqual([]);
     });
 });
 

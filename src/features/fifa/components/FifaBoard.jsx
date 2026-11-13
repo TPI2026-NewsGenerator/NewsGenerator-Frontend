@@ -61,39 +61,15 @@ const Board = ({data, topology, reader, admin, fresh, onRefresh}) => {
     // The votes given on this page, put in the map as the server answered them (the vote that decides now, or none), so the colour follows
     // without asking for the whole map again: {'memberQid|subjectQid': {human: the vote that decides | null, confirmed: the confirmations | null | undefined, at}}
     const [decided, setDecided] = useState({});
-    // The choices of a candidate given on this page ("which candidate does it lean towards"): the entries the server answered, for the member: {at, entries}
-    const [leaned, setLeaned] = useState({});
     const members = useMemo(() => {
         // what the reader did before the map was last asked again is in that map: the server's answer is the newer one (another reader may have voted since)
         const votes = Object.entries(decided).filter(([, answer]) => answer.at >= fresh);
-        const choices = Object.fromEntries(Object.entries(leaned).filter(([, choice]) => choice.at >= fresh).map(([qid, choice]) => [qid, choice.entries]));
-        if (votes.length === 0 && Object.keys(choices).length === 0) return sent;
-        return sent.map(member => {
-            // the entries of a choice replace the ones of the map, the votes given after it come on top
-            const chosen = choices[member.qid] ? {...member, positions: {...member.positions, ...choices[member.qid]}} : member;
-            return votes.reduce((one, [key, answer]) => {
-                const [qid, subject] = key.split('|');
-                return qid === member.qid ? withVote(one, subject, answer.human, answer.confirmed) : one;
-            }, chosen);
-        });
-    }, [sent, decided, leaned, fresh]);
-
-    // a reader says which candidate an association leans toward: sent, then the entries the server answered replace the ones of the map (a choice that
-    // already stands writes nothing). Resolves {ok} or {error: what to say}
-    // extra: {source} the link a reader joined to the candidate they choose
-    const lean = useCallback(async (member, subject, extra = {}) => {
-        let answer;
-        try {
-            answer = await FifaApi.lean({member: member.qid, subject, ...extra});
-        } catch {
-            return {error: 'The choice could not be sent. Try again in a moment.'};
-        }
-        if (!answer || answer.error || answer.ok !== true) return {error: refusalOf(answer, Boolean(extra.source))};
-        setLeaned(previous => ({...previous, [member.qid]: {at: Date.now(), entries: {...previous[member.qid]?.entries, ...answer.positions}}}));
-        // a vote given before on one of its candidates is older than this answer: the answer says what stands
-        setDecided(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith(`${member.qid}|`))));
-        return {ok: true};
-    }, []);
+        if (votes.length === 0) return sent;
+        return sent.map(member => votes.reduce((one, [key, answer]) => {
+            const [qid, subject] = key.split('|');
+            return qid === member.qid ? withVote(one, subject, answer.human, answer.confirmed) : one;
+        }, member));
+    }, [sent, decided, fresh]);
 
     // a reader's vote: sent, then taken into the map. Resolves {ok} or {error: what to say}
     // extra: {source} the link a reader joined to a for or an against
@@ -232,7 +208,7 @@ const Board = ({data, topology, reader, admin, fresh, onRefresh}) => {
             </Tabs.Root>
 
             <AssociationSheet qid={selectedRow?.member ? state.association : ''} row={selectedRow} subjects={subjects} levels={levels}
-                              candidate={scope.mode === 'candidate' ? scope.subject : null} reader={reader} admin={admin} onVote={vote} onLean={lean} onMapStale={mapStale} onClose={close}/>
+                              candidate={scope.mode === 'candidate' ? scope.subject : null} reader={reader} admin={admin} onVote={vote} onMapStale={mapStale} onClose={close}/>
         </>
     );
 };

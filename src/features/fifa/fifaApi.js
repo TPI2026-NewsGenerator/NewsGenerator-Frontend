@@ -64,16 +64,11 @@ export const FifaApi = {
     removeSubject: (qid) => send(`/fifa/subjects/${encodeURIComponent(qid)}`, {method: 'DELETE'}),
     // Any reader changes the status of a candidate: 'declared' | 'rumoured' | 'withdrawn' | 'incumbent' (null when done)
     setStatus: (qid, status) => send(`/fifa/subjects/${encodeURIComponent(qid)}`, {method: 'PATCH', body: {status}}),
-    // A reader says which candidate an association leans toward (it has one vote): body {member, subject: a candidate | 'none' | 'withdraw'} ->
-    // {ok, positions: {[subjectQid]: the position entry as in the map}, lean, written}; 'none': it leans toward none, 'withdraw': the reader takes their
-    // whole choice back; a refusal is {error, status} (401 / 422 / 429). Optional: source {url} or the url as a string (only when subject is a candidate: it
-    // is joined to the FOR vote of that candidate; 422 not an address, a password in it or over 500 characters, 400 a private address, 429 after 20 a day: the
-    // message of the server is said) and note (up to 280 characters)
-    lean: (body) => send('/fifa/leans', {method: 'POST', body}),
     // A reader sets the position of an association on a candidate (the last vote of any reader decides for everyone) or takes their vote back.
     // body: {subject, member, value: 'for' | 'against' | 'unknown' | 'withdraw', note?}; answers {ok, human: {value, by, at, newer_evidence} | null},
     // the vote that decides now (with its source {url, medium, check, found, checked_at} or null); a refusal is {error, status} (401 signed out, 429 too many
-    // votes). Optional: source {url} or the url as a string, only with value 'for' or 'against' (422 with the others; the other refusals as for a lean)
+    // votes). Optional: source {url} or the url as a string, only with value 'for' or 'against' (422 with the others, and 422 not an address, a password in it or over 500
+    // characters, 400 a private address, 429 after 20 a day: the message of the server is said) and note (up to 280 characters)
     vote: (body) => send('/fifa/votes', {method: 'POST', body}),
     // A reader adds the link of a PAGE about an association, with no candidate chosen: body {member, source: url (or {url}), note?} (up to 280 characters) ->
     // {source: {id, kind: 'page', subject_qid, value, by, at, note, url, medium, check, found, checked_at, readings: [{subject_qid, stance, level, found}], mine}} (201);

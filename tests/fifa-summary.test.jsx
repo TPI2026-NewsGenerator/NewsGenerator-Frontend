@@ -3,11 +3,10 @@
 //  Date: 13.11.2026
 //  File: fifa-summary.test.jsx
 //  Description: The tab "Summary" of the sheet of an association, the second one (the sheet opens on Positions): what the association says of each candidate in plain lines BUILT BY THE
-//               CODE (position and since when, set by a reader or changed from, the sentences declared and probable with the media and the last date, who said it, the key
-//               sentences word for word with their medium as a link, the other side, the confederation and the other associations), and the summary an AI writes ONLY when a reader
+//               CODE (position and since when, set by a reader or changed from, the sentences declared and probable with the media and the last date, who said it, the latest
+//               change, the confederation and the other associations: NO sentence of the news, they are in the tab Positions), and the summary an AI writes ONLY when a reader
 //               asks for it (the button, the wait, what the server refuses, the claims with their numbered chips, a summary written before the sheet changed, a summary asked by
-//               another reader). The tab Positions follows the order of the summary, and leaves out the candidates the news say nothing of for the association (but the
-//               one chosen in the list of the page). Information only: nothing here confirms or votes
+//               another reader). The tab Positions follows the order of the summary. Information only: nothing here confirms or votes
 //
 //  The associations, the readers and the AI summaries are the invented ones of bench/fifa/mock-data.mjs
 //
@@ -220,28 +219,31 @@ describe('the tab Summary: the lines the code builds', () => {
         if (other) expect(within(group).getByText(`Said by ${other.name} (${other.role})`)).toBeInTheDocument();
     });
 
-    it('should quote the key sentences word for word, with the medium as a link to the article and the date', async () => {
+    it('should not draw the key sentences of the sides: a summary has no sentence of the news, no blockquote and no medium link (they are in the tab Positions)', async () => {
         const side = sheetOf('ESP').summary.candidates[0].sides[0];
+        // the server still sends them
+        expect(side.key.length).toBeGreaterThan(0);
         show();
         const sheet = await openSheet('ESP');
         const group = within(cardOf(sheet)).getByRole('group', {name: 'For Mock candidate A'});
-        for (const key of side.key) {
-            expect(within(group).getByText(`“${key.sentence}”`)).toBeInTheDocument();
-            const link = within(group).getByRole('link', {name: key.medium});
-            expect(link).toHaveAttribute('href', key.url);
-            expect(link).toHaveAttribute('target', '_blank');
-            expect(link.closest('p')).toHaveTextContent(D(key.published_at));
-            expect(link.closest('p')).toHaveTextContent(key.speaker);
-        }
+        for (const key of side.key) expect(within(sheet).queryByText(`“${key.sentence}”`)).toBeNull();
+        expect(group.querySelector('blockquote')).toBeNull();
+        expect(within(group).queryByRole('link')).toBeNull();
+        expect(within(group).queryByRole('list')).toBeNull();
+        expect(sheet.querySelector('blockquote')).toBeNull();
+        // the lines stay: how many sentences, in how many media, the last one, who said it
+        expect(group).toHaveTextContent(/\d+ declared and \d+ probable sentences? in \d+ (medium|media), last on /);
+        // and the caption says where the sentences are
+        expect(within(sheet).getByText(/The sentences of the news, with their media, are in the tab Positions\./)).toBeInTheDocument();
+        expect(within(sheet).queryByText(/word for word/)).toBeNull();
     });
 
     it('should give both sides when the news go both ways, the side the position stands on first, and no side with nothing in it', async () => {
         show();
         let sheet = await openSheet('ESP');
         expect(within(cardOf(sheet)).getAllByRole('group', {name: /^(For|Against) Mock candidate A$/}).map(group => group.getAttribute('aria-label'))).toEqual(['For Mock candidate A', 'Against Mock candidate A']);
-        // the side that is not the position's is read too, with its own sentence
-        const against = sheetOf('ESP').summary.candidates[0].sides[1];
-        expect(within(within(cardOf(sheet)).getByRole('group', {name: 'Against Mock candidate A'})).getByText(`“${against.key[0].sentence}”`)).toBeInTheDocument();
+        // the side that is not the position's is read too, with its own line
+        expect(within(within(cardOf(sheet)).getByRole('group', {name: 'Against Mock candidate A'})).getByText(/^Against:/)).toBeInTheDocument();
         // only one candidate of the sheet has two sides: B has the one
         expect(within(cardOf(sheet, 'B')).getAllByRole('group').length).toBe(1);
         fireEvent.keyDown(sheet, {key: 'Escape'});

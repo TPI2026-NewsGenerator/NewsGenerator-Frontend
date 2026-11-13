@@ -74,7 +74,8 @@ describe('FifaBoard', () => {
         await mapReady();
         fireEvent.click(screen.getByRole('button', {name: /^Brazil, BRA/}));
         const sheet = await screen.findByRole('dialog');
-        expect(await within(sheet).findByText('Declared support')).toBeInTheDocument();
+        // the strip says the status of the candidate and the rundown under it holds its card (the badge says it again)
+        expect((await within(sheet).findAllByText('Declared support')).length).toBeGreaterThanOrEqual(2);
         expect(within(sheet).getByRole('heading', {name: 'Brazil'})).toBeInTheDocument();
         // the sheet opens on Positions, the first tab, then the summary
         expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Positions', 'Summary', 'Leadership profile', 'Notes']);
