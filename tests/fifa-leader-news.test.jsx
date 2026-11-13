@@ -49,7 +49,7 @@ const openSheet = async (fifa) => {
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
+    await within(sheet).findByRole('group', {name: 'Candidates and their status'});
     return sheet;
 };
 // the tab Leadership profile: its content is there only once the tab is opened

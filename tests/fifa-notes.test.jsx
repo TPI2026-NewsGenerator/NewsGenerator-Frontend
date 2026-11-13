@@ -67,7 +67,7 @@ const openNotes = async (fifa) => {
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    await within(sheet).findByRole('region', {name: 'Mock candidate A'});
+    await within(sheet).findByRole('group', {name: 'Candidates and their status'});
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Notes'}));
     await within(sheet).findByRole('heading', {name: 'Notes'});
     return sheet;
@@ -105,7 +105,7 @@ describe('the tab Notes', () => {
         fireEvent.click(shape('BRA'));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-        await within(sheet).findByRole('region', {name: 'Mock candidate A'});
+        await within(sheet).findByRole('group', {name: 'Candidates and their status'});
         expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Positions', 'Summary', 'Leadership profile', 'Notes']);
     });
 

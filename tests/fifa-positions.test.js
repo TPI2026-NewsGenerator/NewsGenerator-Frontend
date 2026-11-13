@@ -8,7 +8,7 @@
 //
 
 import {describe, expect, it} from 'vitest';
-import {describe as describeMember, fineLevels, labelOf, matchesSearch, orderBySummary, orderCards, passes, positionIn, colouredStrengths, leanOf, readEntry, reasonOf, scaleOf, sideOf, statusLabel, strengthOf, summarise, withVote} from '@/features/fifa/positions.js';
+import {describe as describeMember, fineLevels, labelOf, matchesSearch, orderBySummary, orderCards, passes, positionIn, colouredStrengths, leanOf, readEntry, reasonOf, scaleOf, sideOf, statusLabel, statusOf, strengthOf, summarise, withVote} from '@/features/fifa/positions.js';
 
 const ALL = ['soutien_declare', 'soutien_probable', 'inconnue', 'non_soutien_probable', 'non_soutien_declare'];
 const COARSE = ['soutien', 'inconnue'];
@@ -479,5 +479,43 @@ describe('orderBySummary', () => {
         expect(names(given, summary, {})).toBe('BA');
         expect(given).toEqual([A, B]);
         expect(summary).toEqual(listed('Q', 'B'));
+    });
+});
+
+describe('statusOf', () => {
+    it('should say what the news read, with the same words as the rest of the page', () => {
+        expect(statusOf(entry('soutien_declare'), ALL)).toEqual({label: 'Declared support', known: true, human: false, confirmed: false});
+        expect(statusOf(entry('soutien_probable'), ALL)).toMatchObject({label: 'Probable support', known: true});
+        expect(statusOf(entry('non_soutien_declare'), ALL)).toMatchObject({label: 'Declared opposition', known: true});
+        expect(statusOf(entry('non_soutien_probable'), ALL)).toMatchObject({label: 'Probable opposition', known: true});
+    });
+
+    it('should say "No known position" for a candidate with no entry (the news say nothing of it), and for a position the levels do not hold', () => {
+        expect(statusOf(undefined, ALL)).toEqual({label: 'No known position', known: false, human: false, confirmed: false});
+        expect(statusOf(null, ALL)).toMatchObject({label: 'No known position', known: false});
+        expect(statusOf(entry('inconnue'), ALL)).toMatchObject({label: 'No known position', known: false});
+        expect(statusOf(entry('soutien_declare'), COARSE)).toMatchObject({label: 'No known position', known: false});
+    });
+
+    it('should say "Uncertain: signals, no position" when only Uncertain signals exist, never over a position or a decision of a reader', () => {
+        expect(statusOf(entry('inconnue', {uncertain_count: 2}), ALL)).toMatchObject({label: 'Uncertain: signals, no position', known: false});
+        expect(statusOf(entry('soutien_declare', {uncertain_count: 2}), ALL)).toMatchObject({label: 'Declared support', known: true});
+        const decided = entry('inconnue', {uncertain_count: 2, human: {value: 'unknown', by: 'reader', at: '2026-11-05T00:00:00Z'}, ai_position: 'inconnue'});
+        expect(statusOf(decided, ALL)).toMatchObject({label: 'No known position', known: false, human: true});
+    });
+
+    it('should say that a reader set the position, as a vote reads: Support, Opposition, no position', () => {
+        const vote = (value) => entry('inconnue', {human: {value, by: 'reader', at: '2026-11-05T00:00:00Z'}, ai_position: 'inconnue'});
+        expect(statusOf(vote('for'), ALL)).toEqual({label: 'Support', known: true, human: true, confirmed: false});
+        expect(statusOf(vote('against'), ALL)).toMatchObject({label: 'Opposition', known: true, human: true});
+        expect(statusOf(vote('unknown'), ALL)).toMatchObject({label: 'No known position', known: false, human: true});
+    });
+
+    it('should say that a reader confirmed the position the news read, which is then solid', () => {
+        const confirmed = entry('soutien_declare', {ai_position: 'soutien_probable', confirmed: {count: 1, by: ['reader'], at: '2026-11-05T00:00:00Z', outdated: 0}});
+        expect(statusOf(confirmed, ALL)).toEqual({label: 'Declared support', known: true, human: false, confirmed: true});
+        // a confirmation older than the news that changed the position counts no more
+        const outdated = entry('soutien_probable', {confirmed: {count: 0, by: [], at: '2026-11-05T00:00:00Z', outdated: 1}});
+        expect(statusOf(outdated, ALL)).toMatchObject({label: 'Probable support', confirmed: false});
     });
 });

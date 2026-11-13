@@ -156,7 +156,9 @@ describe('the sheet of an association', () => {
         fireEvent.click(screen.getByRole('button', {name: new RegExp(`^[^,]+, ${fifa},`), hidden: true}));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-        await within(sheet).findByRole('region', {name: 'Mock candidate A'});
+        await within(sheet).findByRole('group', {name: 'Candidates and their status'});
+        // the dated signals are in the detail of the candidate: select A
+        fireEvent.click(within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: /^Mock candidate A( |$)/}));
         return sheet;
     };
 

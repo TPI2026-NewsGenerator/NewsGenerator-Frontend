@@ -49,16 +49,18 @@ const openSheet = async (fifa) => {
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
+    await within(sheet).findByRole('group', {name: 'Candidates and their status'});
     return sheet;
 };
-// the control of a candidate: it is under "Or change the position", which is opened when it is not
-const control = (sheet, candidate = 'A') => {
-    const card = within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
-    const toggle = within(card).getByRole('button', {name: 'Or change the position'});
-    if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
-    return within(card).getByRole('group', {name: /^Your vote: /});
+// the strip of the tab Positions has a card for every candidate: selecting one shows its detail under the strip (the vote, the news), one candidate at a time
+const pick = (sheet, candidate) => {
+    const name = `Mock candidate ${candidate}`;
+    const card = within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: new RegExp(`^${name}( |$)`)});
+    if (card.getAttribute('aria-pressed') !== 'true') fireEvent.click(card);
+    return within(sheet).getByRole('region', {name});
 };
+// the control of a candidate: "Your vote" in its detail
+const control = (sheet, candidate = 'A') => within(pick(sheet, candidate)).getByRole('group', {name: /^Your vote: /});
 
 beforeEach(() => {
     given = [];
@@ -85,12 +87,12 @@ describe('the map with the votes of readers in it', () => {
         expect(shape('QAT')).toHaveAccessibleName('Qatar, QAT, AFC: No position (set by a reader)');
         expect(shape('FRA')).toHaveAttribute('data-kind', 'unknown');
         const sheet = await openSheet('QAT');
-        const card = within(sheet).getByRole('region', {name: 'Mock candidate A'});
+        const card = pick(sheet, 'A');
         expect(within(card).getByText('Set by Mock reader 1', {exact: false})).toBeInTheDocument();
         expect(within(card).getByText('AI reading from the news:')).toBeInTheDocument();
         expect(within(card).getAllByText('Declared support').length).toBeGreaterThan(0);
-        // read-only: no button of a vote here, the reader chooses in the block above
-        expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
+        // the detail has the vote (the one of Mock reader 1 is not this reader's: no choice is pressed for them)
+        expect(within(within(card).getByRole('group', {name: /^Your vote: /})).queryAllByRole('button', {pressed: true})).toHaveLength(0);
     });
 
     it('should count a voted position like an established one in the filters and the counters', async () => {
@@ -140,21 +142,21 @@ describe('the map with the votes of readers in it', () => {
 });
 
 describe('the sheet, Your vote', () => {
-    it('should offer For, Against, No position and Remove my vote on the candidate chosen in the list, and only on it', async () => {
+    it('should offer Supported by {country}, Not supported, No position and Remove my vote on the candidate selected, with no fold, whichever it is', async () => {
         show('/fifa?c=QMOCK1');
         await mapReady();
-        // Albania: the news hold something on A, B and C (a card each)
+        // Albania: the news hold something on A, B and C
         const sheet = await openSheet('ALB');
         const group = control(sheet, 'A');
-        for (const name of ['For', 'Against', 'No position']) expect(within(group).getByRole('button', {name})).toBeEnabled();
+        expect(within(group).getAllByRole('button').map(button => button.textContent)).toEqual(['Supported by Albania', 'Not supported', 'No position', 'Remove my vote']);
+        for (const name of [/^Supported by /, 'Not supported', 'No position']) expect(within(group).getByRole('button', {name})).toBeEnabled();
         // nothing to take back yet
         expect(within(group).getByRole('button', {name: 'Remove my vote'})).toBeDisabled();
-        // the other candidates are read-only: no fold, no button of a vote (the chips show the candidate chosen only: "All" shows them)
-        fireEvent.click(within(sheet).getByRole('radio', {name: 'All'}));
+        // the other candidates have the same vote in their detail, one click away in the strip: no fold anywhere
         for (const candidate of ['B', 'C']) {
-            const card = within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
+            const card = pick(sheet, candidate);
             expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
-            expect(within(card).queryByRole('button', {name: /^Confirm/})).toBeNull();
+            expect(within(within(card).getByRole('group', {name: /^Your vote: /})).getAllByRole('button')).toHaveLength(4);
         }
         // and the block of the candidate leaned toward is not there: a candidate is chosen
         expect(within(sheet).queryByRole('heading', {name: /lean towards/})).toBeNull();
@@ -165,7 +167,7 @@ describe('the sheet, Your vote', () => {
         await mapReady();
         expect(shape('GER')).toHaveAttribute('data-kind', 'unknown');
         const sheet = await openSheet('GER');
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'For'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: /^Supported by /}));
         await waitFor(() => expect(api.vote).toHaveBeenCalledWith({subject: 'QMOCK1', member: qidOf('GER'), value: 'for'}));
         await waitFor(() => expect(shape('GER')).toHaveAttribute('data-kind', 'indicated'));
         expect(shape('GER').style.fill).toBe('var(--cand-1)');
@@ -173,7 +175,7 @@ describe('the sheet, Your vote', () => {
         // the sheet read again: who set it, the news under it, the vote pressed
         expect(await within(sheet).findByText('Set by reader', {exact: false})).toBeInTheDocument();
         expect(within(within(sheet).getByRole('region', {name: 'Mock candidate A'})).getByText('AI reading from the news:')).toBeInTheDocument();
-        expect(within(control(sheet)).getByRole('button', {name: 'For'})).toHaveAttribute('aria-pressed', 'true');
+        expect(within(control(sheet)).getByRole('button', {name: /^Supported by /})).toHaveAttribute('aria-pressed', 'true');
         expect(within(control(sheet)).getByRole('button', {name: 'Remove my vote'})).toBeEnabled();
         // the counters of the page
         expect(screen.getByText(/13 positions known/)).toBeInTheDocument();
@@ -185,7 +187,7 @@ describe('the sheet, Your vote', () => {
         // Brazil: declared support for A in the news
         expect(shape('BRA')).toHaveAccessibleName('Brazil, BRA, CONMEBOL: Declared support, 1 uncertain signal');
         const sheet = await openSheet('BRA');
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Against'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Not supported'}));
         await waitFor(() => expect(api.vote).toHaveBeenLastCalledWith({subject: 'QMOCK1', member: qidOf('BRA'), value: 'against'}));
         // a candidate is chosen: against is shown, in the ink (never the colour of a candidate)
         await waitFor(() => expect(shape('BRA').style.fill).toBe('var(--map-no-strong)'));
@@ -205,7 +207,7 @@ describe('the sheet, Your vote', () => {
         await mapReady();
         // Mexico: Reader 1 decides (Reader 2 took their vote back). This reader votes against, then takes it back: Reader 1 decides again
         const sheet = await openSheet('MEX');
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Against'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Not supported'}));
         await waitFor(() => expect(shape('MEX').style.fill).toBe('var(--map-no-strong)'));
         await waitFor(() => expect(within(control(sheet)).getByRole('button', {name: 'Remove my vote'})).toBeEnabled());
         fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Remove my vote'}));
@@ -248,13 +250,13 @@ describe('the sheet, Your vote', () => {
             return await within(control(sheet)).findByRole('alert');
         };
         api.vote.mockResolvedValueOnce({error: 'Forbidden, invalid or expired', status: 401});
-        expect(await press('For')).toHaveTextContent('Sign in to vote.');
+        expect(await press(/^Supported by /)).toHaveTextContent('Sign in to vote.');
         api.vote.mockResolvedValueOnce({error: 'Too many votes: wait a moment.', status: 429});
-        expect(await press('For')).toHaveTextContent('Too many votes in a short time. Wait a moment and try again.');
+        expect(await press(/^Supported by /)).toHaveTextContent('Too many votes in a short time. Wait a moment and try again.');
         api.vote.mockResolvedValueOnce({error: 'Unknown association, candidate or value.', status: 400});
-        expect(await press('Against')).toHaveTextContent('Unknown association, candidate or value.');
+        expect(await press('Not supported')).toHaveTextContent('Unknown association, candidate or value.');
         api.vote.mockRejectedValueOnce(new Error('network'));
-        expect(await press('For')).toHaveTextContent('The vote could not be sent');
+        expect(await press(/^Supported by /)).toHaveTextContent('The vote could not be sent');
         expect(shape('GER')).toHaveAttribute('data-kind', 'unknown');
         expect(within(control(sheet)).getByRole('button', {name: 'Remove my vote'})).toBeDisabled();
     });

@@ -3,7 +3,7 @@
 //  Date: 12.11.2026
 //  File: fifa-sources.test.jsx
 //  Description: A reader joins a SOURCE (the link of a page that says it) to their choice: the optional field "Add a source (link)" in the block "which candidate
-//               does it lean towards" and in the card of the candidate chosen ("Or change the position"), sent with the candidate chosen or the For / Against
+//               does it lean towards" and in the vote of the detail of the candidate selected ("Your vote"), sent with the candidate chosen or the Supported by / Not supported
 //               (never with Confirm, No position or None), the refusals of the server said under the control, the sources listed under the position of each
 //               candidate with what the AI made of the page (Checking…, The page says it, The page says the opposite, Could not be confirmed, The page could
 //               not be read), and the sheet that reads itself again while a source is being read
@@ -42,10 +42,18 @@ const refuse = (body) => {
 const recorded = (body) => ({...body, ...(body.source !== undefined ? {source: {url: readSourceInput(body.source).url}} : {})});
 
 let given = [];
+// an entry on which nothing has been read: what the server holds for a candidate once a reader said something
+const BLANK_ENTRY = {position: 'inconnue', since: null, previous: null, changed: false, stale: false, signals_count: 0, last_signal_at: null, uncertain_count: 0, articles_30d: 0, media_30d: 0, basis: [], confirmed: null};
 const serve = () => {
     const mock = buildMock();
     api.map.mockResolvedValue(mock.map);
-    api.association.mockImplementation(async qid => buildMock({votes: given}).association(qid));
+    api.association.mockImplementation(async qid => {
+        const sheet = buildMock({votes: given}).association(qid);
+        // Germany: the news hold nothing on A, a candidate with no entry has no button that confirms (there is nothing to confirm): the test of "Confirm" gives it the entry the
+        // server holds once something was said
+        if (sheet.member.fifa === 'GER' && !sheet.positions.QMOCK1) sheet.positions.QMOCK1 = {...BLANK_ENTRY};
+        return sheet;
+    });
     api.presidents.mockResolvedValue(mock.presidents);
     api.confederations.mockResolvedValue(mock.confederations);
     api.vote.mockImplementation(async body => refuse(body) ?? answerVote({levels: ALL_LEVELS, candidates: MOCK_SUBJECTS, given, body: recorded(body), by: 'reader'}));
@@ -62,17 +70,19 @@ const openSheet = async (fifa) => {
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
+    await within(sheet).findByRole('group', {name: 'Candidates and their status'});
     return sheet;
 };
-const cardOf = (sheet, candidate = 'A') => within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
-// the control of a candidate, under "Or change the position"
-const control = (sheet, candidate = 'A') => {
-    const card = cardOf(sheet, candidate);
-    const toggle = within(card).getByRole('button', {name: 'Or change the position'});
-    if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
-    return within(card).getByRole('group', {name: /^Your vote: /});
+// the strip of the tab Positions has a card for every candidate: selecting one shows its detail under the strip (the vote, the news), one candidate at a time
+const pick = (sheet, candidate) => {
+    const name = `Mock candidate ${candidate}`;
+    const card = within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: new RegExp(`^${name}( |$)`)});
+    if (card.getAttribute('aria-pressed') !== 'true') fireEvent.click(card);
+    return within(sheet).getByRole('region', {name});
 };
+const cardOf = (sheet, candidate = 'A') => pick(sheet, candidate);
+// the control of a candidate: "Your vote" in its detail
+const control = (sheet, candidate = 'A') => within(cardOf(sheet, candidate)).getByRole('group', {name: /^Your vote: /});
 const blockOf = (sheet) => within(sheet).getByRole('region', {name: /^Which candidate does .* lean towards\?$/});
 const sourcesOf = (card, name = 'Mock candidate A') => within(card).queryByRole('group', {name: `Sources joined to the choices on ${name}`});
 const FIELD = 'Add a source (link)';
@@ -156,14 +166,14 @@ describe('the mock: sources', () => {
 });
 
 describe('the field in the card of a candidate (a candidate chosen in the list)', () => {
-    it('should be under "Or change the position", optional, with what it does said under it', async () => {
+    it('should be in "Your vote" of the detail of the candidate, with no fold to open, optional, with what it does said under it', async () => {
         show('/fifa?c=QMOCK1');
         const sheet = await openSheet('GER');
         const group = control(sheet);
         const field = within(group).getByLabelText(FIELD);
         expect(field).toHaveValue('');
         expect(field).toHaveAttribute('placeholder', 'https://…');
-        expect(within(group).getByText(/Optional: the link of a page that says it\. It goes with For or Against/)).toBeInTheDocument();
+        expect(within(group).getByText(/Optional: the link of a page that says it\. It goes with a vote of Supported or Not supported/)).toBeInTheDocument();
         // not in the block of the choice, that a candidate chosen does not have
         expect(within(sheet).queryByRole('region', {name: /lean towards/})).toBeNull();
     });
@@ -172,7 +182,7 @@ describe('the field in the card of a candidate (a candidate chosen in the list)'
         show('/fifa?c=QMOCK1');
         const sheet = await openSheet('GER');
         fireEvent.change(within(control(sheet)).getByLabelText(FIELD), {target: {value: `  ${LINK}  `}});
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'For'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: /^Supported by /}));
         await waitFor(() => expect(api.vote).toHaveBeenCalledWith({subject: 'QMOCK1', member: qidOf('GER'), value: 'for', source: LINK}));
         const sources = await waitFor(() => { const found = sourcesOf(cardOf(sheet)); expect(found).not.toBeNull(); return found; });
         const link = within(sources).getByRole('link', {name: /newspaper\.example/});
@@ -198,8 +208,8 @@ describe('the field in the card of a candidate (a candidate chosen in the list)'
         fireEvent.click(within(cardOf(sheet)).getByRole('button', {name: /^Confirm/}));
         await waitFor(() => expect(api.vote).toHaveBeenCalledTimes(2));
         expect(api.vote.mock.calls[1][0]).not.toHaveProperty('source');
-        await enabled(() => within(control(sheet)).getByRole('button', {name: 'Against'}));
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Against'}));
+        await enabled(() => within(control(sheet)).getByRole('button', {name: 'Not supported'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'Not supported'}));
         await waitFor(() => expect(api.vote).toHaveBeenCalledTimes(3));
         expect(api.vote.mock.calls[2][0]).toEqual({subject: 'QMOCK1', member: qidOf('GER'), value: 'against', source: LINK});
     });
@@ -208,7 +218,7 @@ describe('the field in the card of a candidate (a candidate chosen in the list)'
         show('/fifa?c=QMOCK1');
         const sheet = await openSheet('GER');
         fireEvent.change(within(control(sheet)).getByLabelText(FIELD), {target: {value: '   '}});
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'For'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: /^Supported by /}));
         await waitFor(() => expect(api.vote).toHaveBeenCalledTimes(1));
         expect(api.vote.mock.calls[0][0]).toEqual({subject: 'QMOCK1', member: qidOf('GER'), value: 'for'});
     });
@@ -218,7 +228,7 @@ describe('the field in the card of a candidate (a candidate chosen in the list)'
         const sheet = await openSheet('GER');
         const press = async (link) => {
             fireEvent.change(within(control(sheet)).getByLabelText(FIELD), {target: {value: link}});
-            fireEvent.click(within(control(sheet)).getByRole('button', {name: 'For'}));
+            fireEvent.click(within(control(sheet)).getByRole('button', {name: /^Supported by /}));
             return await within(control(sheet)).findByRole('alert');
         };
         expect(await press('not a link')).toHaveTextContent('This is not a web address: it starts with http:// or https://.');
@@ -234,7 +244,7 @@ describe('the field in the card of a candidate (a candidate chosen in the list)'
         // without a link a 429 is still the one of the votes
         fireEvent.change(within(control(sheet)).getByLabelText(FIELD), {target: {value: ''}});
         api.vote.mockResolvedValueOnce({error: 'Too many votes: wait a moment.', status: 429});
-        fireEvent.click(within(control(sheet)).getByRole('button', {name: 'For'}));
+        fireEvent.click(within(control(sheet)).getByRole('button', {name: /^Supported by /}));
         expect(await within(control(sheet)).findByRole('alert')).toHaveTextContent('Too many votes in a short time. Wait a moment and try again.');
     });
 });
@@ -246,8 +256,10 @@ describe('the field in the block "which candidate does it lean towards?" (no can
         const block = blockOf(sheet);
         expect(within(block).getByLabelText(FIELD)).toBeInTheDocument();
         expect(within(block).getByText(/It goes with the candidate you choose below \(not with Confirm nor None\)/)).toBeInTheDocument();
-        // the cards below only read: no field there (Germany: a card for B only, the news hold nothing on A)
-        expect(within(cardOf(sheet, 'B')).queryByLabelText(FIELD)).toBeNull();
+        // the detail of a candidate has its own field, in "Your vote" (sent with a vote of Supported or Not supported): it is another one than the field of the block
+        const own = within(within(cardOf(sheet, 'B')).getByRole('group', {name: /^Your vote: /})).getByLabelText(FIELD);
+        expect(own).not.toBe(within(block).getByLabelText(FIELD));
+        expect(block.contains(own)).toBe(false);
     });
 
     it('should send the link with the candidate chosen, join it to the FOR vote, and list it under that candidate', async () => {
@@ -350,10 +362,9 @@ describe('the sources listed under the position of a candidate', () => {
     });
 
     it('should show no list under a candidate that has none, and the sources of a candidate only under it', async () => {
-        // Mexico holds a vote for A only: B is the candidate chosen in the list, so that it has a card too ("All" shows both)
+        // Mexico holds a vote for A only: the detail of A has its sources, the one of B (selected in the strip, B is the candidate chosen in the list) has none
         show('/fifa?c=QMOCK2');
         const sheet = await openSheet('MEX');
-        fireEvent.click(within(sheet).getByRole('radio', {name: 'All'}));
         expect(sourcesOf(cardOf(sheet, 'A'))).not.toBeNull();
         expect(sourcesOf(cardOf(sheet, 'B'), 'Mock candidate B')).toBeNull();
         // the tab Notes does not list sources any more

@@ -6,8 +6,8 @@
 //               position the news give, the heaviest word there is, so the map draws it SOLID (the declared level of the same side) while the
 //               confirmation holds, and who confirmed is said. It is no decision (no "Set by a reader"): a vote still wins over it. A confirmation of a
 //               position that has since changed is told apart ("before the latest news") and draws the news' own level again. The choices of a vote
-//               (For, Against, No position, Remove my vote) are under "Or change the position", closed; taking one's vote back takes both away,
-//               and the dots come back when nobody else confirmed
+//               (Supported by {country}, Not supported, No position, Remove my vote) come right under it, with no fold; taking one's vote back takes both away,
+//               and the dots come back when nobody else confirmed. The card is the detail of the candidate selected in the strip of the sheet
 //
 //  The positions, the readers and their confirmations are the invented ones of bench/fifa/mock-data.mjs
 //
@@ -32,17 +32,25 @@ vi.mock('@/features/fifa/fifaApi.js', () => ({FifaApi: api}));
 const topology = JSON.parse(readFileSync(resolve(process.cwd(), 'public/fifa-map.topo.json'), 'utf8'));
 const {FifaBoard} = await import('@/features/fifa/components/FifaBoard.jsx');
 
+// an entry on which nothing has been read: what the server holds for a candidate once a reader said something
+const BLANK_ENTRY = {position: 'inconnue', since: null, previous: null, changed: false, stale: false, signals_count: 0, last_signal_at: null, uncertain_count: 0, articles_30d: 0, media_30d: 0, basis: [], confirmed: null};
 // the votes given in a test, answered as the server would
 let given = [];
 const serve = () => {
     const mock = buildMock();
     api.map.mockResolvedValue(mock.map);
-    api.association.mockImplementation(async qid => buildMock({votes: given}).association(qid));
+    api.association.mockImplementation(async qid => {
+        const sheet = buildMock({votes: given}).association(qid);
+        // Germany: the news hold nothing on A, a candidate with no entry has no button that confirms (there is nothing to confirm). The tests of the confirmation of "no position"
+        // give it the entry the server has once something was said, so that the detail of A has its button
+        if (sheet.member.fifa === 'GER' && !sheet.positions.QMOCK1) sheet.positions.QMOCK1 = {...BLANK_ENTRY};
+        return sheet;
+    });
     api.presidents.mockResolvedValue(mock.presidents);
     api.confederations.mockResolvedValue(mock.confederations);
     api.vote.mockImplementation(async body => answerVote({levels: ALL_LEVELS, candidates: MOCK_SUBJECTS, given, body, by: 'reader'}));
 };
-// the button and the fold are in the card of the candidate chosen in the list: Mock candidate A, but where it is said
+// the button and the vote are in the detail of the candidate chosen in the list (or selected in the strip): Mock candidate A, but where it is said
 const show = (url = '/fifa?c=QMOCK1') => render(<MemoryRouter initialEntries={[url]}><FifaBoard reader="reader"/></MemoryRouter>);
 const mapReady = () => screen.findByRole('group', {name: 'Map of the 211 FIFA member associations'});
 // hidden: the page behind an open sheet is aria-hidden, and the map is still the thing looked at
@@ -50,16 +58,22 @@ const shape = (fifa) => screen.getByRole('button', {name: new RegExp(`^[^,]+, ${
 const qidOf = (fifa) => buildMock().map.members.find(member => member.fifa === fifa).qid;
 const dateOf = (at) => new Date(at).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
 
+// the strip of the tab Positions has a card for every candidate: selecting one shows its detail under the strip (the vote, the news), one candidate at a time
+const pick = (sheet, candidate) => {
+    const name = `Mock candidate ${candidate}`;
+    const card = within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: new RegExp(`^${name}( |$)`)});
+    if (card.getAttribute('aria-pressed') !== 'true') fireEvent.click(card);
+    return within(sheet).getByRole('region', {name});
+};
 const openCard = async (fifa, candidate = 'A') => {
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    return await within(sheet).findByRole('region', {name: `Mock candidate ${candidate}`});
+    await within(sheet).findByRole('group', {name: 'Candidates and their status'});
+    return pick(sheet, candidate);
 };
 const confirmButton = (card) => within(card).getByRole('button', {name: /^Confirm/});
-const toggleOf = (card) => within(card).getByRole('button', {name: 'Or change the position'});
 const choices = (card) => within(card).getByRole('group', {name: /^Your vote: /});
-const openFold = (card) => { if (toggleOf(card).getAttribute('aria-expanded') === 'false') fireEvent.click(toggleOf(card)); return choices(card); };
 
 beforeEach(() => {
     given = [];
@@ -79,9 +93,9 @@ describe('the button "Confirm this position ✓"', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         const germany = await openCard('GER');
         expect(confirmButton(germany)).toHaveAccessibleName('Confirm: no position');
-        // a button of the primary kind, before the fold
+        // a button of the primary kind, before the vote
         expect(confirmButton(germany).className).toContain('bg-action');
-        expect(toggleOf(germany).compareDocumentPosition(confirmButton(germany)) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+        expect(confirmButton(germany).compareDocumentPosition(choices(germany)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('should send "confirm", then say who confirmed and when, and show "Confirmed ✓" for the reader\'s own confirmation', async () => {
@@ -246,33 +260,27 @@ describe('the button "Confirm this position ✓"', () => {
     });
 });
 
-describe('Or change the position', () => {
-    it('should hide the choices of a vote until it is opened, and hide them again', async () => {
+describe('the vote under the button', () => {
+    it('should show the choices of a vote with the card, with no fold to open', async () => {
         show();
         await mapReady();
         const card = await openCard('GER');
-        expect(toggleOf(card)).toHaveAttribute('aria-expanded', 'false');
-        expect(within(card).queryByRole('group', {name: /^Your vote: /})).toBeNull();
-        for (const name of ['For', 'Against', 'No position', 'Remove my vote']) expect(within(card).queryByRole('button', {name})).toBeNull();
-        fireEvent.click(toggleOf(card));
-        expect(toggleOf(card)).toHaveAttribute('aria-expanded', 'true');
-        for (const name of ['For', 'Against', 'No position', 'Remove my vote']) expect(within(choices(card)).getByRole('button', {name})).toBeInTheDocument();
-        fireEvent.click(toggleOf(card));
-        expect(within(card).queryByRole('group', {name: /^Your vote: /})).toBeNull();
+        expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
+        expect(within(choices(card)).getAllByRole('button').map(button => button.textContent)).toEqual(['Supported by Germany', 'Not supported', 'No position', 'Remove my vote']);
     });
 
     it('should keep a decision when it is confirmed after: a confirmation is no decision, the choice stays pressed', async () => {
         show();
         await mapReady();
         const card = await openCard('GER');
-        fireEvent.click(within(openFold(card)).getByRole('button', {name: 'For'}));
+        fireEvent.click(within(choices(card)).getByRole('button', {name: /^Supported by /}));
         await waitFor(() => expect(shape('GER')).toHaveAttribute('data-kind', 'indicated'));
         await within(card).findByText(/^Set by reader/);
         fireEvent.click(confirmButton(card));
         await within(card).findByRole('button', {name: 'Confirmed ✓'});
         // the decision stands, the colour is the one of the vote, For is still the choice pressed
         expect(shape('GER')).toHaveAccessibleName('Germany, GER, UEFA: Support (set by a reader)');
-        expect(within(choices(card)).getByRole('button', {name: 'For'})).toHaveAttribute('aria-pressed', 'true');
+        expect(within(choices(card)).getByRole('button', {name: /^Supported by /})).toHaveAttribute('aria-pressed', 'true');
         expect(within(card).getByText('Set by a reader')).toBeInTheDocument();
     });
 
@@ -282,7 +290,7 @@ describe('Or change the position', () => {
         const card = await openCard('BRA');
         fireEvent.click(confirmButton(card));
         await within(card).findByRole('button', {name: 'Confirmed ✓'});
-        for (const name of ['For', 'Against', 'No position']) expect(within(openFold(card)).getByRole('button', {name})).toHaveAttribute('aria-pressed', 'false');
+        for (const name of [/^Supported by /, 'Not supported', 'No position']) expect(within(choices(card)).getByRole('button', {name})).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('should let "Remove my vote" take a confirmation away, and a decision and a confirmation together', async () => {
@@ -290,7 +298,7 @@ describe('Or change the position', () => {
         await mapReady();
         const card = await openCard('GER');
         // nothing of this reader yet: nothing to remove
-        expect(within(openFold(card)).getByRole('button', {name: 'Remove my vote'})).toBeDisabled();
+        expect(within(choices(card)).getByRole('button', {name: 'Remove my vote'})).toBeDisabled();
         // a confirmation alone can be removed
         fireEvent.click(confirmButton(card));
         await within(card).findByRole('button', {name: 'Confirmed ✓'});
@@ -300,13 +308,13 @@ describe('Or change the position', () => {
         await waitFor(() => expect(within(card).queryByRole('button', {name: 'Confirmed ✓'})).toBeNull());
         expect(confirmButton(card)).toBeEnabled();
         // a decision and a confirmation: both go
-        fireEvent.click(within(choices(card)).getByRole('button', {name: 'Against'}));
-        await waitFor(() => expect(within(choices(card)).getByRole('button', {name: 'Against'})).toHaveAttribute('aria-pressed', 'true'));
+        fireEvent.click(within(choices(card)).getByRole('button', {name: 'Not supported'}));
+        await waitFor(() => expect(within(choices(card)).getByRole('button', {name: 'Not supported'})).toHaveAttribute('aria-pressed', 'true'));
         fireEvent.click(confirmButton(card));
         await within(card).findByRole('button', {name: 'Confirmed ✓'});
         fireEvent.click(within(choices(card)).getByRole('button', {name: 'Remove my vote'}));
         await waitFor(() => expect(within(card).queryByRole('button', {name: 'Confirmed ✓'})).toBeNull());
-        await waitFor(() => expect(within(choices(card)).getByRole('button', {name: 'Against'})).toHaveAttribute('aria-pressed', 'false'));
+        await waitFor(() => expect(within(choices(card)).getByRole('button', {name: 'Not supported'})).toHaveAttribute('aria-pressed', 'false'));
         expect(within(card).queryByText(/^Set by /)).toBeNull();
         expect(shape('GER')).toHaveAttribute('data-kind', 'unknown');
     });
@@ -320,7 +328,7 @@ describe('what a confirmation makes solid, a vote, a withdrawal', () => {
         fireEvent.click(confirmButton(card));
         await waitFor(() => expect(shape('PER')).not.toHaveAttribute('data-pattern'));
         await within(card).findByRole('button', {name: 'Confirmed ✓'});
-        await waitFor(() => expect(within(openFold(card)).getByRole('button', {name: 'Remove my vote'})).toBeEnabled());
+        await waitFor(() => expect(within(choices(card)).getByRole('button', {name: 'Remove my vote'})).toBeEnabled());
         fireEvent.click(within(choices(card)).getByRole('button', {name: 'Remove my vote'}));
         await waitFor(() => expect(api.vote).toHaveBeenLastCalledWith({subject: 'QMOCK1', member: qidOf('PER'), value: 'withdraw'}));
         // the probable position of the news, with its dots, and nothing confirmed
@@ -339,7 +347,7 @@ describe('what a confirmation makes solid, a vote, a withdrawal', () => {
         const card = await openCard('MAR');
         fireEvent.click(confirmButton(card));
         expect(await within(card).findByText(/^Confirmed by reader, Mock reader 3/)).toBeInTheDocument();
-        await waitFor(() => expect(within(openFold(card)).getByRole('button', {name: 'Remove my vote'})).toBeEnabled());
+        await waitFor(() => expect(within(choices(card)).getByRole('button', {name: 'Remove my vote'})).toBeEnabled());
         fireEvent.click(within(choices(card)).getByRole('button', {name: 'Remove my vote'}));
         await waitFor(() => expect(within(card).getByRole('button', {name: /^Confirm this position/})).toBeEnabled());
         expect(within(card).getByText(/^Confirmed by Mock reader 3/)).toBeInTheDocument();
@@ -353,7 +361,7 @@ describe('what a confirmation makes solid, a vote, a withdrawal', () => {
         // Morocco: probable in the news, confirmed by a reader (solid). This reader votes against
         const card = await openCard('MAR');
         expect(within(card).getByText('Confirmed by a reader')).toBeInTheDocument();
-        fireEvent.click(within(openFold(card)).getByRole('button', {name: 'Against'}));
+        fireEvent.click(within(choices(card)).getByRole('button', {name: 'Not supported'}));
         await waitFor(() => expect(shape('MAR')).toHaveAccessibleName(/^Morocco, MAR, CAF: Opposition \(set by a reader\)/));
         await within(card).findByText('Set by a reader');
         expect(within(card).queryByText('Confirmed by a reader')).toBeNull();
@@ -390,7 +398,7 @@ describe('the history of the votes', () => {
         const sheet = card.closest('[role=dialog]');
         fireEvent.click(confirmButton(card));
         await within(card).findByRole('button', {name: 'Confirmed ✓'});
-        fireEvent.click(within(openFold(card)).getByRole('button', {name: 'Remove my vote'}));
+        fireEvent.click(within(choices(card)).getByRole('button', {name: 'Remove my vote'}));
         await waitFor(() => expect(within(card).queryByRole('button', {name: 'Confirmed ✓'})).toBeNull());
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Notes'}));
         const history = await within(sheet).findByRole('region', {name: 'Position history'});

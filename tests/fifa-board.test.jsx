@@ -95,8 +95,10 @@ describe('FifaBoard', () => {
         fireEvent.click(screen.getByRole('button', {name: /^Turkey, TUR.*Uncertain/}));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+        // every candidate has a card in the strip, the ones the news hold nothing on say "No known position"
         await within(sheet).findAllByText('No known position');
-        // the sentences are under the position of the candidate, in the group Uncertain
+        // the sentences are in the detail of the candidate: select A in the strip, then they are under its position, in the group Uncertain
+        fireEvent.click(within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: /^Mock candidate A( |$)/}));
         const group = await within(sheet).findByRole('group', {name: 'Uncertain sentences on Mock candidate A'});
         expect(within(group).getByRole('heading', {level: 4}).firstElementChild).toHaveClass('border-dashed');
         expect(within(sheet).getAllByText(/Why Uncertain:/).length).toBe(2);

@@ -2,11 +2,11 @@
 //  Author: Fabian Rostello
 //  Date: 12.11.2026
 //  File: fifa-lean.test.jsx
-//  Description: "Which candidate does {country} lean towards?": with no candidate chosen in the list, the sheet of an association has one block at the top
-//               of the tab Positions. An association has one vote. The four states: the news show a candidate (the reader confirms it, or chooses
-//               another or none), a reader chose or confirmed it, the news show several (choose one), none is shown (choose). The choice is
-//               sent to /leans, the answer's entries replace the ones of the map, "Remove my choice" takes it all back. The cards of the candidates
-//               under it only read; with one candidate chosen in the list the sheet has its card with "Confirm this position ✓" and the fold
+//  Description: "Which candidate does {country} lean towards?": with no candidate chosen in the list, the sheet of an association has one block in the tab Positions,
+//               under the strip of the candidates and the detail of the one selected. An association has one vote. The four states: the news show a candidate (the reader
+//               confirms it, or chooses another or none), a reader chose or confirmed it, the news show several (choose one), none is shown (choose). The choice is
+//               sent to /leans, the answer's entries replace the ones of the map, "Remove my choice" takes it all back. With one candidate chosen in the list the block is gone:
+//               the candidate is selected in the strip, its detail has "Confirm this position ✓" and the vote
 //
 //  The associations, the readers and the answers are the invented ones of bench/fifa/mock-data.mjs
 //
@@ -52,11 +52,18 @@ const openSheet = async (fifa) => {
     fireEvent.click(shape(fifa));
     const sheet = await screen.findByRole('dialog');
     fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-    await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
+    await within(sheet).findByRole('group', {name: 'Candidates and their status'});
     return sheet;
 };
 const blockOf = (sheet) => within(sheet).getByRole('region', {name: /^Which candidate does .* lean towards\?$/});
-const cardOf = (sheet, candidate = 'A') => within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
+// the strip of the tab Positions has a card for every candidate: selecting one shows its detail under the strip (the vote, the news), one candidate at a time
+const pick = (sheet, candidate) => {
+    const name = `Mock candidate ${candidate}`;
+    const card = within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: new RegExp(`^${name}( |$)`)});
+    if (card.getAttribute('aria-pressed') !== 'true') fireEvent.click(card);
+    return within(sheet).getByRole('region', {name});
+};
+const cardOf = (sheet, candidate = 'A') => pick(sheet, candidate);
 const choose = (block, name) => fireEvent.click(within(block).getByRole('button', {name}));
 const counters = () => screen.getByText(/positions? known · /).textContent;
 
@@ -104,56 +111,59 @@ describe('the mock: which candidate an association leans toward', () => {
 });
 
 describe('the block, with no candidate chosen', () => {
-    it('should be at the top of the tab Positions, before the cards', async () => {
+    it('should be in the tab Positions, under the strip of the candidates and the detail of the one selected', async () => {
         show();
         const sheet = await openSheet('BRA');
         const block = blockOf(sheet);
         expect(within(block).getByRole('heading', {name: 'Which candidate does Brazil lean towards?'})).toBeInTheDocument();
-        expect(block.compareDocumentPosition(cardOf(sheet)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const strip = within(sheet).getByRole('group', {name: 'Candidates and their status'});
+        expect(strip.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        // the detail of a candidate selected comes between the strip and the block
+        const card = cardOf(sheet);
+        expect(strip.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(card.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it('should not be there when a candidate is chosen: the card of that candidate has "Confirm this position ✓" and the fold, first', async () => {
+    it('should not be there when a candidate is chosen: that candidate is selected in the strip, its detail has "Confirm this position ✓" and the vote', async () => {
         show('/fifa?c=QMOCK2');
         await mapReady();
-        // Spain: the news hold something on A and B (a card each), B is the candidate chosen
+        // Spain: the news hold something on A and B, B is the candidate chosen
         fireEvent.click(shape('ESP'));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
         const first = await within(sheet).findByRole('region', {name: 'Mock candidate B'});
         expect(within(sheet).queryByRole('region', {name: /lean towards/})).toBeNull();
         expect(within(first).getByRole('button', {name: /^Confirm/})).toBeInTheDocument();
-        expect(within(first).getByRole('button', {name: 'Or change the position'})).toBeInTheDocument();
-        // the chips show the candidate chosen only: all of them with "All"; the candidate chosen comes first, the others only read
-        fireEvent.click(within(sheet).getByRole('radio', {name: 'All'}));
-        expect(within(sheet).getAllByRole('region').filter(one => /^Mock candidate/.test(one.getAttribute('aria-label') ?? ''))[0]).toBe(first);
-        expect(within(cardOf(sheet, 'A')).queryByRole('button', {name: /^Confirm/})).toBeNull();
+        expect(within(first).getByRole('group', {name: /^Your vote: /})).toBeInTheDocument();
+        expect(within(first).queryByRole('button', {name: 'Or change the position'})).toBeNull();
+        expect(within(sheet).getByRole('button', {name: /^Mock candidate B( |$)/})).toHaveAttribute('aria-pressed', 'true');
+        // the other candidates are one click away in the strip, with the same button and vote
+        const other = cardOf(sheet, 'A');
+        expect(within(other).getByRole('button', {name: /^Confirm/})).toBeInTheDocument();
+        expect(within(other).getByRole('group', {name: /^Your vote: /})).toBeInTheDocument();
     });
 
-    it('should leave the cards of the candidates read-only: what the news read, no button of a vote, on every card (India: A, B and C)', async () => {
+    it('should leave the block under the detail of a candidate selected, which has its own button that confirms and its vote (India: A, B and C)', async () => {
         show();
         const sheet = await openSheet('IND');
         for (const candidate of ['A', 'B', 'C']) {
             const card = cardOf(sheet, candidate);
+            expect(within(card).getByRole('button', {name: /^Confirm/})).toBeInTheDocument();
+            expect(within(card).getByRole('group', {name: /^Your vote: /})).toBeInTheDocument();
             expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
-            expect(within(card).queryByRole('button', {name: /^Confirm/})).toBeNull();
-            expect(within(card).queryByRole('group', {name: /^Your vote/})).toBeNull();
         }
-        // the block is the only place with a Confirm button
-        expect(within(sheet).getAllByRole('button', {name: /^Confirm/})).toHaveLength(1);
+        // the block of the choice of the association is there too: its button "Confirm Mock candidate A ✓" and the one of the detail
+        expect(within(blockOf(sheet)).getByRole('button', {name: 'Confirm Mock candidate A ✓'})).toBeInTheDocument();
+        expect(within(sheet).getAllByRole('button', {name: /^Confirm/})).toHaveLength(2);
     });
 
-    it('should keep on the read-only card the position, who confirmed it and the groups of sentences (Nigeria)', async () => {
+    it('should keep on the detail the position, who confirmed it and the groups of sentences (Nigeria)', async () => {
         show();
         const sheet = await openSheet('NGA');
         const card = cardOf(sheet);
-        expect(within(card).queryByRole('button', {name: 'Or change the position'})).toBeNull();
-        expect(within(card).queryByRole('button', {name: /^Confirm/})).toBeNull();
-        expect(within(card).queryByRole('group', {name: /^Your vote/})).toBeNull();
         expect(within(card).getAllByText('Declared support').length).toBeGreaterThan(0);
         expect(within(card).getByText(/^Confirmed by Mock reader 3, Mock reader 1/)).toBeInTheDocument();
         expect(within(card).getByRole('group', {name: 'Declared sentences on Mock candidate A'})).toBeInTheDocument();
-        // the block is the only place with a Confirm button
-        expect(within(sheet).getAllByRole('button', {name: /^Confirm/})).toHaveLength(1);
     });
 });
 
@@ -184,7 +194,7 @@ describe('the four states of the block', () => {
         fireEvent.click(shape('MEX'));
         sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
-        await within(sheet).findByRole('region', {name: 'Mock candidate A'});
+        await within(sheet).findByRole('group', {name: 'Candidates and their status'});
         block = blockOf(sheet);
         expect(within(block).getByText('Chosen by Mock reader 1')).toBeInTheDocument();
         expect(within(block).queryByText('Read from the news')).toBeNull();

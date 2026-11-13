@@ -77,7 +77,14 @@ const openSheet = async (fifa) => {
     fireEvent.click(shape(fifa));
     return readSheet(await screen.findByRole('dialog'));
 };
-const cardOf = (sheet, candidate = 'A') => within(sheet).getByRole('region', {name: `Mock candidate ${candidate}`});
+// the strip of the tab Positions has a card for every candidate: selecting one shows its detail under the strip (the vote, the news), one candidate at a time
+const pick = (sheet, candidate) => {
+    const name = `Mock candidate ${candidate}`;
+    const card = within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: new RegExp(`^${name}( |$)`)});
+    if (card.getAttribute('aria-pressed') !== 'true') fireEvent.click(card);
+    return within(sheet).getByRole('region', {name});
+};
+const cardOf = (sheet, candidate = 'A') => pick(sheet, candidate);
 const pagesOf = (card, name = 'Mock candidate A') => within(card).queryByRole('group', {name: `Pages added about ${name}`});
 const listOf = (sheet) => within(sheet).queryByRole('list', {name: 'Pages added'});
 // the accordion "Sources" (closed at first): opened when it is asked for its content
@@ -265,8 +272,9 @@ describe('the control "Add a source"', () => {
         const block = within(sheet).getByRole('region', {name: /^Which candidate does .* lean towards\?$/});
         expect(within(block).getByLabelText('Add a source (link)')).toBeInTheDocument();
         expect(block.contains(button)).toBe(false);
-        // above it, at the top of the tab Positions
-        expect(section.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        // under it: the strip of the candidates comes first in the tab Positions, then the block of the choice, then the control to add a source
+        expect(block.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(within(sheet).getByRole('group', {name: 'Candidates and their status'}).compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('should be there with a candidate chosen in the list too', async () => {
@@ -462,6 +470,7 @@ describe('the sentences a page gave', () => {
     it('should not tag the sentences of the news', async () => {
         show();
         const sheet = await openSheet('BRA');
+        cardOf(sheet, 'A');
         expect(within(sheet).queryByRole('button', {name: /from a page/})).toBeNull();
         expect(within(sheet).getAllByText('Read by the AI; the sentence is the article\'s own').length).toBeGreaterThan(0);
     });
@@ -479,6 +488,8 @@ describe('deleting a page', () => {
     it('should not offer the delete control on the page of another reader', async () => {
         show();
         const sheet = await openSheet('ARG');
+        // the page is under the candidate the AI read a position about: select it in the strip
+        cardOf(sheet, 'B');
         expect(within(sheet).getAllByRole('link', {name: /mockdaily\.example/}).length).toBeGreaterThan(0);
         expect(within(sheet).queryAllByRole('button', {name: /^Delete the source/})).toHaveLength(0);
     });
@@ -495,6 +506,7 @@ describe('deleting a page', () => {
         serve({admin: true});
         show('/fifa', {admin: true});
         const sheet = await openSheet('ARG');
+        cardOf(sheet, 'B');
         expect(within(sheet).getByRole('button', {name: 'Delete the source mockdaily.example added by Mock reader 2'})).toBeInTheDocument();
     });
 

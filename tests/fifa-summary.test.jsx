@@ -157,8 +157,8 @@ describe('the tab Summary: the lines the code builds', () => {
         expect(within(sheet).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Positions', 'Summary', 'Leadership profile', 'Notes']);
         expect(within(sheet).getByRole('tab', {name: 'Positions'})).toHaveAttribute('aria-selected', 'true');
         expect(within(sheet).getByRole('tab', {name: 'Summary'})).toHaveAttribute('aria-selected', 'false');
-        // the cards of Positions are in the page, the lines of the summary are not
-        expect(within(sheet).getAllByRole('region', {name: /^Mock candidate [A-E]$/}).length).toBeGreaterThan(0);
+        // the strip of Positions is in the page, the lines of the summary are not
+        expect(within(sheet).getByRole('group', {name: 'Candidates and their status'})).toBeInTheDocument();
         expect(within(sheet).queryByRole('region', {name: /: summary$/})).toBeNull();
         expect(within(sheet).queryByRole('heading', {name: 'AI summary'})).toBeNull();
         // one click opens the summary: the candidates of the summary, in its order; nothing of the tab Positions is in the page any more
@@ -323,24 +323,22 @@ describe('the tab Summary: the lines the code builds', () => {
     });
 });
 
-describe('the tab Positions follows the order of the summary (the candidates left out: see fifa-cards.test.jsx)', () => {
-    const cards = (sheet) => within(sheet).getAllByRole('region', {name: /^Mock candidate [A-E]$/}).map(card => card.getAttribute('aria-label').replace('Mock candidate ', ''));
-    const chips = (sheet) => within(within(sheet).getByRole('radiogroup', {name: 'Candidate shown'})).getAllByRole('radio').map(chip => chip.closest('label').textContent);
+describe('the strip of the tab Positions follows the order of the summary (see also fifa-cards.test.jsx)', () => {
+    const strip = (sheet) => within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getAllByRole('button').map(button => button.children[0].textContent.replace('Mock candidate ', ''));
 
-    it('should open on Positions, with the cards in the order the summary lists the candidates', async () => {
+    it('should open on Positions, with the cards of the strip in the order the summary lists the candidates, the ones it does not hold last', async () => {
         // the server lists B before A on this sheet
         answerOf = (sheet) => ({...sheet, summary: {candidates: [...sheet.summary.candidates].reverse()}});
         show();
         const sheet = await openSheet('ESP', null);
-        await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
-        expect(cards(sheet)).toEqual(['B', 'A']);
-        expect(chips(sheet)).toEqual(['All', 'Mock candidate B', 'Mock candidate A']);
+        await within(sheet).findByRole('group', {name: 'Candidates and their status'});
+        expect(strip(sheet)).toEqual(['B', 'A', 'C']);
         // and the summary lists them in the same order
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Summary'}));
         expect(within(sheet).getAllByRole('region', {name: /: summary$/}).map(card => card.getAttribute('aria-label'))).toEqual(['Mock candidate B: summary', 'Mock candidate A: summary']);
     });
 
-    it('should keep the order it had with no summary on the sheet (an older server)', async () => {
+    it('should keep the order of the candidates with no summary on the sheet (an older server)', async () => {
         answerOf = (sheet) => {
             const older = {...sheet};
             for (const field of ['summary', 'context', 'ai_summary', 'ai_summary_available']) delete older[field];
@@ -348,8 +346,8 @@ describe('the tab Positions follows the order of the summary (the candidates lef
         };
         show();
         const sheet = await openSheet('ESP', null);
-        await within(sheet).findAllByRole('region', {name: /^Mock candidate [A-E]$/});
-        expect(cards(sheet)).toEqual(['A', 'B']);
+        await within(sheet).findByRole('group', {name: 'Candidates and their status'});
+        expect(strip(sheet)).toEqual(['A', 'B', 'C']);
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Summary'}));
         expect(within(sheet).getByText('Nothing to summarise yet: no sentence of the news ties this association to a candidate.')).toBeInTheDocument();
     });

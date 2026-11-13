@@ -2,10 +2,10 @@
 //  Author: Fabian Rostello
 //  Date: 12.11.2026
 //  File: VoteControl.jsx
-//  Description: "Your vote" on the position of an association on a candidate: For, Against, No position, or take the vote back. The last
-//               vote of any reader decides for everyone, so the control says what the reader's own last vote is and says nothing
-//               else for them; a refusal (signed out, too many votes, a source the server refuses) is said under it. It is kept under "Or change the
-//               position": the main action of a card is to confirm the position shown. The field "Add a source (link)" goes with For or Against
+//  Description: "Your vote" on the position of an association on a candidate: "Supported by {the association}" (for), "Not supported" (against), "No position", or take the
+//               vote back. The last vote of any reader decides for everyone, so the control says what the reader's own last vote is and says nothing
+//               else for them; a refusal (signed out, too many votes, a source the server refuses) is said under it. It is shown with the detail of the candidate selected in
+//               the strip of the sheet, under the button that confirms the position shown (no fold to open). The field "Add a source (link)" goes with a vote for or against
 //
 
 import {useState} from "react";
@@ -14,7 +14,12 @@ import {VOTE_VALUES} from "@/features/fifa/positions.js";
 import {sourceOf} from "@/features/fifa/sourceChecks.js";
 import {cn} from "@/lib/utils.js";
 
-const CHOICE = 'inline-flex h-8 cursor-pointer items-center rounded-full border px-3.5 text-[0.8125rem] transition-colors duration-200 disabled:cursor-default disabled:opacity-50';
+const CHOICE = 'inline-flex min-h-9 cursor-pointer items-center rounded-full border px-4 text-[0.875rem] transition-colors duration-200 disabled:cursor-default disabled:opacity-50';
+
+// the words of the three choices: the position is the association's, so a vote for says it is supported by it
+const labelOf = (choice, member) => choice.value === 'for'
+    ? `Supported by ${member.level === 'confederation' ? member.fifa : member.name}`
+    : choice.value === 'against' ? 'Not supported' : choice.label;
 
 // mine: the last DECISION of this reader on this candidate ('for' | 'against' | 'unknown'), null when they have none or took it back (a confirmation
 // is no decision); removable: this reader has a decision or a confirmation to take back; onVote(value, extra): resolves {ok} or {error}; extra: {source} when
@@ -35,12 +40,12 @@ export const VoteControl = ({subject, member, mine, removable, onVote}) => {
     return (
         <div role="group" aria-label={`Your vote: the position of ${member.name} on ${subject.name}`} className="mt-4">
             <p className="kicker">Your vote</p>
-            <SourceField value={link} onChange={setLink} disabled={state.busy} hint="Optional: the link of a page that says it. It goes with For or Against; the AI reads the page in the background and it never changes a colour."/>
+            <SourceField value={link} onChange={setLink} disabled={state.busy} hint="Optional: the link of a page that says it. It goes with a vote of Supported or Not supported; the AI reads the page in the background and it never changes a colour."/>
             <div className="mt-3 flex flex-wrap items-center gap-2">
                 {VOTE_VALUES.map(choice => (
                     <button key={choice.value} type="button" disabled={state.busy} aria-pressed={mine === choice.value} onClick={() => send(choice.value)}
                             className={cn(CHOICE, mine === choice.value ? 'border-action bg-action text-white' : 'border-rule text-ink hover:border-ink-mute')}>
-                        {choice.label}
+                        {labelOf(choice, member)}
                     </button>
                 ))}
                 <button type="button" disabled={state.busy || !removable} onClick={() => send('withdraw')}

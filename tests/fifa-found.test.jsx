@@ -191,11 +191,16 @@ describe('the tags', () => {
         fireEvent.click(shape('CHN'));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+        // the detail of a candidate is under the strip, one at a time: select D, then E
+        const strip = await within(sheet).findByRole('group', {name: 'Candidates and their status'});
+        fireEvent.click(within(strip).getByRole('button', {name: /^Mock candidate D( |$)/}));
         const card = await within(sheet).findByRole('region', {name: 'Mock candidate D'});
         expect(within(card).queryByText(FOUND_TAG)).toBeNull();
         expect(within(card).queryByText(foundLine(D))).toBeNull();
         expect(within(card).queryByText(READING_TAG)).toBeNull();
-        // the card of the candidate being read says so
+        // the strip does not say it either, and the card of the candidate being read says so
+        expect(within(strip).queryByText(FOUND_TAG)).toBeNull();
+        fireEvent.click(within(strip).getByRole('button', {name: /^Mock candidate E( |$)/}));
         const reading = within(sheet).getByRole('region', {name: 'Mock candidate E'});
         expect(within(reading).getByText(READING_TAG)).toBeInTheDocument();
         expect(within(reading).queryByText(FOUND_TAG)).toBeNull();
@@ -329,8 +334,7 @@ describe('what the reader did on the page, when the map is asked again', () => {
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
         const card = await within(sheet).findByRole('region', {name: 'Mock candidate A'});
-        fireEvent.click(within(card).getByRole('button', {name: 'Or change the position'}));
-        fireEvent.click(within(card).getByRole('button', {name: 'For'}));
+        fireEvent.click(within(card).getByRole('button', {name: /^Supported by /}));
     };
 
     it('should follow the server after the map is asked again: a vote of another reader since is not hidden by the answer to the reader\'s own', async () => {

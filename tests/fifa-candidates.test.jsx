@@ -214,6 +214,9 @@ describe('the sheet, the sentences of a candidate in groups', () => {
         fireEvent.click(screen.getByRole('button', {name: new RegExp(`^[^,]+, ${fifa},`)}));
         const sheet = await screen.findByRole('dialog');
         fireEvent.mouseDown(within(sheet).getByRole('tab', {name: 'Positions'}));
+        await within(sheet).findByRole('group', {name: 'Candidates and their status'});
+        // the sentences are in the detail of the candidate: select A
+        fireEvent.click(within(within(sheet).getByRole('group', {name: 'Candidates and their status'})).getByRole('button', {name: /^Mock candidate A( |$)/}));
         await within(sheet).findByRole('region', {name: 'Mock candidate A'});
         return sheet;
     };

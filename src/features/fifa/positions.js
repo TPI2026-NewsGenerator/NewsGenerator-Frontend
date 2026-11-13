@@ -91,6 +91,15 @@ export const readEntry = (entry, levels) => {
     return {human, position, aiPosition, confirmedByReader};
 };
 
+// The status of a candidate for an association, in the words of the page (the card of the strip of the sheet): {label, known, human, confirmed}. label: what the news read or
+// what a reader set (labelOf of the position), "Uncertain: signals, no position" when only Uncertain signals exist, "No known position" when the entry is missing (the news say
+// nothing of it); known: a position is held; human: a reader set it; confirmed: a reader's confirmation makes the position solid
+export const statusOf = (entry, levels) => {
+    const {human, position, confirmedByReader} = readEntry(entry, levels);
+    const uncertain = sideOf(position) === 'unknown' && !human && (entry?.uncertain_count ?? 0) > 0;
+    return {label: uncertain ? 'Uncertain: signals, no position' : labelOf(position), known: sideOf(position) !== 'unknown', human: Boolean(human), confirmed: confirmedByReader};
+};
+
 // An entry that nothing has been said on yet: the vote of a reader makes it
 const BLANK = {position: UNKNOWN, since: null, previous: null, changed: false, stale: false, signals_count: 0, last_signal_at: null, uncertain_count: 0, articles_30d: 0, media_30d: 0, basis: [], confirmed: null};
 
