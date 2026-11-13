@@ -2,7 +2,7 @@
 //  Author: Fabian Rostello
 //  Date: 28.09.2026
 //  File: Masthead.jsx
-//  Description: The bar on top of every page: the name, six sections, the profile read, who reads, their
+//  Description: The bar on top of every page: the name, four sections, the profile read, who reads, their
 //               settings and the theme. It stays on top, translucent; a hairline under it once the page scrolls
 //
 
@@ -14,13 +14,11 @@ import {ProfileSwitcher} from "@/features/profiles/ProfileSwitcher.jsx";
 import {ThemeButton, ThemeChoice} from "@/components/ui/theme-toggle.jsx";
 import {useUnread} from "@/features/affairs/useUnread.js";
 
-// in the order of use (the user, 06.11.2026): what is read, then what is looked for, the profile last
+// in the order of use (the user, 06.11.2026): what is read, then what is followed, the profile last. Search and FIFA are closed (13.11.2026, see App.jsx)
 const SECTIONS = [
     {to: '/briefing', label: 'Briefing'},
     {to: '/affairs', label: 'Affairs'},
     {to: '/following', label: 'Following'},
-    {to: '/search', label: 'Search'},
-    {to: '/fifa', label: 'FIFA'},
     {to: '/profile', label: 'Profile'},
 ];
 

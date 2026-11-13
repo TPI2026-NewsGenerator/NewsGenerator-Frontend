@@ -6,6 +6,10 @@ thinks**: the members are the real ones (name, FIFA code, ISO code, confederatio
 ("Mock candidate A/B/C"), the persons ("Mock president AFG"), the sentences ("[Mock sentence in es] ...") and the positions are
 invented. Every answer carries `mock: true` and the page prints a banner when it sees it.
 
+**The page is closed since 13.11.2026** (the user): `src/App.jsx` sends `/fifa` to the briefing and the bar has no FIFA entry. The code is kept. To see it with this mock,
+put the route back in `App.jsx` (`const FifaPage = lazy(() => import("@/pages/Fifa.jsx").then(module => ({default: module.FifaPage})))` and
+`<Route path="/fifa" element={<Suspense fallback={null}><FifaPage/></Suspense>}/>`), then open `/fifa`. The tests `tests/fifa-*.test.jsx` mount the board directly and do not need the route.
+
 ```
 node bench/fifa/preview.mjs        # the mock on 3998 + Vite on 5180 (launch.json: "fifa-mock"), then open /fifa
 MOCK_LEVELS=coarse node bench/fifa/preview.mjs   # the server stands behind ["soutien","inconnue"] only

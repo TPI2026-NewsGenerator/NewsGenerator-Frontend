@@ -110,7 +110,6 @@ export const Colophon = () => (
                 <ul className="mt-2 space-y-1.5">
                     <li><Link className="hover:text-ink hover:underline" to="/briefing">Briefing</Link></li>
                     <li><Link className="hover:text-ink hover:underline" to="/profile">Profile</Link></li>
-                    <li><Link className="hover:text-ink hover:underline" to="/search">Search</Link></li>
                 </ul>
             </nav>
         </div>

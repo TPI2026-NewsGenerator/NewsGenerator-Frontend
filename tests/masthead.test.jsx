@@ -3,7 +3,7 @@
 //  Date: 06.11.2026
 //  File: masthead.test.jsx
 //  Description: The sections of the bar on top of every page, in the order the user chose (06.11.2026): Briefing, Affairs, Following,
-//               Search, then FIFA (12.11.2026), the profile last, in the bar and in the menu of a phone
+//               the profile last, in the bar and in the menu of a phone. Search and FIFA were closed on 13.11.2026 (see closed-pages.test.jsx)
 //
 
 import '@testing-library/jest-dom';
@@ -16,16 +16,26 @@ vi.mock('@/features/profiles/ProfileSwitcher.jsx', () => ({ProfileSwitcher: () =
 
 const {Masthead} = await import('@/features/navbar/components/Masthead.jsx');
 
-const ORDER = ['Briefing', 'Affairs', 'Following', 'Search', 'FIFA', 'Profile'];
+const ORDER = ['Briefing', 'Affairs', 'Following', 'Profile'];
 const user = {id: 1, username: 'reader', admin: false};
 const show = () => render(<MemoryRouter initialEntries={['/briefing']}><Masthead user={user} onSignOut={vi.fn()}/></MemoryRouter>);
 
 describe('Masthead, its sections', () => {
-    it('should list them in the bar as Briefing, Affairs, Following, Search, FIFA, Profile', () => {
+    it('should list them in the bar as Briefing, Affairs, Following, Profile', () => {
         show();
         const bar = screen.getByRole('navigation', {name: 'Sections'});
         expect(within(bar).getAllByRole('link').map(link => link.textContent)).toEqual(ORDER);
-        expect(within(bar).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/briefing', '/affairs', '/following', '/search', '/fifa', '/profile']);
+        expect(within(bar).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/briefing', '/affairs', '/following', '/profile']);
+    });
+
+    it('should offer neither Search nor FIFA, in the bar or in the menu of a phone', () => {
+        show();
+        expect(screen.queryByRole('link', {name: 'Search'})).toBeNull();
+        expect(screen.queryByRole('link', {name: 'FIFA'})).toBeNull();
+        fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+        const menu = screen.getByRole('dialog', {name: 'Menu'});
+        expect(within(menu).queryByRole('link', {name: 'Search'})).toBeNull();
+        expect(within(menu).queryByRole('link', {name: 'FIFA'})).toBeNull();
     });
 
     it('should list them in the same order in the menu of a phone', () => {
